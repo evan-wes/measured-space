@@ -102,7 +102,8 @@ class QAItem:
     answer : float or int or str
         The answer from this source.
     source : str
-        ``"oracle"`` (ground truth) or ``"auto"`` (perception).
+        ``"oracle"`` (ground truth), or ``"auto"`` / ``"auto_<depth source>"`` (perception, e.g.
+        ``"auto_lidar"``).
     objects : tuple of dict, default ()
         For each referent (for a count, each counted object), the box used to compute the answer
         (``object_id``, ``label``, ``center``, ``size``, ``rotation`` in the world frame), so every answer
