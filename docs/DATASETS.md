@@ -34,13 +34,29 @@ inertial poses, and fixed, calibrated multi-camera installations.
 - **Classes [V]:** Person, Forklift, NovaCarter, Transporter, FourierGR1T2, AgilityDigit, plus PalletTruck in 2026. **Racks, shelves, pallets and boxes have no ground truth.**
 - **Video [V]:** 1080p, 30 FPS, GT per frame.
 - **Calibration [V]**, read from one 7 KB `calibration.json`: per camera `intrinsicMatrix` (example: fx = fy = 916.25, cx = 960, cy = 540, no distortion), `extrinsicMatrix` 3×4 (world→camera, metres, z-up world), `cameraMatrix`, `homography`. Camera centres computed as −Rᵀt match the listed coordinates. The cameras are ceiling CCTV about 3.3 m up.
-- **3D boxes [V card; U conventions]:** object centre in world coordinates, `scale [w, l, h]`, `rotation [pitch, roll, yaw]`, plus `2d_bounding_box_visible {camera_id: [xmin, ymin, xmax, ymax]}`, which gives per-camera visibility directly. NVIDIA's loader converts rotations with `np.radians` (so the file stores degrees) and uses keys with spaces rather than underscores. The challenge page says radians. **Check value ranges when loading.**
-- **Depth [V format; U encoding]:** one HDF5 file per camera holding PNG-compressed frames. Third-party code reads keys `distance_to_image_plane_{frame:05d}.png` in millimetres (planar z-depth). The files are served with HTTP range support, so reading single frames remotely may be possible [U, untested].
+- **3D boxes [V card; U conventions]:** object centre in world coordinates, `scale [w, l, h]`, `rotation [pitch, roll, yaw]`, plus `2d_bounding_box_visible {camera_id: [xmin, ymin, xmax, ymax]}`, which gives per-camera visibility directly. NVIDIA's loader converts rotations with `np.radians` (so the file stores degrees) and uses keys with spaces rather than underscores. The challenge page says radians. **Superseded: measured as radians; see "Conventions measured" below.**
+- **Depth [V format; U encoding]:** one HDF5 file per camera (superseded: frames are raw gzip uint16 arrays, not PNG; see "Conventions measured" below). Third-party code reads keys `distance_to_image_plane_{frame:05d}.png` in millimetres (planar z-depth). The files are served with HTTP range support, so reading single frames remotely may be possible [U, untested].
 - **Size [V, tree API]:** 2026 split 2.478 TB (49.4 GB without depth). The card says 2.94 TB. Per-scene depth ranges from 16 to 310 GB.
 - **Minimal subset [V sizes, re-checked 2026-10-26]:** `MTMC_Tracking_2026/train/Warehouse_012` (8 cameras, not a Cosmos re-render), full scene 30.377 GB:
   - Stage 1, 0.152 GB: `calibration.json`, `ground_truth.json` (151.8 MB), `map.png`. Use it to choose cameras by visible-object counts.
   - Stage 2, about 4.1 GB: 2 chosen cameras' `videos/*.mp4` (94–160 MB each) and `depth_maps/*.h5` (1.4–6.8 GB each). Cameras 0004 and 0006 are the smallest pair (4.06 GB including stage 1), but cameras should be chosen by content.
   - Real scenes `MTMC_Tracking_2026/test/Warehouse_026` (4 cameras) and `Warehouse_027` (7 cameras): `calibration.json`, `vggt_reprojection_error.txt` and 60 s MP4s per camera; **no GT, no depth**; 0.290 GB together [V, tree API, survey of 2026-10-26]. Used only for a qualitative sim→real check of the auto-labeller and gate.
+- **Conventions measured on `Warehouse_018` (2026-10-26; `scripts/check_smartspaces_oracle.py`):**
+  - **Extrinsic:** world→camera. −Rᵀt reproduces each sensor's `coordinates` in all 4 local scenes; read the
+    other way, projected-box IoU is 0.
+  - **Rotation:** **radians**, `[pitch, roll, yaw]`, yaw counter-clockwise about +z (yaw spans ±π; pitch and
+    roll ≈ 0). Reading it as degrees scores worse on both reprojection IoU and depth containment.
+  - **Scale:** `(width, length, height)` along the box's local x, y, z. Forklifts travel along local −y.
+  - **Depth:** planar z in millimetres, stored as raw gzip-compressed uint16 arrays (1080×1920) despite the
+    `.png` key names. Back-projected as planar depth, the floor lands at z = 0.002 m (median).
+  - **2D boxes:** visible boxes are inclusive pixel indices.
+  - **Video:** OpenCV frame seeking matches sequential decoding.
+  - **Principal point:** the intrinsics put it at exactly (W/2, H/2), suggesting a corner-origin pixel
+    convention (a 0.5 px offset from this package's centre-origin convention; not corrected).
+- **`Warehouse_018` contents:** 4 objects, Forklift_3 (parked), Forklift_4 (moving), PalletTruck_2 (parked) and
+  Person_0; 9,000 frames. Ceiling cameras 0000/0002 are 3.26/3.21 m above the floor. Every GT visible 2D box lies
+  inside its projected 3D box (median covered share 1.000 for every class and camera). Open: Forklift_4's box
+  bottom sits 0.14–0.16 m above the floor, unlike the others.
 - **Question-type mapping:** all planned types are supported for the 7 agent classes. These are centre and closest-surface distance, size, egocentric distance, relative depth, left/right, closest same-class instance, and count in view (from `2d_bounding_box_visible`).
 - **Risks:**
   - An open-vocabulary detector will find racks and pallets that have no GT; those detections cannot be audited and must be excluded from scoring.

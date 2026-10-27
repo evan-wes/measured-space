@@ -67,8 +67,8 @@ class FrameView:
     T_wc : numpy.ndarray, shape (4, 4)
         Camera-to-world pose.
     image_ref : str
-        The RGB image's location relative to the dataset folder: a file path, or ``"<archive>::<member>"``
-        for a file read straight out of an archive.
+        The RGB image's location relative to the dataset folder: a file path, ``"<archive>::<member>"``
+        for a file read straight out of an archive, or ``"<video>::<frame index>"`` for a video frame.
     up : numpy.ndarray, shape (3,), default +z
         World up direction (against gravity), used for heights and "above/below".
     """

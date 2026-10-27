@@ -104,8 +104,9 @@ class QAItem:
     source : str
         ``"oracle"`` (ground truth) or ``"auto"`` (perception).
     objects : tuple of dict, default ()
-        For each referent, the box used to compute the answer (``object_id``, ``label``, ``center``,
-        ``size``, ``rotation`` in the world frame), so every answer can be recomputed.
+        For each referent (for a count, each counted object), the box used to compute the answer
+        (``object_id``, ``label``, ``center``, ``size``, ``rotation`` in the world frame), so every answer
+        can be recomputed.
     extra : dict, default {}
         Per-item diagnostics: decision margins, visibility, and for automatic labels the predicted
         uncertainty.
