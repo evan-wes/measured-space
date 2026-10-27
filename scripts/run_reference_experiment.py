@@ -2,9 +2,10 @@
 
 For each dataset this loads the oracle and auto labels from ``<label root>/<dataset>/`` (as
 ``scripts/run_audit.py`` does, plus each question's tolerance), cross-fits the audit's feature model leave one
-scene out, and runs :func:`measured_space.references.run_reference_experiment`: for each held-out scene, ``n``
-random references (items whose oracle answer is revealed) recalibrate the scene (scale per depth source, bias per
-question type, spread factor), and the scene's other labels are gated at ``tau`` and ``2 tau``.
+scene out (scenes grouped into ``--max-folds`` folds when a dataset and question type has more), and runs
+:func:`measured_space.references.run_reference_experiment`: for each held-out scene, ``n`` random references
+(items whose oracle answer is revealed) recalibrate the scene (scale per depth source, bias per question type,
+spread factor), and the scene's other labels are gated at ``tau`` and ``2 tau``.
 
 Outputs (``--results`` and ``--figure`` are required, with no default, so a run never overwrites the committed
 results by accident; the committed run used ``--results results/references --figure
@@ -56,8 +57,8 @@ import pandas as pd
 from make_figures import BLUE, INK, MUTED, ORANGE, WIDTH, save, style   # scripts/ is on sys.path when run
 from measured_space.audit import AuditConfig, dumps, exclude_ambiguous, exclusion_record
 from measured_space.config import REPO_ROOT, data_root
-from measured_space.references import (ReferenceConfig, ReferenceResult, cross_fit_sigma, load_reference_pairs,
-                                       run_reference_experiment, synthetic_site_pairs)
+from measured_space.references import (ReferenceConfig, ReferenceResult, cross_fit_key, cross_fit_sigma,
+                                       load_reference_pairs, run_reference_experiment, synthetic_site_pairs)
 
 DATASETS = ("arkitscenes", "smartspaces")
 DATASET_NAME = {"arkitscenes": "ARKitScenes", "smartspaces": "Smart Spaces"}
@@ -101,6 +102,9 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--n-draws", type=int, default=ReferenceConfig.n_draws, help="random draws per scene and n")
     parser.add_argument("--seed", type=int, default=ReferenceConfig.seed, help="seed of the reference draws")
     parser.add_argument("--n-jobs", type=int, default=4, help="worker processes for cross-fitting")
+    parser.add_argument("--max-folds", type=int, default=AuditConfig.max_folds,
+                        help="most cross-fitting folds per dataset and question type; with more scenes, scenes are "
+                             "grouped into this many folds balanced by row count (default %(default)s)")
     parser.add_argument("--wait-minutes", type=float, default=0.0,
                         help="poll for each dataset's summary.json for up to this long (0: do not wait)")
     parser.add_argument("--figure-only", action="store_true", help="only redraw the figure from the results")
@@ -355,7 +359,7 @@ def main(argv: list[str] | None = None) -> int:
     """
     args = parse_args(argv)
     started = time.time()
-    audit = dataclasses.replace(AuditConfig(), n_jobs=args.n_jobs)
+    audit = dataclasses.replace(AuditConfig(), n_jobs=args.n_jobs, max_folds=args.max_folds)
     config = dataclasses.replace(ReferenceConfig(), n_refs=tuple(sorted(set(args.n_refs) | {0})),
                                  n_draws=args.n_draws, seed=args.seed)
     if args.figure_only:
@@ -394,8 +398,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"--exclude-ambiguous: dropped {exclusion['n_dropped']} pairs, kept {exclusion['n_unknown_kept']} "
               f"of unknown ambiguity: {dumps(exclusion['counts'])}", flush=True)
     pairs = pairs.reset_index(drop=True)
-    model_key = {k: v for k, v in dataclasses.asdict(audit).items() if k != "n_jobs"}
-    key: dict[str, Any] = {"inputs": inputs, "audit": model_key, "tag": tag, "n_rows": len(pairs)}
+    # max_folds enters the key only when some group has more scenes, so caches written before it stay valid
+    key: dict[str, Any] = {"inputs": inputs, "audit": cross_fit_key(pairs, audit), "tag": tag, "n_rows": len(pairs)}
     if counts is not None:                    # only then, so caches written before the option stay valid
         key["exclude_ambiguous"] = exclusion
     test, cal, notes, cached = predictions(pairs, audit, key, args.cache, tag)

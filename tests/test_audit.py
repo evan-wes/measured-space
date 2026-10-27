@@ -7,6 +7,12 @@ heteroscedastic error model; conformal coverage on exchangeable scenes; the Lear
 draws and in the full gate; the feature model beating the constant-sigma baseline when the truth is
 heteroscedastic (but not when it is not); and, for the audit's scripts, that no output folder of committed results
 has a default and that the error figure draws every source.
+
+Cross-fitting folds: with at most ``max_folds`` scenes, :func:`~measured_space.audit.cross_fit`,
+:func:`~measured_space.audit.select_ridge` and a whole :func:`~measured_space.audit.run_audit` are bit-identical to
+frozen copies of the leave-one-scene-out originals; with 100 scenes no prediction comes from a model that saw the
+test scene or the calibrated scene, the fold assignment is deterministic and balanced, the fits are bounded
+(``K + K (K - 1) / 2``) and the audit finishes in well under a minute.
 """
 
 from __future__ import annotations
@@ -15,20 +21,25 @@ import importlib.util
 import json
 import math
 import sys
+import time
 from collections.abc import Callable
+from itertools import combinations
 from pathlib import Path
 from types import ModuleType
-from typing import Any
+from typing import Any, TypeVar
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from measured_space.audit import (AuditConfig, AuditResult, NumericPredictor, conformal_quantile, exclude_ambiguous,
-                                  exclusion_record, fit_error_model, load_labels, ltt_threshold, match_ambiguity,
-                                  pair_table, referent_features, run_audit, select_ridge, synthetic_pairs,
-                                  wilson_interval)
+import measured_space.audit as audit_module
+from measured_space.audit import (AuditConfig, AuditResult, NumericPredictor, _cross_fit_task, conformal_quantile,
+                                  cross_fit, exclude_ambiguous, exclusion_record, fit_error_model, load_labels,
+                                  ltt_threshold, match_ambiguity, pair_table, referent_features, run_audit,
+                                  scene_folds, select_ridge, synthetic_pairs, wilson_interval)
 from measured_space.qa_schema import QAItem, QuestionSpec, Referent, write_jsonl
+
+M = TypeVar("M")
 
 FAST = AuditConfig(n_boot=200, ridge_grid=(1.0,))     # fixed ridge keeps the pipeline tests fast
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
@@ -459,6 +470,351 @@ def test_sigma_model_predicts_a_flat_spread_on_homoscedastic_truth() -> None:
     tercile = cov[(cov["dataset"] == "synthetic") & (cov["by"] == "sigma_tercile") & (cov["level"] == 0.9)
                   & (cov["method"] == "sigma")]
     assert tercile["coverage"].max() - tercile["coverage"].min() < 0.08
+
+
+# --------------------------------------------------------------------------------------------------------
+# Cross-fitting folds: unchanged up to max_folds scenes; grouped, leak-free, balanced and bounded above it
+# --------------------------------------------------------------------------------------------------------
+
+
+def _cross_fit_v0(rows: pd.DataFrame, fit: Callable[[pd.DataFrame], M],
+                  predict: Callable[[M, pd.DataFrame], dict[str, Any]]) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Frozen copy of ``cross_fit`` before grouped folds: leave one scene out, leave two out for calibration.
+
+    Parameters
+    ----------
+    rows : pandas.DataFrame
+        Rows of one dataset and question type, with a ``scene`` column.
+    fit : callable
+        ``fit(train_rows) -> model``.
+    predict : callable
+        ``predict(model, rows) -> {name: array}``.
+
+    Returns
+    -------
+    test, cal : pandas.DataFrame
+        As :func:`~measured_space.audit.cross_fit` returned them.
+    """
+    scenes = sorted(rows["scene"].unique())
+    if len(scenes) < 3:
+        raise ValueError(f"Leave-two-scenes-out needs >= 3 scenes, got {len(scenes)}")
+    by_scene = {s: rows[rows["scene"] == s] for s in scenes}
+    test_parts, cal_parts = [], []
+    for s in scenes:
+        model = fit(rows[rows["scene"] != s])
+        test_parts.append(pd.DataFrame({"row": by_scene[s].index, **predict(model, by_scene[s])}))
+    for s, t in combinations(scenes, 2):
+        model = fit(rows[~rows["scene"].isin([s, t])])
+        for test_scene, cal_scene in ((s, t), (t, s)):
+            part = by_scene[cal_scene]
+            cal_parts.append(pd.DataFrame({"test_scene": test_scene, "row": part.index, **predict(model, part)}))
+    return pd.concat(test_parts, ignore_index=True), pd.concat(cal_parts, ignore_index=True)
+
+
+def _select_ridge_v0(rows: pd.DataFrame, fit: Callable[[pd.DataFrame, float], M],
+                     loss: Callable[[M, pd.DataFrame], float], grid: tuple[float, ...]) -> float:
+    """Frozen copy of ``select_ridge`` before grouped folds: leave-one-scene-out cross-validation.
+
+    Parameters
+    ----------
+    rows : pandas.DataFrame
+        Training rows with a ``scene`` column.
+    fit : callable
+        ``fit(train_rows, ridge) -> model``.
+    loss : callable
+        ``loss(model, held_out_rows) -> summed loss``.
+    grid : tuple of float
+        Candidate weights.
+
+    Returns
+    -------
+    float
+        The chosen weight, as :func:`~measured_space.audit.select_ridge` chose it.
+    """
+    grid = tuple(sorted(grid))
+    if len(grid) == 1:
+        return float(grid[0])
+    scenes = sorted(rows["scene"].unique())
+    if len(scenes) < 2:
+        return float(grid[-1])
+    totals = np.zeros(len(grid))
+    for s in scenes:
+        train, held = rows[rows["scene"] != s], rows[rows["scene"] == s]
+        for j, ridge in enumerate(grid):
+            totals[j] += loss(fit(train, ridge), held)
+    best = np.flatnonzero(totals <= totals.min() + 1e-9)
+    return float(grid[best[-1]])
+
+
+class _Recorder:
+    """An instrumented model: each fit records the scenes it trained on, and predictions name their model.
+
+    Attributes
+    ----------
+    trained : list of frozenset of str
+        Training scenes of every fit, in fit order (a model is its position here).
+    """
+
+    def __init__(self) -> None:
+        """Start with no fits."""
+        self.trained: list[frozenset[str]] = []
+
+    def fit(self, rows: pd.DataFrame) -> int:
+        """Record a fit.
+
+        Parameters
+        ----------
+        rows : pandas.DataFrame
+            Training rows.
+
+        Returns
+        -------
+        int
+            The model's number.
+        """
+        self.trained.append(frozenset(rows["scene"].unique()))
+        return len(self.trained) - 1
+
+    def predict(self, model: int, rows: pd.DataFrame) -> dict[str, Any]:
+        """Name the model that predicts each row.
+
+        Parameters
+        ----------
+        model : int
+            The model's number.
+        rows : pandas.DataFrame
+            Rows to predict.
+
+        Returns
+        -------
+        dict
+            ``model``: the model number per row.
+        """
+        return {"model": np.full(len(rows), model, dtype=np.int64)}
+
+
+def _rows(n_scenes: int, n_items: int, seed: int = 0, qtype: str = "size_height") -> pd.DataFrame:
+    """Labelled rows of one synthetic dataset and numeric question type.
+
+    Parameters
+    ----------
+    n_scenes : int
+        Scenes.
+    n_items : int
+        Questions per scene (each answered by two depth sources; a few are misses).
+    seed : int, default 0
+        Random seed.
+    qtype : str, default "size_height"
+        Question type.
+
+    Returns
+    -------
+    pandas.DataFrame
+        :func:`~measured_space.audit.synthetic_pairs` rows of that type with an auto answer.
+    """
+    pairs = synthetic_pairs(n_scenes=n_scenes, n_items=n_items, seed=seed)
+    return pairs[(pairs["qtype"] == qtype) & pairs["matched"]]
+
+
+@pytest.mark.parametrize("n_scenes", [5, 20])
+def test_cross_fit_is_leave_one_scene_out_exactly_up_to_max_folds_scenes(n_scenes: int) -> None:
+    """At most ``max_folds`` scenes: the same fits on the same training rows in the same order, and the same
+    outputs, as the original leave-one-scene-out cross-fit, with or without ``max_folds``.
+
+    Parameters
+    ----------
+    n_scenes : int
+        Scenes (20 is the default ``max_folds``, the largest count left ungrouped).
+    """
+    rows = _rows(n_scenes, 6, seed=n_scenes)
+    old = _Recorder()
+    expected = _cross_fit_v0(rows, old.fit, old.predict)
+    for max_folds in (None, AuditConfig().max_folds, n_scenes):
+        new = _Recorder()
+        got = cross_fit(rows, new.fit, new.predict, max_folds=max_folds, seed=7)
+        assert new.trained == old.trained
+        for g, e in zip(got, expected):
+            pd.testing.assert_frame_equal(g, e, check_exact=True)
+
+
+def test_cross_fit_and_select_ridge_reproduce_the_original_feature_model_fits() -> None:
+    """The audit's feature model through the new cross-fit and ridge search (default ``max_folds``) gives
+    bit-identical predictions and ridge choices to the original functions."""
+    rows = _rows(5, 20, seed=2)
+    config = AuditConfig(ridge_grid=(1.0, 100.0, 1e4))
+    sources = ["laser", "moge"]
+
+    def fit_v0(r: pd.DataFrame) -> NumericPredictor:
+        """The feature model with the original ridge search.
+
+        Parameters
+        ----------
+        r : pandas.DataFrame
+            Training rows.
+
+        Returns
+        -------
+        NumericPredictor
+            Fitted at the ridge weight the original search chooses.
+        """
+        ridge = _select_ridge_v0(r, lambda t, lam: NumericPredictor.fit(t, "sigma", sources, config, lam),
+                                 lambda m, h: float(np.sum(m.nll(h))), config.ridge_grid)
+        return NumericPredictor.fit(r, "sigma", sources, config, ridge)
+
+    expected = _cross_fit_v0(rows, fit_v0, lambda m, r: m.predict(r))
+    got = _cross_fit_task((rows, "sigma", True, sources, config))
+    for g, e in zip(got, expected):
+        pd.testing.assert_frame_equal(g.drop(columns="kind"), e, check_exact=True)
+    assert set(got[0]["ridge"]) <= set(config.ridge_grid)                       # chosen by the search
+
+
+def test_run_audit_is_bit_identical_up_to_max_folds_scenes(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A whole audit with a ridge search, run with the new cross-fit and ridge search and again with the frozen
+    originals patched in: every table and every per-item frame is identical, and no ``folds`` table appears.
+
+    Parameters
+    ----------
+    monkeypatch : pytest.MonkeyPatch
+        Swaps the originals into the audit module.
+    """
+    pairs = synthetic_pairs(n_scenes=5, n_items=30, noise_scale=1.8, seed=3)
+    config = AuditConfig(n_boot=50, ridge_grid=(1.0, 1000.0))
+    new = run_audit(pairs, config)
+    monkeypatch.setattr(audit_module, "cross_fit", lambda rows, fit, predict, **_: _cross_fit_v0(rows, fit, predict))
+    monkeypatch.setattr(audit_module, "select_ridge",
+                        lambda rows, fit, loss, grid, **_: _select_ridge_v0(rows, fit, loss, tuple(grid)))
+    old = run_audit(pairs, config)
+    assert list(new.tables) == list(old.tables) and "folds" not in new.tables
+    for name, table in old.tables.items():
+        pd.testing.assert_frame_equal(new.tables[name], table, check_exact=True, obj=name)
+    for name in ("pairs", "numeric", "categorical", "gate"):
+        pd.testing.assert_frame_equal(getattr(new, name), getattr(old, name), check_exact=True, obj=name)
+    assert new.notes == old.notes
+
+
+def test_cross_fit_on_100_scenes_never_predicts_with_a_model_that_saw_the_scene() -> None:
+    """Grouped folds (100 scenes, 20 folds): no test or calibration prediction for a scene, and no calibration
+    score for a test scene, comes from a model trained on that scene; each test scene is calibrated by exactly
+    the scenes outside its fold, each once; and there are 20 + 190 fits instead of 100 + 4950."""
+    rows = _rows(100, 4, seed=11)
+    rec = _Recorder()
+    test, cal = cross_fit(rows, rec.fit, rec.predict, max_folds=20, seed=0)
+    assert len(rec.trained) == 20 + 20 * 19 // 2
+    scene = rows["scene"]
+    trained = [rec.trained[m] for m in test["model"]]
+    assert sorted(test["row"]) == sorted(rows.index)                              # every row predicted once
+    assert not any(s in t for s, t in zip(scene.loc[test["row"]], trained))
+    trained = [rec.trained[m] for m in cal["model"]]
+    cal_scene = scene.loc[cal["row"]].to_numpy()
+    assert not any(s in t for s, t in zip(cal_scene, trained))                   # calibrated scene unseen
+    assert not any(s in t for s, t in zip(cal["test_scene"], trained))           # test scene unseen
+    fold_of = scene_folds(scene, 20, 0)
+    for s, g in cal.groupby("test_scene"):
+        outside = {t for t in fold_of if fold_of[t] != fold_of[s]}
+        assert set(scene.loc[g["row"]]) == outside, s
+        assert g["row"].is_unique                                                # each calibration row once
+    assert len(cal) == sum((scene.map(fold_of) != fold_of[s]).sum() for s in fold_of)
+
+
+def test_select_ridge_groups_more_than_max_folds_scenes_and_never_holds_out_a_training_scene() -> None:
+    """With 100 training scenes the ridge search runs 20 folds per candidate; every scene is held out exactly once
+    and never in the rows its model was fitted on. With 20 scenes it holds out one scene at a time."""
+    for n_scenes, n_folds in ((100, 20), (20, 20), (7, 7)):
+        rows = _rows(n_scenes, 3, seed=n_scenes)
+        fits: list[tuple[frozenset[str], float]] = []
+        held: list[tuple[int, frozenset[str]]] = []
+
+        def fit(r: pd.DataFrame, ridge: float) -> int:
+            """Record a fit.
+
+            Parameters
+            ----------
+            r : pandas.DataFrame
+                Training rows.
+            ridge : float
+                Candidate weight.
+
+            Returns
+            -------
+            int
+                The model's number.
+            """
+            fits.append((frozenset(r["scene"].unique()), ridge))
+            return len(fits) - 1
+
+        def loss(model: int, r: pd.DataFrame) -> float:
+            """Record the held-out scenes of a model.
+
+            Parameters
+            ----------
+            model : int
+                The model's number.
+            r : pandas.DataFrame
+                Held-out rows.
+
+            Returns
+            -------
+            float
+                A loss favouring larger weights.
+            """
+            held.append((model, frozenset(r["scene"].unique())))
+            return -fits[model][1]
+
+        grid = (1.0, 10.0, 100.0)
+        assert select_ridge(rows, fit, loss, grid, max_folds=20, seed=0) == 100.0
+        assert len(fits) == n_folds * len(grid)
+        for model, scenes in held:
+            assert not scenes & fits[model][0]
+            assert scenes | fits[model][0] == set(rows["scene"])
+        per_ridge = [[s for m, scenes in held if fits[m][1] == lam for s in scenes] for lam in grid]
+        assert all(sorted(p) == sorted(rows["scene"].unique()) for p in per_ridge)  # each scene held out once
+        if n_scenes <= 20:
+            assert all(len(scenes) == 1 for _, scenes in held)
+
+
+def test_scene_folds_are_deterministic_and_balanced() -> None:
+    """The fold assignment repeats exactly for a seed, keeps fold row counts within one scene's rows of each
+    other, numbers folds by their first scene, and is one scene per fold up to ``max_folds`` scenes."""
+    rng = np.random.default_rng(4)
+    counts = rng.integers(1, 40, size=106)
+    scenes = np.repeat([f"s{i:03d}" for i in range(106)], counts)
+    folds = scene_folds(scenes, 20, seed=0)
+    assert folds == scene_folds(pd.Series(scenes).sample(frac=1.0, random_state=1), 20, seed=0)  # row order
+    assert list(folds) == sorted(folds) and sorted(set(folds.values())) == list(range(20))
+    load = pd.Series(counts, index=[f"s{i:03d}" for i in range(106)]).groupby(folds).sum()
+    assert load.max() - load.min() <= counts.max()
+    firsts = [min(s for s in folds if folds[s] == f) for f in range(20)]
+    assert firsts == sorted(firsts)
+    equal = np.repeat([f"s{i:03d}" for i in range(100)], 5)                     # all ties: seeded order decides
+    by_seed = [scene_folds(equal, 20, seed=seed) for seed in range(3)]
+    assert all(np.bincount(list(f.values())).tolist() == [5] * 20 for f in by_seed)
+    assert by_seed[0] != by_seed[1] and by_seed[0] == scene_folds(equal, 20, seed=0)
+    assert scene_folds(scenes, None) == scene_folds(scenes, 106) == {s: i for i, s in enumerate(sorted(folds))}
+    with pytest.raises(ValueError):
+        AuditConfig(max_folds=2)
+
+
+def test_audit_of_100_scenes_is_grouped_bounded_and_fast() -> None:
+    """A synthetic audit of 100 scenes runs on 20 folds per question type, records them, shares one model per
+    fold, and finishes in under a minute."""
+    pairs = synthetic_pairs(n_scenes=100, n_items=5, noise_scale=1.8, seed=6)
+    config = AuditConfig(n_boot=50, tau_scales=(1.0,), ridge_grid=(1.0,))
+    started = time.perf_counter()
+    result = run_audit(pairs, config)
+    assert time.perf_counter() - started < 60.0
+    folds = result.tables["folds"]
+    assert set(folds["qtype"]) == {"size_height", "distance_center", "left_right"}
+    assert folds.groupby("qtype")["fold"].nunique().eq(20).all()
+    assert any("100 scenes cross-fitted in 20 folds" in note for note in result.notes)
+    const = result.numeric[result.numeric["kind"] == "const"].merge(folds, on=["dataset", "qtype", "scene"])
+    assert const.groupby(["qtype", "fold"])["sigma"].nunique().eq(1).all()     # one model per fold
+    assert const.groupby("qtype")["sigma"].nunique().eq(20).all()
+    gate = result.tables["gate_thresholds"]
+    assert gate["scene"].nunique() == 100                                     # a threshold per test scene
+    rows = pairs[(pairs["qtype"] == "size_height") & pairs["matched"]].reset_index(drop=True)
+    _, cal = _cross_fit_task((rows, "const", True, ["laser", "moge"], config))
+    fold_of = scene_folds(rows["scene"], 20, config.seed)
+    assert not any(fold_of[t] == fold_of[s] for t, s in zip(cal["test_scene"], rows.loc[cal["row"], "scene"]))
 
 
 # --------------------------------------------------------------------------------------------------------

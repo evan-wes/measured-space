@@ -3,7 +3,10 @@
 For each dataset this reads ``<label root>/<dataset>/qa_oracle.jsonl`` and every ``qa_auto_<depth source>.jsonl``
 next to it (written by the label pipeline), and runs :func:`measured_space.audit.run_audit`: errors per question
 type and depth source, the structured error model with leave-one-scene-out predictions, Mondrian conformal
-calibration, categorical p(correct), and the Learn-then-Test label gate.
+calibration, categorical p(correct), and the Learn-then-Test label gate. A dataset and question type with more
+than ``--max-folds`` scenes (default 20) is cross-fitted on that many folds of scenes balanced by row count
+instead of scene by scene (:func:`measured_space.audit.cross_fit`); the assignment is written as ``folds.csv``
+and the setting to ``summary.json``.
 
 Outputs:
 
@@ -84,8 +87,12 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--kappa", type=float, default=AuditConfig.kappa, help="numeric reject threshold (tolerances)")
     parser.add_argument("--ridge-grid", type=float, nargs="+", default=list(AuditConfig.ridge_grid),
                         help="candidate ridge weights, chosen per fit by inner leave-one-scene-out CV "
-                             "(one value: fixed)")
+                             "(grouped K-fold above --max-folds scenes; one value: fixed)")
     parser.add_argument("--n-jobs", type=int, default=4, help="worker processes for cross-fitting")
+    parser.add_argument("--max-folds", type=int, default=AuditConfig.max_folds,
+                        help="most cross-fitting folds per dataset and question type; with more scenes, scenes are "
+                             "grouped into this many folds balanced by row count, and leave-one-scene-out "
+                             "becomes leave-one-fold-out (default %(default)s)")
     parser.add_argument("--n-boot", type=int, default=AuditConfig.n_boot, help="scene-cluster bootstrap replicates")
     parser.add_argument("--wait-minutes", type=float, default=0.0,
                         help="poll for each dataset's summary.json for up to this long (0: do not wait)")
@@ -183,6 +190,34 @@ def write_tables(result: AuditResult, out: Path, results: Path | None) -> None:
         folder.mkdir(parents=True, exist_ok=True)
         for name, frame in result.tables.items():
             frame.to_csv(folder / f"{name}.csv", index=False, float_format="%.6g")
+
+
+def cross_fit_record(result: AuditResult, config: AuditConfig) -> dict[str, Any]:
+    """The cross-fitting settings record for a run's summary.
+
+    Parameters
+    ----------
+    result : AuditResult
+        The audit (its ``folds`` table lists the groups whose scenes were grouped, if any).
+    config : AuditConfig
+        Its settings.
+
+    Returns
+    -------
+    dict
+        ``max_folds``, ``seed`` (it breaks the fold assignment's ties), ``rule`` and ``grouped``:
+        ``{"<dataset>/<qtype>": {"n_scenes", "n_folds"}}`` for every group cross-fitted on grouped folds (the
+        assignment is in ``folds.csv``); every other modelled group left each scene out on its own.
+    """
+    folds = result.tables.get("folds", pd.DataFrame(columns=["dataset", "qtype", "scene", "fold"]))
+    grouped = {f"{dataset}/{qtype}": {"n_scenes": int(g["scene"].nunique()), "n_folds": int(g["fold"].nunique())}
+               for (dataset, qtype), g in folds.groupby(["dataset", "qtype"], sort=True)}
+    return {"max_folds": config.max_folds, "seed": config.seed,
+            "rule": "a dataset and question type with at most max_folds scenes is cross-fitted leave one scene "
+                    "out (calibration: leave two out); with more, its scenes are grouped into max_folds folds "
+                    "balanced by row count and the same scheme runs on folds (calibration scores for a test "
+                    "scene come from scenes outside its fold, predicted without both folds)",
+            "grouped": grouped}
 
 
 PRIMARY_GATE = {"numeric": "sigma", "categorical": "logistic"}
@@ -349,7 +384,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     started = time.time()
     config = dataclasses.replace(AuditConfig(), epsilon=args.epsilon, delta=args.delta, kappa=args.kappa,
-                                 ridge_grid=tuple(args.ridge_grid), n_boot=args.n_boot, n_jobs=args.n_jobs)
+                                 ridge_grid=tuple(args.ridge_grid), n_boot=args.n_boot, n_jobs=args.n_jobs,
+                                 max_folds=args.max_folds)
     out = args.out or data_root() / "outputs" / ("audit_exclude_ambiguous" if args.exclude_ambiguous else "audit")
     inputs: dict[str, Any] = {}
     if args.synthetic:
@@ -384,7 +420,7 @@ def main(argv: list[str] | None = None) -> int:
     write_tables(result, out, results)
     summary = {"config": dataclasses.asdict(config), "gate_z": config.gate_z, "datasets": sorted(pairs["dataset"].unique()),
                "n_rows": int(len(pairs)), "n_labelled": int(pairs["matched"].sum()), "inputs": inputs,
-               "exclude_ambiguous": exclusion,
+               "exclude_ambiguous": exclusion, "cross_fit": cross_fit_record(result, config),
                "notes": result.notes, "git_commit": git_commit(), "seconds": round(time.time() - started, 1)}
     for folder in [out] + ([results] if results is not None else []):
         (folder / "summary.json").write_text(dumps(summary))

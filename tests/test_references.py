@@ -5,11 +5,14 @@ balanced stratified reference draws; tolerances as ``is_correct`` defines them; 
 experiment reproduces the audit's gate exactly; and with one site whose auto answers are 25 % too large (a
 capture scale error no per-label feature sees), the pooled gate fails there while recalibration from 40
 references brings the error among accepted labels back within epsilon. Also: the experiment runs on a pair table
-with ambiguous pairs excluded, and ``scripts/run_reference_experiment.py`` has no default for its outputs.
+with ambiguous pairs excluded, and ``scripts/run_reference_experiment.py`` has no default for its outputs. With
+scenes grouped into cross-fitting folds (more scenes than ``max_folds``), no references still reproduce the
+audit's gate exactly; the prediction cache key gains ``max_folds`` only then, so older caches stay valid.
 """
 
 from __future__ import annotations
 
+import dataclasses
 import importlib.util
 import math
 import sys
@@ -21,9 +24,9 @@ import pandas as pd
 import pytest
 
 from measured_space.audit import AuditConfig, AuditResult, exclude_ambiguous, run_audit
-from measured_space.references import (ReferenceConfig, ReferenceResult, Variant, fit_site_correction,
-                                       reference_order, run_reference_experiment, site_quantile_factor,
-                                       synthetic_site_pairs, tolerance_at)
+from measured_space.references import (ReferenceConfig, ReferenceResult, Variant, cross_fit_key, cross_fit_sigma,
+                                       fit_site_correction, reference_order, run_reference_experiment,
+                                       site_quantile_factor, synthetic_site_pairs, tolerance_at)
 
 FAST = AuditConfig(n_boot=50, ridge_grid=(1.0,))       # fixed ridge keeps the cross-fitting fast
 SHIFTED = "scene00"                                     # its auto answers are 25 % too large
@@ -138,6 +141,32 @@ def test_tolerance_at_matches_the_correctness_rule() -> None:
                                             [0.3, 2.0, -2.0, 1.0]), [0.05, 0.2, 0.2, 0.0])
 
 
+def _assert_no_references_is_the_audit_gate(experiment: ReferenceResult, audit: AuditResult) -> pd.DataFrame:
+    """Check that with n = 0 every scene's accepted labels, their errors and the 90 % coverage are the audit's.
+
+    Parameters
+    ----------
+    experiment : ReferenceResult
+        The reference experiment.
+    audit : AuditResult
+        The audit of the same sites, with the same model settings.
+
+    Returns
+    -------
+    pandas.DataFrame
+        The audit's counts per tolerance multiple and scene: ``n_eval, n_acc, n_acc_wrong, n_cov``.
+    """
+    gate = audit.gate[(audit.gate["kind"] == "sigma") & (audit.gate["answer_kind"] == "numeric")]
+    expected = gate.groupby(["tau_scale", "scene"]).apply(
+        lambda g: pd.Series({"n_eval": len(g), "n_acc": int((g["decision"] == "accept").sum()),
+                             "n_acc_wrong": int(g.loc[g["decision"] == "accept", "wrong_s"].sum()),
+                             "n_cov": int(g["cov90"].sum())}), include_groups=False)
+    d = experiment.draws
+    got = d[d["n_refs"] == 0].set_index(["tau_scale", "scene"])[list(expected.columns)].sort_index()
+    pd.testing.assert_frame_equal(got.astype(int), expected.sort_index().astype(int))
+    return expected
+
+
 def test_no_references_reproduces_the_audit_gate(experiment: ReferenceResult, audit: AuditResult) -> None:
     """With n = 0, every scene's accepted labels, their errors and the 90 % coverage are the audit's, exactly.
 
@@ -148,15 +177,38 @@ def test_no_references_reproduces_the_audit_gate(experiment: ReferenceResult, au
     audit : AuditResult
         The audit of the same sites.
     """
-    gate = audit.gate[(audit.gate["kind"] == "sigma") & (audit.gate["answer_kind"] == "numeric")]
-    expected = gate.groupby(["tau_scale", "scene"]).apply(
-        lambda g: pd.Series({"n_eval": len(g), "n_acc": int((g["decision"] == "accept").sum()),
-                             "n_acc_wrong": int(g.loc[g["decision"] == "accept", "wrong_s"].sum()),
-                             "n_cov": int(g["cov90"].sum())}), include_groups=False)
-    d = experiment.draws
-    got = d[d["n_refs"] == 0].set_index(["tau_scale", "scene"])[list(expected.columns)].sort_index()
-    pd.testing.assert_frame_equal(got.astype(int), expected.sort_index().astype(int))
+    expected = _assert_no_references_is_the_audit_gate(experiment, audit)
     assert expected.loc[(1.0, SHIFTED), "n_acc"] > 0                    # the shifted site does get accepted labels
+
+
+def test_no_references_reproduces_the_audit_gate_on_grouped_folds() -> None:
+    """With more scenes than ``max_folds`` the audit's grouped folds carry over: a test scene's fold-mates
+    give it no calibration rows, and with n = 0 the experiment is still the audit's gate exactly."""
+    pairs = synthetic_site_pairs(8, 40, scale_errors={SHIFTED: 1.25}, seed=4)
+    grouped = dataclasses.replace(FAST, max_folds=3)
+    config = ReferenceConfig(n_refs=(0, 10), n_draws=1, variants=(Variant("abc_uniform"),))
+    experiment = run_reference_experiment(pairs, config, grouped)
+    audit = run_audit(pairs.drop(columns=["tol_abs", "tol_rel"]), grouped)
+    folds = audit.tables["folds"]
+    assert folds.groupby("qtype")["fold"].nunique().eq(3).all()
+    _, cal, _ = cross_fit_sigma(pairs.reset_index(drop=True), grouped)
+    cal = cal.assign(scene=pairs.loc[cal["row"], "scene"].to_numpy(), qtype=pairs.loc[cal["row"], "qtype"].to_numpy())
+    fold = folds.set_index(["qtype", "scene"])["fold"]
+    assert (fold.loc[list(zip(cal["qtype"], cal["test_scene"]))].to_numpy()
+            != fold.loc[list(zip(cal["qtype"], cal["scene"]))].to_numpy()).all()      # no fold-mate calibrates
+    _assert_no_references_is_the_audit_gate(experiment, audit)
+    assert len(experiment.draws[experiment.draws["n_refs"] == 10]) == 8 * len(FAST.tau_scales)
+
+
+def test_cross_fit_key_adds_max_folds_only_when_it_changes_the_predictions() -> None:
+    """Up to ``max_folds`` scenes per group, the cache key is the one written before ``max_folds`` existed (every
+    setting but ``n_jobs``); with more scenes, it holds ``max_folds``."""
+    small, large = synthetic_site_pairs(6, 10, seed=1), synthetic_site_pairs(25, 4, seed=1)
+    before = {k: v for k, v in dataclasses.asdict(FAST).items() if k not in ("n_jobs", "max_folds")}
+    assert cross_fit_key(small, FAST) == before
+    assert cross_fit_key(small, dataclasses.replace(FAST, max_folds=3, n_jobs=8)) == {**before, "max_folds": 3}
+    assert cross_fit_key(large, FAST) == {**before, "max_folds": FAST.max_folds}
+    assert cross_fit_key(large, dataclasses.replace(FAST, max_folds=25)) == before
 
 
 def test_references_restore_the_bound_at_a_site_with_a_scale_error(experiment: ReferenceResult) -> None:

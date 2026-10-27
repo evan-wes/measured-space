@@ -27,6 +27,22 @@ guarantee. It follows the design review in ``docs/LOG.md``.
    other scenes, each predicted by a model that saw neither that scene nor the test scene (leave two scenes
    out). Calibration models train on one scene fewer than the test model, so their scores err on the large
    side and the intervals on the conservative side.
+
+   **Grouped folds above ``max_folds`` scenes.** Leave-two-out costs ``n + n (n - 1) / 2`` fits per model
+   kind (5,671 at 106 scenes, each with its own inner ridge search). So when a dataset and question type has
+   more than :attr:`AuditConfig.max_folds` scenes, its scenes are grouped into ``max_folds`` folds balanced by
+   row count (:func:`scene_folds`: deterministic from the seed, never looking at errors or features) and the
+   same scheme runs on folds: a model fitted without fold ``F`` predicts every scene of ``F``; for each pair
+   of folds ``{F, G}``, a model fitted without both predicts the scenes of ``G`` as calibration data for every
+   test scene of ``F``, and vice versa (``K + K (K - 1) / 2`` fits, 210 at ``K = 20``). With at most
+   ``max_folds`` scenes every scene is its own fold, which is the leave-one-scene-out design above, exactly.
+   The guarantees are kept: no prediction for a scene comes from a model that saw it, and no calibration
+   score for a test scene comes from a model that saw the test scene or the scene being calibrated. Each test
+   scene still gets its own calibration set of whole other scenes, so exchangeability is still assumed at the
+   scene level and nowhere finer; a test scene's own fold-mates do not calibrate it. Calibration models now
+   train on one fold fewer than the test model (about ``n / K`` scenes rather than one), so their scores err
+   further on the large side. The inner ridge search (:func:`select_ridge`) groups its training scenes the
+   same way.
 4. **Conformal calibration** (:func:`conformal_calibrate`). Split conformal on ``|e - mu| / sigma``, Mondrian
    by question type and depth source (pooled over sources when a cell has too few calibration scores, which is
    recorded). Coverage is reported at nominal 50/80/90/95 % with Wilson intervals (:func:`coverage_table`).
@@ -125,8 +141,9 @@ class AuditConfig:
         Candidate L2 penalty weights on standardised, non-intercept coefficients (added to the summed negative
         log-likelihood) of the feature models (``sigma``, ``logistic``, ``margin``). With several candidates,
         every fit picks its own by leave-one-scene-out cross-validation on its training scenes only
-        (:func:`select_ridge`), so a fold never sees its test or calibration scene; with one, the weight is
-        fixed. Default ``(1, 10, ..., 1e5)``: from weak to strong enough to shrink the feature model to the
+        (:func:`select_ridge`; grouped ``max_folds``-fold cross-validation when the training rows come from
+        more than ``max_folds`` scenes), so a fold never sees its test or calibration scene; with one, the
+        weight is fixed. Default ``(1, 10, ..., 1e5)``: from weak to strong enough to shrink the feature model to the
         constant baseline (a first grid ending at 1000 had every small-data fit choose its edge).
     n_jobs : int
         Worker processes for cross-fitting (default 1).
@@ -159,8 +176,13 @@ class AuditConfig:
         Fewest scenes a dataset and question type need to be modelled (default 3; leave-two-out needs 3).
     min_rows : int
         Fewest labelled rows a dataset and question type need to be modelled (default 20).
+    max_folds : int
+        Most cross-fitting folds per dataset and question type (default 20, at least 3). With at most this many
+        scenes, every scene is its own fold (leave one scene out; leave two out for calibration). With more,
+        scenes are grouped into this many folds balanced by row count (:func:`scene_folds`) and the same scheme
+        runs on folds (:func:`cross_fit`); the inner ridge search groups its training scenes the same way.
     seed : int
-        Seed for tie-breaking and the cluster bootstrap (default 0).
+        Seed for tie-breaking (including the fold assignment) and the cluster bootstrap (default 0).
     n_boot : int
         Scene-cluster bootstrap replicates for the headline coverage interval (default 2000).
     """
@@ -182,8 +204,20 @@ class AuditConfig:
     n_bins: int = 10
     min_scenes: int = 3
     min_rows: int = 20
+    max_folds: int = 20
     seed: int = 0
     n_boot: int = 2000
+
+    def __post_init__(self) -> None:
+        """Check the settings that would make cross-fitting impossible.
+
+        Raises
+        ------
+        ValueError
+            If ``max_folds`` is below 3 (leaving two folds out needs a third to train on).
+        """
+        if self.max_folds < 3:
+            raise ValueError(f"max_folds must be at least 3, got {self.max_folds}")
 
     @property
     def gate_z(self) -> float:
@@ -1185,7 +1219,8 @@ class NumericPredictor:
         sources : sequence of str
             All depth sources of the dataset.
         config : AuditConfig
-            Ridge grid, noise floor and gross-component settings.
+            Ridge grid, its cross-validation folds (``max_folds``, ``seed``), noise floor and gross-component
+            settings.
         ridge : float, optional
             Fixed ridge weight for the ``sigma`` kind; by default chosen from ``config.ridge_grid`` by
             :func:`select_ridge` on ``rows``. The baselines have no penalised coefficients.
@@ -1197,7 +1232,8 @@ class NumericPredictor:
         """
         if kind == "sigma" and ridge is None:
             ridge = select_ridge(rows, lambda r, lam: NumericPredictor.fit(r, kind, sources, config, lam),
-                                 lambda m, r: float(np.sum(m.nll(r))), config.ridge_grid)
+                                 lambda m, r: float(np.sum(m.nll(r))), config.ridge_grid,
+                                 max_folds=config.max_folds, seed=config.seed)
         standardizer = Standardizer.fit(rows, FEATURES if kind == "sigma" else (), sources if kind == "sigma"
                                         else ())
         Xm, Xv, offset = NumericPredictor.design(rows, kind, standardizer)
@@ -1326,7 +1362,7 @@ class LogisticPredictor:
         sources : sequence of str
             All depth sources of the dataset.
         config : AuditConfig
-            Supplies the ridge grid.
+            Supplies the ridge grid and its cross-validation folds (``max_folds``, ``seed``).
         ridge : float, optional
             Fixed ridge weight; by default chosen by :func:`select_ridge` (the ``const`` kind uses the smallest
             grid value, which only touches its intercept).
@@ -1352,7 +1388,8 @@ class LogisticPredictor:
         if ridge is None:
             ridge = min(config.ridge_grid) if kind == "const" else select_ridge(
                 rows, lambda r, lam: LogisticPredictor.fit(r, kind, sources, config, lam),
-                lambda m, r: float(np.sum(m.nll(r))), config.ridge_grid)
+                lambda m, r: float(np.sum(m.nll(r))), config.ridge_grid, max_folds=config.max_folds,
+                seed=config.seed)
         y = 1.0 - rows["wrong"].to_numpy(dtype=np.float64)
         return LogisticPredictor(kind, standardizer, fit_logistic(y, standardizer.transform(rows), ridge=ridge),
                                  float(ridge))
@@ -1391,8 +1428,12 @@ class LogisticPredictor:
 
 
 def select_ridge(rows: pd.DataFrame, fit: Callable[[pd.DataFrame, float], T], loss: Callable[[T, pd.DataFrame], float],
-                 grid: Sequence[float]) -> float:
+                 grid: Sequence[float], *, max_folds: int | None = None, seed: int = 0) -> float:
     """Choose a ridge weight by leave-one-scene-out cross-validation within the given rows.
+
+    With more than ``max_folds`` scenes in ``rows``, the scenes are grouped into ``max_folds`` folds
+    (:func:`scene_folds`) and each fold is held out in turn instead: grouped K-fold cross-validation, which
+    still never splits a scene between training and held-out rows.
 
     Parameters
     ----------
@@ -1404,6 +1445,10 @@ def select_ridge(rows: pd.DataFrame, fit: Callable[[pd.DataFrame, float], T], lo
         ``loss(model, held_out_rows) -> summed loss`` (held-out negative log-likelihood).
     grid : sequence of float
         Candidate weights.
+    max_folds : int, optional
+        Most folds; None holds out every scene on its own however many there are.
+    seed : int, default 0
+        Seed of the fold assignment's tie-breaks.
 
     Returns
     -------
@@ -1414,12 +1459,13 @@ def select_ridge(rows: pd.DataFrame, fit: Callable[[pd.DataFrame, float], T], lo
     grid = sorted(grid)
     if len(grid) == 1:
         return float(grid[0])
-    scenes = sorted(rows["scene"].unique())
-    if len(scenes) < 2:
+    fold_of = scene_folds(rows["scene"], max_folds, seed)
+    if len(fold_of) < 2:
         return float(grid[-1])
+    row_fold = rows["scene"].map(fold_of).to_numpy()
     totals = np.zeros(len(grid))
-    for s in scenes:
-        train, held = rows[rows["scene"] != s], rows[rows["scene"] == s]
+    for f in range(max(fold_of.values()) + 1):
+        train, held = rows[row_fold != f], rows[row_fold == f]
         for j, ridge in enumerate(grid):
             totals[j] += loss(fit(train, ridge), held)
     best = np.flatnonzero(totals <= totals.min() + 1e-9)
@@ -1434,7 +1480,7 @@ def _cross_fit_task(task: tuple[pd.DataFrame, str, bool, list[str], AuditConfig]
     ----------
     task : tuple
         ``(rows, kind, numeric, sources, config)``: the labelled rows, the model kind, whether the type is
-        numeric, the dataset's depth sources and the settings.
+        numeric, the dataset's depth sources and the settings (``max_folds`` and ``seed`` set the folds).
 
     Returns
     -------
@@ -1443,7 +1489,8 @@ def _cross_fit_task(task: tuple[pd.DataFrame, str, bool, list[str], AuditConfig]
     """
     rows, kind, numeric, sources, config = task
     predictor: Any = NumericPredictor if numeric else LogisticPredictor
-    test, cal = cross_fit(rows, lambda r: predictor.fit(r, kind, sources, config), lambda m, r: m.predict(r))
+    test, cal = cross_fit(rows, lambda r: predictor.fit(r, kind, sources, config), lambda m, r: m.predict(r),
+                          max_folds=config.max_folds, seed=config.seed)
     return test.assign(kind=kind), cal.assign(kind=kind)
 
 
@@ -1515,14 +1562,91 @@ def _run_tasks(tasks: list[tuple[pd.DataFrame, str, bool, list[str], AuditConfig
 # ============================================================================================================
 
 
+def scene_folds(scenes: ArrayLike, max_folds: int | None, seed: int = 0) -> dict[Any, int]:
+    """Assign scenes to cross-fitting folds: one fold per scene, or ``max_folds`` folds balanced by row count.
+
+    With at most ``max_folds`` distinct scenes (or ``max_folds`` None), scene ``i`` in sorted order is fold
+    ``i``: leave one scene out. With more, scenes are taken in decreasing row count (ties in a random order
+    drawn from ``seed``) and each goes to the fold with the fewest rows so far (ties: fewer scenes, then the
+    lower fold number), so fold sizes in rows differ by at most the largest scene's count. Folds are then
+    numbered by their first scene in sorted order. The assignment depends on the scene ids, their row counts
+    and the seed only: never on errors, labels or features.
+
+    Parameters
+    ----------
+    scenes : array_like
+        The scene of every row (each scene weighs as many rows as it has).
+    max_folds : int or None
+        Most folds; None gives every scene its own fold.
+    seed : int, default 0
+        Seed of the tie-breaks between scenes with equal row counts.
+
+    Returns
+    -------
+    dict
+        Scene to fold number in ``0 .. K - 1``, in sorted scene order; ``K`` is the number of scenes or
+        ``max_folds``, whichever is smaller.
+    """
+    counts = pd.Series(np.asarray(scenes)).value_counts()
+    names = sorted(counts.index)
+    if max_folds is None or len(names) <= max_folds:
+        return {s: i for i, s in enumerate(names)}
+    n_rows = counts.reindex(names).to_numpy(dtype=np.int64)
+    tie = np.random.default_rng(seed).permutation(len(names))
+    order = np.lexsort((tie, -n_rows))                    # most rows first; equal counts in a seeded order
+    load, size = np.zeros(max_folds, dtype=np.int64), np.zeros(max_folds, dtype=np.int64)
+    fold = np.empty(len(names), dtype=np.int64)
+    for i in order:
+        k = min(range(max_folds), key=lambda j: (load[j], size[j], j))
+        fold[i], load[k], size[k] = k, load[k] + n_rows[i], size[k] + 1
+    number: dict[int, int] = {}
+    for k in fold:                                        # names are sorted: first sight is the fold's first scene
+        number.setdefault(int(k), len(number))
+    return {s: number[int(k)] for s, k in zip(names, fold)}
+
+
+def fold_table(rows: pd.DataFrame, config: AuditConfig) -> pd.DataFrame:
+    """The fold assignment :func:`cross_fit` uses for one dataset and question type (to record it).
+
+    Parameters
+    ----------
+    rows : pandas.DataFrame
+        The modelled rows of one dataset and question type (``dataset``, ``qtype``, ``scene``).
+    config : AuditConfig
+        ``max_folds`` and ``seed``.
+
+    Returns
+    -------
+    pandas.DataFrame
+        Columns ``dataset, qtype, scene, fold, n_rows, fold_rows, fold_scenes``, one row per scene in sorted
+        order: its fold (:func:`scene_folds`), its rows, and its fold's rows and scenes.
+    """
+    fold_of = scene_folds(rows["scene"], config.max_folds, config.seed)
+    n_rows = rows["scene"].value_counts()
+    table = pd.DataFrame({"dataset": rows["dataset"].iloc[0], "qtype": rows["qtype"].iloc[0],
+                          "scene": list(fold_of), "fold": list(fold_of.values()),
+                          "n_rows": [int(n_rows[s]) for s in fold_of]})
+    by_fold = table.groupby("fold")
+    return table.assign(fold_rows=by_fold["n_rows"].transform("sum"), fold_scenes=by_fold["scene"].transform("size"))
+
+
 def cross_fit(rows: pd.DataFrame, fit: Callable[[pd.DataFrame], T],
-              predict: Callable[[T, pd.DataFrame], dict[str, Array]]) -> tuple[pd.DataFrame, pd.DataFrame]:
+              predict: Callable[[T, pd.DataFrame], dict[str, Array]], *, max_folds: int | None = None,
+              seed: int = 0) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Leave-one-scene-out test predictions and leave-two-scenes-out calibration predictions.
 
     For each scene ``S`` a model fitted on all other scenes predicts ``S`` (the test predictions). For each pair
     of scenes ``{S, S'}`` a model fitted without both predicts ``S'`` as calibration data for test scene ``S``,
     and ``S`` as calibration data for ``S'``. So no calibration score for ``S`` comes from a model that saw
     ``S``, and none comes from the scene being calibrated.
+
+    With more than ``max_folds`` scenes, the scenes are grouped into ``max_folds`` folds (:func:`scene_folds`)
+    and the same holds at fold level: a model fitted without fold ``F`` predicts every scene of ``F``, and for
+    each pair of folds ``{F, G}`` a model fitted without both predicts each scene of ``G`` as calibration data
+    for every test scene of ``F`` (the predictions repeated once per test scene), and vice versa. The output
+    keeps its form, one calibration set per test scene, and the guarantee: no calibration score for ``S`` comes
+    from a model that saw ``S`` or the scene being calibrated. Scenes of ``S``'s own fold do not calibrate
+    ``S``. Fits: ``K + K (K - 1) / 2`` for ``K`` folds.
 
     Parameters
     ----------
@@ -1532,33 +1656,47 @@ def cross_fit(rows: pd.DataFrame, fit: Callable[[pd.DataFrame], T],
         ``fit(train_rows) -> model``.
     predict : callable
         ``predict(model, rows) -> {name: array of shape (n,)}``.
+    max_folds : int, optional
+        Most folds; None (the default) leaves every scene out on its own however many there are.
+    seed : int, default 0
+        Seed of the fold assignment's tie-breaks.
 
     Returns
     -------
     test : pandas.DataFrame
-        Columns ``row`` (index into ``rows``) and the predicted arrays; one row per input row.
+        Columns ``row`` (index into ``rows``) and the predicted arrays; one row per input row, scenes in sorted
+        order.
     cal : pandas.DataFrame
-        Columns ``test_scene``, ``row`` and the predicted arrays; each row appears once per other scene.
+        Columns ``test_scene``, ``row`` and the predicted arrays; each row appears once per scene outside its
+        fold (once per other scene when every scene is its own fold).
 
     Raises
     ------
     ValueError
         If there are fewer than 3 scenes.
     """
-    scenes = sorted(rows["scene"].unique())
+    fold_of = scene_folds(rows["scene"], max_folds, seed)
+    scenes = list(fold_of)
     if len(scenes) < 3:
         raise ValueError(f"Leave-two-scenes-out needs >= 3 scenes, got {len(scenes)}")
+    members = [[s for s in scenes if fold_of[s] == f] for f in range(max(fold_of.values()) + 1)]
     by_scene = {s: rows[rows["scene"] == s] for s in scenes}
-    test_parts, cal_parts = [], []
-    for s in scenes:
-        model = fit(rows[rows["scene"] != s])
-        test_parts.append(pd.DataFrame({"row": by_scene[s].index, **predict(model, by_scene[s])}))
-    for s, t in combinations(scenes, 2):
-        model = fit(rows[~rows["scene"].isin([s, t])])
-        for test_scene, cal_scene in ((s, t), (t, s)):
-            part = by_scene[cal_scene]
-            cal_parts.append(pd.DataFrame({"test_scene": test_scene, "row": part.index, **predict(model, part)}))
-    return pd.concat(test_parts, ignore_index=True), pd.concat(cal_parts, ignore_index=True)
+    row_fold = rows["scene"].map(fold_of).to_numpy()
+    test_parts: dict[Any, pd.DataFrame] = {}
+    cal_parts = []
+    for f, held in enumerate(members):
+        model = fit(rows[row_fold != f])
+        for s in held:
+            test_parts[s] = pd.DataFrame({"row": by_scene[s].index, **predict(model, by_scene[s])})
+    for f, g in combinations(range(len(members)), 2):
+        model = fit(rows[(row_fold != f) & (row_fold != g)])
+        for test_fold, cal_fold in ((f, g), (g, f)):
+            for cal_scene in members[cal_fold]:
+                part = by_scene[cal_scene]
+                pred = predict(model, part)
+                cal_parts += [pd.DataFrame({"test_scene": test_scene, "row": part.index, **pred})
+                              for test_scene in members[test_fold]]
+    return pd.concat([test_parts[s] for s in scenes], ignore_index=True), pd.concat(cal_parts, ignore_index=True)
 
 
 # ============================================================================================================
@@ -2288,7 +2426,8 @@ class AuditResult:
     tables : dict of str to pandas.DataFrame
         Aggregate tables, the only outputs meant for committing: ``errors``, ``coverage``, ``rank``,
         ``comparison``, ``coefficients``, ``categorical``, ``reliability``, ``gate``, ``gate_thresholds``,
-        ``risk_yield``, ``aurc``, ``bias_correction``.
+        ``risk_yield``, ``aurc``, ``bias_correction``, ``ridge``; and ``folds`` (:func:`fold_table` of every
+        dataset and question type with more than ``max_folds`` scenes) when there is such a group.
     notes : list of str
         Groups skipped and why, and other remarks produced while running.
     """
@@ -2398,13 +2537,15 @@ def ridge_table(test: pd.DataFrame) -> pd.DataFrame:
     Parameters
     ----------
     test : pandas.DataFrame
-        Test predictions with ``dataset, qtype, scene, kind, ridge`` (one model per test scene).
+        Test predictions with ``dataset, qtype, scene, kind, ridge`` (one model per test scene, or per fold
+        above ``max_folds`` scenes).
 
     Returns
     -------
     pandas.DataFrame
-        Columns ``dataset, qtype, kind, ridge, n_models``: how many of the per-scene models chose each weight
-        (penalised kinds only).
+        Columns ``dataset, qtype, kind, ridge, n_models``: how many test scenes' models chose each weight
+        (penalised kinds only). Under leave-one-scene-out that is the number of models; when scenes are grouped
+        into folds, the scenes of a fold share one model and each counts.
     """
     models = test.dropna(subset=["ridge"]).drop_duplicates(["dataset", "qtype", "kind", "scene"])
     return (models.groupby(["dataset", "qtype", "kind", "ridge"]).size().rename("n_models").reset_index())
@@ -2480,6 +2621,7 @@ def run_audit(pairs: pd.DataFrame, config: AuditConfig | None = None,
     notes: list[str] = []
     row_cols = ["dataset", "scene", "qtype", "depth_source", "e", "tau", "tau_hat", "wrong", "log_range"]
     tasks: list[tuple[pd.DataFrame, str, bool, list[str], AuditConfig]] = []
+    folds: list[pd.DataFrame] = []
     for dataset, dpairs in pairs.groupby("dataset", sort=True):
         sources = depth_sources(dpairs)
         labelled = dpairs[dpairs["matched"]]
@@ -2491,6 +2633,12 @@ def run_audit(pairs: pd.DataFrame, config: AuditConfig | None = None,
             if n_scenes < config.min_scenes or len(rows) < config.min_rows:
                 notes.append(f"{dataset}/{qtype}: skipped ({len(rows)} labelled rows, {n_scenes} scenes)")
                 continue
+            if n_scenes > config.max_folds:
+                fold = fold_table(rows, config)
+                folds.append(fold)
+                notes.append(f"{dataset}/{qtype}: {n_scenes} scenes cross-fitted in {config.max_folds} folds of "
+                             f"{fold['fold_scenes'].min()}-{fold['fold_scenes'].max()} scenes and "
+                             f"{fold['fold_rows'].min()}-{fold['fold_rows'].max()} rows (table folds)")
             tasks += [(rows, kind, numeric, sources, config)
                       for kind in (NUMERIC_KINDS if numeric else CATEGORICAL_KINDS)]
     num_test, num_cal, cat_test, cat_cal = [], [], [], []
@@ -2550,6 +2698,8 @@ def run_audit(pairs: pd.DataFrame, config: AuditConfig | None = None,
     fitted = [f for f in (numeric_out, categorical_out) if len(f)]
     if fitted:
         tables["ridge"] = ridge_table(pd.concat(fitted, ignore_index=True))
+    if folds:                          # only when some group was grouped: leave-one-scene-out runs are unchanged
+        tables["folds"] = pd.concat(folds, ignore_index=True)
     for name, parts in (("gate", gate_rows), ("gate_thresholds", threshold_rows), ("risk_yield", curve_rows),
                         ("aurc", aurc_rows)):
         if parts:

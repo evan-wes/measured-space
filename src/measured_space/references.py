@@ -50,7 +50,12 @@ audit uses them and only the test site is recalibrated.
 
 **Experiment** (:func:`run_reference_experiment`). Leave one scene out within a dataset, as the audit does:
 predictions come from :func:`~measured_space.audit.cross_fit` with the audit's feature model (test scene: fitted
-without it; calibration scenes: fitted without the test scene and the calibration scene). For each test scene,
+without it; calibration scenes: fitted without the test scene and the calibration scene). Above
+:attr:`~measured_space.audit.AuditConfig.max_folds` scenes in a dataset and question type, the audit's grouped
+folds apply unchanged: a test scene is predicted by the model fitted without its fold, and a calibration scene by
+the model fitted without both folds, so a test scene's own fold-mates do not calibrate it (they are empty
+calibration sites, which contribute nothing). At most ``max_folds`` scenes, the predictions are leave one (two)
+scene(s) out exactly as before. For each test scene,
 reference count ``n`` and random draw, ``n`` of the scene's numeric items are references, drawn uniformly or
 stratified by terciles of the item's predicted sigma (:func:`reference_order`; draws are nested, so the ``n = 10``
 references contain the ``n = 5`` ones). An item is one question; a reference reveals its oracle answer for every
@@ -71,7 +76,7 @@ import json
 import math
 import zlib
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -320,40 +325,26 @@ def synthetic_site_pairs(n_scenes: int = 6, n_items: int = 80, *, scale_errors: 
     return pairs
 
 
-def cross_fit_sigma(pairs: pd.DataFrame, config: AuditConfig,
-                    log: Callable[[str], None] | None = None) -> tuple[pd.DataFrame, pd.DataFrame, list[str]]:
-    """Out-of-scene predictions of the audit's feature model for every modelled numeric row.
+def _sigma_tasks(pairs: pd.DataFrame,
+                 config: AuditConfig) -> tuple[list[tuple[pd.DataFrame, str, bool, list[str], AuditConfig]], list[str]]:
+    """The audit's cross-fitting tasks for its feature model on every modelled numeric group.
 
-    The same groups, filters, depth-source order and model as :func:`~measured_space.audit.run_audit` (kind
-    ``sigma`` only), through the audit's own cross-fitting, so the predictions are the audit's.
+    The same groups, filters and depth-source order as :func:`~measured_space.audit.run_audit`.
 
     Parameters
     ----------
     pairs : pandas.DataFrame
-        Pair table(s) with a default ``RangeIndex`` (rows are referred to by index).
+        Pair table(s).
     config : AuditConfig
-        Model settings, minimum scenes and rows per group, and ``n_jobs``.
-    log : callable, optional
-        Receives progress messages.
+        Minimum scenes and rows per group, and the model settings carried by each task.
 
     Returns
     -------
-    test : pandas.DataFrame
-        Columns ``row, mu, sigma``: each row predicted by a model fitted without its scene (m).
-    cal : pandas.DataFrame
-        Columns ``test_scene, row, mu, sigma``: each row predicted by a model fitted without its scene and
-        ``test_scene``, once per other scene of its dataset (m).
+    tasks : list of tuple
+        ``(rows, "sigma", True, sources, config)`` per dataset and numeric question type, in sorted order.
     notes : list of str
         Groups skipped (too few scenes or rows).
-
-    Raises
-    ------
-    ValueError
-        If ``pairs`` does not have a default ``RangeIndex``.
     """
-    if not pairs.index.equals(pd.RangeIndex(len(pairs))):
-        raise ValueError("pairs must have a default RangeIndex (call reset_index(drop=True))")
-    say = log or (lambda message: None)
     tasks: list[tuple[pd.DataFrame, str, bool, list[str], AuditConfig]] = []
     notes = []
     for dataset, dpairs in pairs.groupby("dataset", sort=True):
@@ -366,6 +357,74 @@ def cross_fit_sigma(pairs: pd.DataFrame, config: AuditConfig,
                 notes.append(f"{dataset}/{qtype}: skipped ({len(rows)} labelled rows, {n_scenes} scenes)")
                 continue
             tasks.append((rows, "sigma", True, sources, config))
+    return tasks, notes
+
+
+def cross_fit_key(pairs: pd.DataFrame, config: AuditConfig) -> dict[str, Any]:
+    """The audit settings that :func:`cross_fit_sigma`'s predictions depend on, e.g. for a cache key.
+
+    Every :class:`~measured_space.audit.AuditConfig` field except ``n_jobs`` (how many workers fit changes
+    nothing) and ``max_folds``, which is included only when some modelled group has more scenes than it, the
+    only case in which it changes the predictions. Keys written before ``max_folds`` existed therefore still
+    match runs with at most ``max_folds`` scenes per group.
+
+    Parameters
+    ----------
+    pairs : pandas.DataFrame
+        The pair table(s) to be cross-fitted.
+    config : AuditConfig
+        The settings.
+
+    Returns
+    -------
+    dict
+        Field name to value (``asdict`` form).
+    """
+    key = {k: v for k, v in asdict(config).items() if k not in ("n_jobs", "max_folds")}
+    tasks, _ = _sigma_tasks(pairs, config)
+    if any(task[0]["scene"].nunique() > config.max_folds for task in tasks):
+        key["max_folds"] = config.max_folds
+    return key
+
+
+def cross_fit_sigma(pairs: pd.DataFrame, config: AuditConfig,
+                    log: Callable[[str], None] | None = None) -> tuple[pd.DataFrame, pd.DataFrame, list[str]]:
+    """Out-of-scene predictions of the audit's feature model for every modelled numeric row.
+
+    The same groups, filters, depth-source order and model as :func:`~measured_space.audit.run_audit` (kind
+    ``sigma`` only), through the audit's own cross-fitting, so the predictions are the audit's, folds included
+    (grouped above ``config.max_folds`` scenes).
+
+    Parameters
+    ----------
+    pairs : pandas.DataFrame
+        Pair table(s) with a default ``RangeIndex`` (rows are referred to by index).
+    config : AuditConfig
+        Model settings, minimum scenes and rows per group, folds, and ``n_jobs``.
+    log : callable, optional
+        Receives progress messages.
+
+    Returns
+    -------
+    test : pandas.DataFrame
+        Columns ``row, mu, sigma``: each row predicted by a model fitted without its scene (its fold, when
+        scenes are grouped) (m).
+    cal : pandas.DataFrame
+        Columns ``test_scene, row, mu, sigma``: each row predicted by a model fitted without its scene and
+        ``test_scene`` (without both their folds), once per other scene of its dataset (once per scene outside
+        its fold) (m).
+    notes : list of str
+        Groups skipped (too few scenes or rows).
+
+    Raises
+    ------
+    ValueError
+        If ``pairs`` does not have a default ``RangeIndex``.
+    """
+    if not pairs.index.equals(pd.RangeIndex(len(pairs))):
+        raise ValueError("pairs must have a default RangeIndex (call reset_index(drop=True))")
+    say = log or (lambda message: None)
+    tasks, notes = _sigma_tasks(pairs, config)
     if not tasks:
         empty = pd.DataFrame(columns=["row", "mu", "sigma"])
         return empty, empty.assign(test_scene=pd.Series(dtype=object)), notes
@@ -993,7 +1052,9 @@ class DatasetSites:
     test : dict of str to SiteRows
         Each scene with the predictions of the model fitted without it.
     cal : dict of (str, str) to SiteRows
-        ``(test scene, scene)``: the scene with the predictions of the model fitted without both.
+        ``(test scene, scene)``: the scene with the predictions of the model fitted without both (without both
+        their folds when scenes are grouped; a question type in which the scene shares the test scene's fold
+        has no rows here).
     cell_qtype : numpy.ndarray of int, shape (n_qtypes * n_sources,)
         Question-type code of every cell.
     """
