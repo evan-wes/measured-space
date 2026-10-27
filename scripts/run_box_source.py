@@ -1,20 +1,24 @@
-"""Build an automatic label source from CuTR 3D boxes, from stored label shards (no SAM 3, no depth models).
+"""Build an automatic label source from external 3D boxes, from stored label shards (no SAM 3, no depth models).
 
-Two variants (:mod:`measured_space.box_sources`):
+Three variants (:mod:`measured_space.box_sources`):
 
 - ``cutr_sam3``: CuTR's world boxes attached to SAM 3's detections by 2D IoU (CPU only);
 - ``cutr_clip``: CuTR's boxes as the detections, named zero-shot by CLIP (:mod:`measured_space.clip_naming`).
-  This variant loads the CLIP model, by default on ``--clip-device cuda``, and reads every view's image.
+  This variant loads the CLIP model, by default on ``--clip-device cuda``, and reads every view's image;
+- ``external_named``: a labeller's boxes as the detections, named by their own ``label`` field (CPU only), e.g.
+  Sparse4D's boxes converted by ``python -m measured_space.sparse4d convert``. It needs ``--source-name`` (the
+  items become ``auto_<name>``) and ``--min-score``, the operating threshold: boxes below it are not
+  detections. Sparse4D's evaluation threshold is 0.2.
 
-For every shard of ``--labels-from`` (a folder written by ``scripts/run_labels.py``), the view's CuTR predictions
+For every shard of ``--labels-from`` (a folder written by ``scripts/run_labels.py``), the view's predictions
 (``<predictions>/<dataset>/<scene>.jsonl``) become the view's only automatic source. The view is then
 re-associated and answered with :func:`measured_space.pipeline.rematch_view` (``"2d"``), which recomputes the
 oracle answers as a check and keeps the stored ones verbatim. The new shards go to
 ``<out-dir>/<dataset>/shards/`` and are assembled with ``run_labels.assemble``, in the layout ``run_labels.py``
 writes: ``views.jsonl``, ``oracle_objects.jsonl``, ``detections.jsonl``, ``qa_oracle.jsonl``,
-``qa_auto_<variant>.jsonl`` and ``summary.json``. ``scripts/run_audit.py --labels <out-dir>`` and the VLM scoring
-can read them. Each shard keeps the source shard's timestamps and adds a ``rematch`` record and a ``box_source``
-record (prediction provenance, attachment or naming counts, CLIP probabilities).
+``qa_auto_<variant or source name>.jsonl`` and ``summary.json``. ``scripts/run_audit.py --labels <out-dir>`` and
+the VLM scoring can read them. Each shard keeps the source shard's timestamps and adds a ``rematch`` record and a
+``box_source`` record (prediction provenance, attachment or naming counts, CLIP probabilities, overlap counts).
 
 Safety and provenance:
 
@@ -36,6 +40,9 @@ Run from the repository root::
         --predictions <data>/outputs/cubify --out-dir <data>/outputs/labels_cutr_sam3
     python scripts/run_box_source.py --variant cutr_clip --labels-from <data>/outputs/labels_2d \\
         --predictions <data>/outputs/cubify --out-dir <data>/outputs/labels_cutr_clip --clip-device cuda
+    python scripts/run_box_source.py --variant external_named --source-name sparse4d --min-score 0.2 \\
+        --labels-from <data>/outputs/labels_ss12_2d --predictions <data>/outputs/sparse4d_predictions/<tag> \\
+        --out-dir <data>/outputs/labels_ss12_sparse4d --datasets smartspaces
 """
 
 from __future__ import annotations
@@ -57,9 +64,11 @@ from numpy.typing import NDArray
 
 from measured_space.box_sources import (
     CLIP_SOURCE,
+    EXTERNAL_NAMED,
     SAM3_SOURCE,
     VARIANTS,
     ViewPredictions,
+    check_source_name,
     clip_box2d,
     predictions_file,
     read_box_predictions,
@@ -88,11 +97,15 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         The parsed options.
     """
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
-    p.add_argument("--variant", choices=list(VARIANTS), required=True, help="which CuTR source to build")
+    p.add_argument("--variant", choices=list(VARIANTS), required=True, help="which source to build")
+    p.add_argument("--source-name", default=None,
+                   help="external_named: the source's name; items become auto_<name> (e.g. sparse4d)")
+    p.add_argument("--min-score", type=float, default=None,
+                   help="external_named: operating threshold; boxes scoring below it are not detections")
     p.add_argument("--labels-from", type=Path, required=True,
                    help="label folder of run_labels.py whose <dataset>/shards/*.json are read (never written)")
     p.add_argument("--predictions", type=Path, required=True,
-                   help="CuTR predictions folder holding <dataset>/<scene>.jsonl")
+                   help="predictions folder holding <dataset>/<scene>.jsonl (CuTR, or converted external boxes)")
     p.add_argument("--out-dir", type=Path, required=True, help="new, empty output folder")
     p.add_argument("--datasets", nargs="+", choices=["arkitscenes", "smartspaces"],
                    default=["arkitscenes", "smartspaces"], help="datasets to process (missing ones are skipped)")
@@ -112,7 +125,17 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
                    help="cutr_clip: withhold names below this CLIP probability (default: off)")
     p.add_argument("--hf-cache", type=Path, default=None,
                    help="Hugging Face hub cache (default <data root>/hf_cache)")
-    return p.parse_args(argv)
+    args = p.parse_args(argv)
+    if args.variant == EXTERNAL_NAMED:
+        if args.source_name is None or args.min_score is None:
+            p.error(f"--variant {EXTERNAL_NAMED} needs --source-name and --min-score")
+        try:
+            check_source_name(args.source_name)
+        except ValueError as error:
+            p.error(str(error))
+    elif args.source_name is not None or args.min_score is not None:
+        p.error(f"--source-name and --min-score are for --variant {EXTERNAL_NAMED} only")
+    return args
 
 
 def refuse_existing(out_dir: Path, *inputs: Path) -> None:
@@ -305,7 +328,7 @@ def oracle_check(labels_from: Path, out_dir: Path, datasets: Sequence[str], comp
 
 def main(argv: Sequence[str] | None = None, *, logits_fn: LogitsFn | None = None,
          load_image: ImageLoader | None = None) -> int:
-    """Build the chosen CuTR source for every selected view, assemble the outputs and log the run.
+    """Build the chosen source for every selected view, assemble the outputs and log the run.
 
     Parameters
     ----------
@@ -396,7 +419,12 @@ def main(argv: Sequence[str] | None = None, *, logits_fn: LogitsFn | None = None
                 naming_seconds = time.perf_counter() - t
             t = time.perf_counter()
             result, info = run_box_source(records, view_predictions, args.variant, names=names, config=match_2d,
-                                          naming_seconds=naming_seconds)
+                                          naming_seconds=naming_seconds, source_name=args.source_name,
+                                          min_score=args.min_score)
+            if args.variant == EXTERNAL_NAMED:
+                counts.update({"detections": info["n_detections"], "named": info["n_named"],
+                               "below_min_score": info["n_below_min_score"],
+                               **{f"overlap_{k}": v for k, v in info["overlap"].items()}})
             output = result.records()
             seconds = time.perf_counter() - t
             if json.loads(to_json_line(output["qa"]["oracle"])) != records["qa"].get("oracle", []):
@@ -412,7 +440,7 @@ def main(argv: Sequence[str] | None = None, *, logits_fn: LogitsFn | None = None
                                "predictions_sha256": scene_file.get("sha256"), "clip": clip_info}})
             counts["processed"] += 1
             counts[f"processed_{dataset}"] += 1
-        print(f"{dataset}: {args.variant} for {counts[f'processed_{dataset}']} views in "
+        print(f"{dataset}: {args.source_name or args.variant} for {counts[f'processed_{dataset}']} views in "
               f"{time.perf_counter() - t_dataset:.1f} s", flush=True)
 
     t = time.perf_counter()
@@ -424,7 +452,8 @@ def main(argv: Sequence[str] | None = None, *, logits_fn: LogitsFn | None = None
               "prediction_files": prediction_files}
     (out_dir / "inputs.json").write_text(json.dumps(inputs, indent=1))
     run: dict[str, Any] = {
-        "argv": list(sys.argv[1:] if argv is None else argv), "variant": args.variant, "started": started,
+        "argv": list(sys.argv[1:] if argv is None else argv), "variant": args.variant,
+        "source_name": args.source_name, "min_score": args.min_score, "started": started,
         "labels_from": str(labels_from), "predictions": str(preds_root),
         "source_shards": {d: {"n": len(v), "digest": shard_digest(v), "list": "inputs.json"}
                           for d, v in shard_list.items()},
@@ -439,8 +468,8 @@ def main(argv: Sequence[str] | None = None, *, logits_fn: LogitsFn | None = None
         "assemble_seconds": round(assemble_seconds, 1), "finished": datetime.now(timezone.utc).isoformat()}
     with (out_dir / "runs.jsonl").open("a") as f:
         f.write(json.dumps(run) + "\n")
-    print(json.dumps({k: run[k] for k in ("variant", "counts", "oracle_identical", "n_shard_oracle_mismatch")}),
-          flush=True)
+    print(json.dumps({k: run[k] for k in ("variant", "source_name", "counts", "oracle_identical",
+                                          "n_shard_oracle_mismatch")}), flush=True)
     failed = bool(oracle_mismatch) or any(v["identical"] is False for v in oracle.values())
     return 1 if failed else 0
 

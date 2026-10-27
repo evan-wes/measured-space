@@ -1,4 +1,4 @@
-"""Automatic label sources from externally produced 3D boxes: CuTR, the Cubify Anything detector.
+"""Automatic label sources from externally produced 3D boxes: CuTR (Cubify Anything) and named external boxes.
 
 CuTR predicts class-agnostic, metric 3D boxes from one RGB-D image. A separate step runs it and writes one
 JSONL per scene, ``<predictions>/<dataset>/<scene>.jsonl``, one line per view::
@@ -6,14 +6,17 @@ JSONL per scene, ``<predictions>/<dataset>/<scene>.jsonl``, one line per view::
     {"view_key", "dataset", "scene", "camera_id", "frame", "model", "checkpoint_sha256", "score_threshold",
      "image_size": [W, H], "seconds",
      "boxes": [{"center": [3], "size": [3], "rotation": [3x3], "score", "box2d": [x0, y0, x1, y1],
-                "center_cam": [3]}]}
+                "center_cam": [3], "label" (optional)}]}
 
 ``center``, ``size`` and ``rotation`` are a world :class:`~measured_space.geometry.OrientedBox` (keys as in
 :func:`measured_space.pipeline.box_json`). ``box2d`` is CuTR's own 2D box in full-resolution upright image pixels,
 with pixel edges at integer coordinates (as :attr:`measured_space.perception.Instance.box2d`). ``center_cam`` is
-the box centre in the view's camera frame. :func:`read_box_predictions` reads this format.
+the box centre in the view's camera frame. ``label`` is optional: a dataset label (the ground truth's object type)
+from a labeller that names its boxes; CuTR writes none. Other keys of a line or a box are ignored.
+:func:`read_box_predictions` reads this format. Other labellers are converted to it, e.g. the multi-camera
+detector Sparse4D by :mod:`measured_space.sparse4d`.
 
-Two automatic sources are built from it. Each is a CPU transform of a view's stored records (one shard of
+Three automatic sources are built from it. Each is a CPU transform of a view's stored records (one shard of
 ``scripts/run_labels.py``), followed by :func:`measured_space.pipeline.rematch_view` with the ``"2d"``
 association. Pairing with ground truth, the questions, the answers and the oracle check are therefore exactly
 the existing procedure.
@@ -34,6 +37,19 @@ probable phrase is an "other" phrase (wall, floor, ...) gets **no name**. Its re
 phrase, no labels and ``lift_error = "unnamed: <reason>"``, but its lift carries no box. Detections without a
 box take no part in the association, so an unnamed box answers no question and enters no count.
 
+``external_named`` (:func:`external_named_records`): **external boxes named by their own labeller.** As
+``cutr_clip``, the detections are the prediction line's boxes, highest score first, but each takes its name from
+its ``label`` field instead of CLIP. The source has a configurable name (:func:`check_source_name`), e.g.
+``sparse4d``, so its items are ``auto_sparse4d``. Boxes scoring below an operating threshold (``min_score``)
+are left out entirely: they are not detections. A label that is one of the dataset's classes
+(:data:`measured_space.perception.CLASS_PHRASES`) gives the detection that class's prompt phrase, the phrase
+the SAM 3 sources store. Its ``labels`` are every class that phrase stands for, the box's own label first, so
+the counts name the box by its own class (``qa_label``). ``label_correct`` then means what it means for the
+other sources: the phrase names the paired object (a "Transporter" box on a NovaCarter is correct, as a
+"mobile robot" detection is). The label itself stays in the prediction line and in the source's provenance
+(``external_label``). A box without a label, or with a label outside the dataset's classes, is unnamed, as in
+``cutr_clip``: kept with no box and ``lift_error = "unnamed: <reason>"``.
+
 **Lift features** (keys as in :func:`~measured_space.perception.lift_instance` where the meaning is the same):
 
 - ``depth_median``: the camera-frame z of the CuTR box centre (``center_cam[2]``), metres. It is a **proxy**:
@@ -46,7 +62,13 @@ box take no part in the association, so an unnamed box answers no question and e
   ``pair_iou2d``, the assignment's 2D IoU;
 - ``cutr_clip`` also stores ``border_touch`` and ``n_border_sides``: whether the clipped 2D box comes within the
   pipeline's ``boundary_px`` of an image edge, and of how many edges (:func:`box_mask_stats`). It also stores
-  ``name_prob``, CLIP's probability of the name (or, for an unnamed box, of its best phrase).
+  ``name_prob``, CLIP's probability of the name (or, for an unnamed box, of its best phrase);
+- ``external_named`` stores ``depth_median``, ``det_score``, ``border_touch`` and ``n_border_sides`` as
+  ``cutr_clip`` does, ``external_box_index`` (the box's position in its prediction line) instead of
+  ``cutr_box_index``, and ``cover_by_nearer`` (:func:`cover_by_nearer`): the largest share of the box's 2D box
+  covered by one other kept box whose centre is nearer the camera. The source has no depth map, so it cannot
+  test occlusion; ``cover_by_nearer`` says how much an untested occlusion could concern the box. The audit's
+  error model does not read it.
 
 The depth-based features (``depth_mad_rel``, ``footprint_hull_fill``, ``n_points`` and the others) are
 **absent**. CuTR returns a box, not a point cloud, so they do not exist for these sources, and the audit's
@@ -54,8 +76,8 @@ error model reads them as missing (standardised to 0).
 
 **Masks.** A CuTR detection has no mask, and none is rasterised. A view rebuilt from records carries an empty
 stand-in mask for every detection anyway (:func:`~measured_space.pipeline.detections_from_records`), and only
-its stored mask *statistics* are used. For ``cutr_clip`` these statistics come from the clipped 2D box
-(:func:`box_mask_stats`) and are marked ``box_mask = 1``. ``mask_area_px`` is then the box area, and
+its stored mask *statistics* are used. For ``cutr_clip`` and ``external_named`` these statistics come from the
+clipped 2D box (:func:`box_mask_stats`) and are marked ``box_mask = 1``. ``mask_area_px`` is then the box area, and
 ``boundary_fraction`` is left out: for a rectangle it depends only on the rectangle's size, which would make it
 a disguised size feature.
 
@@ -70,14 +92,16 @@ it rather than pair wrong geometry.
 **Records.** The transformed records keep the oracle records (``oracle_objects`` and the oracle items) verbatim
 and **only the new source**:
 
-- ``cutr_clip`` cannot keep the SAM 3 sources: its detection list differs, and all sources of a view must
-  share one detection list;
+- ``cutr_clip`` and ``external_named`` cannot keep the SAM 3 sources: their detection lists differ, and all
+  sources of a view must share one detection list;
 - ``cutr_sam3`` follows the same rule for symmetry, and so that the depth sources' outputs live only in the
   folder that produced them, with no copies that could drift.
 
 The oracle answers are byte-identical to the source folder's, so items pair by id across folders. The view's
 stored timings keep only the stages this source used (image loading, SAM 3 for ``cutr_sam3``, oracle
-visibility) and gain the CuTR time (``cutr``) and, for ``cutr_clip``, the CLIP time (``clip_naming``).
+visibility) and gain the CuTR time (``cutr``) and, for ``cutr_clip``, the CLIP time (``clip_naming``). An
+``external_named`` source reads no image here: it keeps the oracle visibility time and gains the prediction
+line's ``seconds`` under the source's name, if the line states it.
 """
 
 from __future__ import annotations
@@ -85,6 +109,7 @@ from __future__ import annotations
 import copy
 import json
 import math
+import re
 from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
@@ -97,8 +122,9 @@ from scipy.optimize import linear_sum_assignment
 from measured_space.clip_naming import BoxName
 from measured_space.geometry import Array, OrientedBox, invert_pose
 from measured_space.matching import Match2DConfig, box_iou_2d
-from measured_space.perception import labels_for_phrase
+from measured_space.perception import CLASS_PHRASES, labels_for_phrase
 from measured_space.pipeline import (
+    DEPTH_SOURCES,
     MASK_FEATURE_KEYS,
     Lift,
     PipelineConfig,
@@ -117,12 +143,26 @@ SAM3_SOURCE = "cutr_sam3"
 CLIP_SOURCE = "cutr_clip"
 """str: CuTR's own boxes named by CLIP; items get ``source="auto_cutr_clip"``."""
 
-VARIANTS: tuple[str, ...] = (SAM3_SOURCE, CLIP_SOURCE)
-"""tuple of str: the automatic sources built from CuTR boxes."""
+EXTERNAL_NAMED = "external_named"
+"""str: external boxes named by their ``label`` field; the source's name is chosen (:func:`check_source_name`)."""
+
+VARIANTS: tuple[str, ...] = (SAM3_SOURCE, CLIP_SOURCE, EXTERNAL_NAMED)
+"""tuple of str: the automatic sources built from external boxes (the two CuTR sources and the named one)."""
 
 KEPT_TIMINGS: dict[str, tuple[str, ...]] = {SAM3_SOURCE: ("load_image", "segment", "oracle_visibility"),
-                                            CLIP_SOURCE: ("load_image", "oracle_visibility")}
-"""dict of str to tuple of str: stored stage timings each source depends on (the others are dropped)."""
+                                            CLIP_SOURCE: ("load_image", "oracle_visibility"),
+                                            EXTERNAL_NAMED: ("oracle_visibility",)}
+"""dict of str to tuple of str: stored stage timings each variant depends on (the others are dropped)."""
+
+SOURCE_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]{0,39}$")
+"""re.Pattern: an ``external_named`` source name: lower case, digits and underscores, starting with a letter."""
+
+RESERVED_SOURCE_NAMES: frozenset[str] = frozenset(
+    {"oracle", SAM3_SOURCE, CLIP_SOURCE, EXTERNAL_NAMED} | {s for v in DEPTH_SOURCES.values() for s in v})
+"""frozenset of str: names an ``external_named`` source may not take (the oracle, the other sources, the depths)."""
+
+COVER_SHARE = 0.5
+"""float: a box at least this much covered by one nearer box counts as covered (:func:`overlap_summary`)."""
 
 CENTER_CAM_TOLERANCE = 1e-3
 """float: largest allowed difference between ``center_cam`` and the world centre in the view's camera, metres."""
@@ -134,30 +174,42 @@ NOT_ASSIGNED = "no CuTR box assigned at 2D IoU >= {min_iou}"
 """str: lift error of a SAM 3 detection left unassigned (formatted with the threshold)."""
 
 UNNAMED_PREFIX = "unnamed: "
-"""str: prefix of the lift error of a CuTR box CLIP gave no name (followed by the reason)."""
+"""str: prefix of the lift error of a box that got no name (followed by the reason)."""
+
+NO_LABEL = "no label"
+"""str: why an ``external_named`` box without a ``label`` is unnamed."""
+
+UNKNOWN_LABEL = "label {label!r} is not a {dataset} class"
+"""str: why an ``external_named`` box with a label outside the dataset's classes is unnamed (formatted)."""
+
+UNLABELLED_PHRASE = "unlabelled"
+"""str: the phrase stored for an ``external_named`` box without a label."""
 
 
 @dataclass(frozen=True)
 class CutrBox:
-    """One CuTR box in one view.
+    """One external box in one view (CuTR's, or another labeller's in the same format).
 
     Parameters
     ----------
     box : OrientedBox
         World box, metres.
     score : float
-        CuTR's confidence.
+        The labeller's confidence.
     box2d : tuple of float
-        CuTR's 2D box ``(xmin, ymin, xmax, ymax)``, full-resolution upright pixels, edges at integer
-        coordinates, as predicted (not clipped).
+        The 2D box ``(xmin, ymin, xmax, ymax)``, full-resolution upright pixels, edges at integer coordinates,
+        as written (CuTR's are not clipped).
     center_cam : numpy.ndarray, shape (3,)
         Box centre in the view's camera frame, metres.
+    label : str or None, default None
+        The labeller's dataset label for the box, if it names its boxes (CuTR does not).
     """
 
     box: OrientedBox
     score: float
     box2d: Box2D
     center_cam: Array
+    label: str | None = None
 
 
 @dataclass(frozen=True)
@@ -256,8 +308,10 @@ def parse_view_predictions(record: Mapping[str, Any]) -> ViewPredictions:
         center_cam = np.asarray(b["center_cam"], dtype=np.float64)
         if len(box2d) != 4 or center_cam.shape != (3,):
             raise ValueError(f"{key}: box {i} has a malformed box2d or center_cam")
+        label = b.get("label")
         boxes.append(CutrBox(OrientedBox(b["center"], b["size"], b["rotation"]), float(b["score"]),
-                             box2d, center_cam))                                      # type: ignore[arg-type]
+                             box2d, center_cam,                                       # type: ignore[arg-type]
+                             None if label is None else str(label)))
     width, height = (int(v) for v in record["image_size"])
     return ViewPredictions(key, str(record.get("model", "")), record.get("checkpoint_sha256"),
                            _optional_float(record.get("score_threshold")), (width, height),
@@ -450,6 +504,131 @@ def box_mask_stats(box2d: Sequence[float], width: int, height: int, boundary_px:
             "border_touch": float(any(sides)), "n_border_sides": float(sum(sides)), "box_mask": 1.0}
 
 
+def cover_by_nearer(boxes2d: Sequence[Sequence[float]], depths: Sequence[float]) -> Array:
+    """For each 2D box, the largest share of its area that one box with a nearer centre covers.
+
+    A box drawn from a 3D box without a depth map is kept even where a nearer object hides it. This measures
+    how much that could matter: 0 means no nearer box overlaps it, 1 that one nearer box covers it whole.
+
+    Parameters
+    ----------
+    boxes2d : sequence of sequence of float, each shape (4,)
+        ``(xmin, ymin, xmax, ymax)``, pixels, edges at integer coordinates.
+    depths : sequence of float
+        Each box's centre depth in the camera (``center_cam`` z), metres; same length.
+
+    Returns
+    -------
+    numpy.ndarray, shape (N,)
+        Per box, ``max_j area(box ∩ box_j) / area(box)`` over boxes ``j`` with a strictly smaller depth; 0 for a
+        box with no area or no nearer overlapping box.
+
+    Raises
+    ------
+    ValueError
+        If the two sequences differ in length.
+    """
+    b = np.asarray(boxes2d, dtype=np.float64).reshape(-1, 4)
+    d = np.asarray(depths, dtype=np.float64).reshape(-1)
+    if len(b) != len(d):
+        raise ValueError(f"{len(b)} boxes but {len(d)} depths")
+    if len(b) == 0:
+        return np.zeros(0)
+    width = np.minimum(b[:, None, 2], b[None, :, 2]) - np.maximum(b[:, None, 0], b[None, :, 0])
+    height = np.minimum(b[:, None, 3], b[None, :, 3]) - np.maximum(b[:, None, 1], b[None, :, 1])
+    intersection = np.clip(width, 0.0, None) * np.clip(height, 0.0, None)
+    area = np.clip(b[:, 2] - b[:, 0], 0.0, None) * np.clip(b[:, 3] - b[:, 1], 0.0, None)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        share = np.where(area[:, None] > 0.0, intersection / area[:, None], 0.0)
+    nearer = d[None, :] < d[:, None]                                     # [i, j]: box j is nearer than box i
+    return np.clip(np.where(nearer, share, 0.0), 0.0, 1.0).max(axis=1)
+
+
+def overlap_summary(boxes2d: Sequence[Sequence[float]], depths: Sequence[float], *,
+                    min_iou: float = Match2DConfig.min_iou, min_cover: float = COVER_SHARE) -> dict[str, int]:
+    """How often a view's 2D boxes overlap: the cases an untested occlusion can affect.
+
+    Parameters
+    ----------
+    boxes2d : sequence of sequence of float, each shape (4,)
+        ``(xmin, ymin, xmax, ymax)``, pixels, edges at integer coordinates.
+    depths : sequence of float
+        Each box's centre depth in the camera, metres.
+    min_iou : float, default Match2DConfig.min_iou
+        Pairs at this 2D IoU or more could both pair with the same object under the 2D association.
+    min_cover : float, default COVER_SHARE
+        A box at least this much covered by one nearer box (:func:`cover_by_nearer`) counts as covered.
+
+    Returns
+    -------
+    dict of str to int
+        ``n_boxes``; ``n_pairs_overlap`` (pairs with any overlap); ``n_pairs_iou`` (pairs at IoU >= ``min_iou``);
+        ``n_boxes_overlap`` (boxes overlapping at least one other); ``n_covered`` (boxes covered by a nearer one).
+    """
+    b = np.asarray(boxes2d, dtype=np.float64).reshape(-1, 4)
+    n = len(b)
+    if n < 2:
+        return {"n_boxes": n, "n_pairs_overlap": 0, "n_pairs_iou": 0, "n_boxes_overlap": 0, "n_covered": 0}
+    iou = box_iou_2d(b, b)
+    width = np.minimum(b[:, None, 2], b[None, :, 2]) - np.maximum(b[:, None, 0], b[None, :, 0])
+    height = np.minimum(b[:, None, 3], b[None, :, 3]) - np.maximum(b[:, None, 1], b[None, :, 1])
+    overlap = (width > 0.0) & (height > 0.0)
+    np.fill_diagonal(overlap, False)
+    upper = np.triu(np.ones((n, n), dtype=bool), k=1)
+    return {"n_boxes": n, "n_pairs_overlap": int((overlap & upper).sum()),
+            "n_pairs_iou": int(((iou >= min_iou) & upper).sum()), "n_boxes_overlap": int(overlap.any(axis=1).sum()),
+            "n_covered": int((cover_by_nearer(b, depths) >= min_cover).sum())}
+
+
+def check_source_name(name: str) -> str:
+    """Check the name of an ``external_named`` source.
+
+    Parameters
+    ----------
+    name : str
+        The proposed name; items get ``source="auto_<name>"``.
+
+    Returns
+    -------
+    str
+        The name, unchanged.
+
+    Raises
+    ------
+    ValueError
+        If it does not match :data:`SOURCE_NAME_PATTERN` or is one of :data:`RESERVED_SOURCE_NAMES`.
+    """
+    if not SOURCE_NAME_PATTERN.match(name):
+        raise ValueError(f"source name {name!r} must be lower case letters, digits and underscores, starting with "
+                         "a letter (at most 40 characters)")
+    if name in RESERVED_SOURCE_NAMES:
+        raise ValueError(f"source name {name!r} is taken (reserved: {sorted(RESERVED_SOURCE_NAMES)})")
+    return name
+
+
+def external_names(dataset: str, label: str | None) -> tuple[str, tuple[str, ...]] | None:
+    """The phrase and candidate labels of a box named by its own labeller.
+
+    Parameters
+    ----------
+    dataset : str
+        Dataset name (a key of :data:`measured_space.perception.CLASS_PHRASES` to have any classes).
+    label : str or None
+        The box's dataset label.
+
+    Returns
+    -------
+    tuple or None
+        ``(phrase, labels)``: the class's prompt phrase and every label that phrase stands for, ``label`` first;
+        ``None`` if ``label`` is ``None`` or not one of the dataset's classes.
+    """
+    phrases = CLASS_PHRASES.get(dataset, {})
+    if label is None or label not in phrases:
+        return None
+    phrase = phrases[label]
+    return phrase, (label, *(other for other in labels_for_phrase(dataset, phrase) if other != label))
+
+
 # --------------------------------------------------------------------------------------------------------
 # Transforming a view's records
 # --------------------------------------------------------------------------------------------------------
@@ -510,7 +689,7 @@ def _detection_record(identity: Mapping[str, Any], index: int, source: str, phra
 
 
 def _source_records(records: Mapping[str, Any], source: str, detection_records: list[dict[str, Any]],
-                    extra_timings: Mapping[str, float | None]) -> dict[str, Any]:
+                    extra_timings: Mapping[str, float | None], kept: Sequence[str] | None = None) -> dict[str, Any]:
     """A view's records with one automatic source: the oracle records verbatim, the new detections.
 
     Parameters
@@ -523,17 +702,19 @@ def _source_records(records: Mapping[str, Any], source: str, detection_records: 
         Its detection records, one per detection.
     extra_timings : mapping of str to float or None
         Stage timings to add (``None`` values are skipped), seconds.
+    kept : sequence of str, optional
+        Stored stage timings to keep; defaults to ``KEPT_TIMINGS[source]``.
 
     Returns
     -------
     dict
         ``view`` (a copy naming ``source`` as the only automatic source, with its detection count and the
-        timings of :data:`KEPT_TIMINGS` plus ``extra_timings``), ``oracle_objects`` (deep copy, unchanged),
-        ``detections`` and ``qa`` (the oracle items only, deep copy, unchanged).
+        kept timings plus ``extra_timings``), ``oracle_objects`` (deep copy, unchanged), ``detections`` and
+        ``qa`` (the oracle items only, deep copy, unchanged).
     """
     view = copy.deepcopy(dict(records["view"]))
     stored = view.get("timings") or {}
-    timings = {k: float(stored[k]) for k in KEPT_TIMINGS[source] if k in stored}
+    timings = {k: float(stored[k]) for k in (KEPT_TIMINGS[source] if kept is None else kept) if k in stored}
     timings.update({k: float(v) for k, v in extra_timings.items() if v is not None})
     oracle_items = copy.deepcopy(list(records["qa"].get("oracle", [])))
     view.update(depth_sources=[source], n_detections=len(detection_records), timings=timings,
@@ -667,17 +848,92 @@ def cutr_clip_records(records: Mapping[str, Any], predictions: ViewPredictions, 
     return _source_records(records, CLIP_SOURCE, out, timings), info
 
 
+def external_named_records(records: Mapping[str, Any], predictions: ViewPredictions, source: str, *,
+                           min_score: float | None = None) -> tuple[dict[str, Any], dict[str, Any]]:
+    """A view's records with an ``external_named`` source: the line's boxes as detections, named by their labels.
+
+    Parameters
+    ----------
+    records : mapping
+        The stored view records.
+    predictions : ViewPredictions
+        The labeller's output for the view; each box's ``label`` names it.
+    source : str
+        The source's name (:func:`check_source_name`); items get ``source="auto_<source>"``.
+    min_score : float, optional
+        Operating threshold: boxes scoring below it are left out (not detections). ``None`` keeps every box.
+
+    Returns
+    -------
+    records : dict
+        The records with ``source`` as the only automatic source, one detection per kept box (highest score
+        first); input for :func:`measured_space.pipeline.rematch_view`.
+    info : dict
+        Provenance: ``variant``, ``source``, the predictions' :meth:`~ViewPredictions.meta`, ``min_score``,
+        ``n_below_min_score``, ``n_detections``, ``n_named``, ``n_unnamed`` (by reason),
+        ``center_cam_max_abs_diff_m``, ``overlap`` (:func:`overlap_summary` of the kept boxes), and per detection
+        ``external_box_index`` and ``external_label``.
+
+    Raises
+    ------
+    ValueError
+        For a bad source name or a non-finite ``min_score``, or as :func:`check_predictions`.
+    """
+    check_source_name(source)
+    if min_score is not None and not math.isfinite(min_score):
+        raise ValueError(f"min_score must be finite, got {min_score}")
+    view_record = records["view"]
+    diff = check_predictions(view_record, predictions)
+    boundary_px = PipelineConfig.from_json(view_record["config"]).boundary_px
+    width, height = predictions.image_size
+    dataset = view_record["dataset"]
+    identity = _identity(view_record)
+    boxes = predictions.boxes
+    kept_idx = [j for j, b in enumerate(boxes) if min_score is None or b.score >= min_score]
+    order = sorted(kept_idx, key=lambda j: (-boxes[j].score, j))
+    clipped = [clip_box2d(boxes[j].box2d, width, height) for j in order]
+    cover = cover_by_nearer(clipped, [float(boxes[j].center_cam[2]) for j in order])
+    out = []
+    unnamed: Counter = Counter()
+    for index, (j, box2d) in enumerate(zip(order, clipped)):
+        b = boxes[j]
+        mask = box_mask_stats(box2d, width, height, boundary_px)
+        features = {"depth_median": float(b.center_cam[2]), "border_touch": mask["border_touch"],
+                    "n_border_sides": mask["n_border_sides"], "det_score": b.score,
+                    "external_box_index": float(j), "cover_by_nearer": float(cover[index])}
+        named = external_names(dataset, b.label)
+        if named is None:
+            reason = NO_LABEL if b.label is None else UNKNOWN_LABEL.format(label=b.label, dataset=dataset)
+            unnamed[reason] += 1
+            phrase, labels = (UNLABELLED_PHRASE if b.label is None else b.label), ()
+            lift = Lift(None, features, f"{UNNAMED_PREFIX}{reason}", 1)
+        else:
+            phrase, labels = named
+            lift = Lift(b.box, features, None, 1)
+        out.append(_detection_record(identity, index, source, phrase, labels, b.score, box2d, mask, lift))
+    info = {"variant": EXTERNAL_NAMED, "source": source, **predictions.meta(), "min_score": min_score,
+            "n_below_min_score": len(boxes) - len(kept_idx), "n_detections": len(order),
+            "n_named": len(order) - sum(unnamed.values()), "n_unnamed": dict(sorted(unnamed.items())),
+            "center_cam_max_abs_diff_m": diff,
+            "overlap": overlap_summary(clipped, [float(boxes[j].center_cam[2]) for j in order]),
+            "external_box_index": order, "external_label": [boxes[j].label for j in order]}
+    transformed = _source_records(records, source, out, {source: predictions.seconds},
+                                  kept=KEPT_TIMINGS[EXTERNAL_NAMED])
+    return transformed, info
+
+
 def run_box_source(records: Mapping[str, Any], predictions: ViewPredictions, variant: str, *,
                    names: Sequence[BoxName] | None = None, config: Match2DConfig | None = None,
-                   naming_seconds: float | None = None) -> tuple[ViewResult, dict[str, Any]]:
-    """Build one view's CuTR source and redo its association and answers (:func:`rematch_view`, ``"2d"``).
+                   naming_seconds: float | None = None, source_name: str | None = None,
+                   min_score: float | None = None) -> tuple[ViewResult, dict[str, Any]]:
+    """Build one view's source from external boxes and redo its association and answers (``"2d"``).
 
     Parameters
     ----------
     records : mapping
         The stored view records (one shard's ``"records"``).
     predictions : ViewPredictions
-        CuTR's output for the view.
+        The external boxes for the view (CuTR's, or a named labeller's).
     variant : str
         One of :data:`VARIANTS`.
     names : sequence of BoxName, optional
@@ -686,27 +942,38 @@ def run_box_source(records: Mapping[str, Any], predictions: ViewPredictions, var
         Threshold of the :data:`SAM3_SOURCE` attachment; defaults to ``Match2DConfig()``.
     naming_seconds : float, optional
         CLIP's time for the view (:data:`CLIP_SOURCE` only).
+    source_name : str, optional
+        Required for :data:`EXTERNAL_NAMED`: the source's name (:func:`check_source_name`).
+    min_score : float, optional
+        :data:`EXTERNAL_NAMED` only: the operating threshold (:func:`external_named_records`).
 
     Returns
     -------
     result : ViewResult
-        The view with the source's matches and items (``source="auto_<variant>"``); the oracle items are the
-        stored ones, verbatim.
+        The view with the source's matches and items (``source="auto_<variant>"``, or ``"auto_<source_name>"``
+        for :data:`EXTERNAL_NAMED`); the oracle items are the stored ones, verbatim.
     info : dict
-        Provenance from :func:`cutr_sam3_records` or :func:`cutr_clip_records`.
+        Provenance from :func:`cutr_sam3_records`, :func:`cutr_clip_records` or :func:`external_named_records`.
 
     Raises
     ------
     ValueError
-        For an unknown variant, :data:`CLIP_SOURCE` without ``names``, or as the transforms and
+        For an unknown variant, :data:`CLIP_SOURCE` without ``names``, :data:`EXTERNAL_NAMED` without
+        ``source_name``, ``source_name`` or ``min_score`` with another variant, or as the transforms and
         :func:`~measured_space.pipeline.rematch_view`.
     """
+    if variant != EXTERNAL_NAMED and (source_name is not None or min_score is not None):
+        raise ValueError(f"source_name and min_score are for the {EXTERNAL_NAMED} variant only")
     if variant == SAM3_SOURCE:
         transformed, info = cutr_sam3_records(records, predictions, config=config)
     elif variant == CLIP_SOURCE:
         if names is None:
             raise ValueError(f"the {CLIP_SOURCE} source needs CLIP names for the boxes")
         transformed, info = cutr_clip_records(records, predictions, names, naming_seconds=naming_seconds)
+    elif variant == EXTERNAL_NAMED:
+        if source_name is None:
+            raise ValueError(f"the {EXTERNAL_NAMED} variant needs a source name")
+        transformed, info = external_named_records(records, predictions, source_name, min_score=min_score)
     else:
         raise ValueError(f"variant must be one of {VARIANTS}, got {variant!r}")
     return rematch_view(transformed, association="2d"), info

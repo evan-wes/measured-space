@@ -1,4 +1,4 @@
-"""Tests for the CuTR automatic sources and their script, on a synthetic view and synthetic CuTR predictions.
+"""Tests for the automatic sources from external boxes and their script, on a synthetic view and predictions.
 
 The view is the one of ``tests/test_pipeline.py``: a chair and a table in front of a wall, seen by a camera at
 the origin looking along world +y, with ray-cast depth and masks. The label pipeline runs on it (no models) and
@@ -8,7 +8,8 @@ its records stand in for a stored shard. CuTR's boxes are written by hand:
 - box B is a slightly wrong table, whose 2D box runs off the image;
 - box C is a box elsewhere, or, in the CLIP test, a box on the chair that CLIP calls "wall".
 
-Everything runs on the CPU; the CLIP model is a fake that reads colours.
+The ``external_named`` tests label the same boxes (A "chair", B "table", C "lamp", not a dataset class) and add
+a low-score box D. Everything runs on the CPU; the CLIP model is a fake that reads colours.
 """
 
 from __future__ import annotations
@@ -31,17 +32,25 @@ from PIL import Image
 from measured_space.audit import load_labels, referent_features
 from measured_space.box_sources import (
     CLIP_SOURCE,
+    EXTERNAL_NAMED,
     NO_CUTR_BOX,
+    NO_LABEL,
     NOT_ASSIGNED,
     SAM3_SOURCE,
+    UNKNOWN_LABEL,
     UNNAMED_PREFIX,
     ViewPredictions,
     attach_cutr,
     box_mask_stats,
     check_predictions,
+    check_source_name,
     clip_box2d,
+    cover_by_nearer,
     cutr_clip_records,
     cutr_sam3_records,
+    external_named_records,
+    external_names,
+    overlap_summary,
     parse_view_predictions,
     predictions_file,
     read_box_predictions,
@@ -532,6 +541,158 @@ def test_cutr_clip_input_errors(records: dict[str, Any]) -> None:
 
 
 # --------------------------------------------------------------------------------------------------------
+# external_named
+# --------------------------------------------------------------------------------------------------------
+
+BOX_D = OrientedBox([2.0, 6.0, 1.0], [0.3, 0.3, 0.3], np.eye(3))
+
+
+def named_line(records: dict[str, Any]) -> dict[str, Any]:
+    """A named labeller's output for a stored view: A "chair", B "table", C "lamp", and D "chair" at score 0.1.
+
+    Parameters
+    ----------
+    records : dict
+        The stored view records.
+
+    Returns
+    -------
+    dict
+        One line of a predictions file, with a ``label`` per box.
+    """
+    line = prediction_line(records)
+    for box, label in zip(line["boxes"], ("chair", "table", "lamp")):
+        box["label"] = label
+    line["boxes"].append({**cutr_box(make_view(records["view"]["frame"]), BOX_D, 0.1, [600.0, 0.0, 630.0, 30.0]),
+                          "label": "chair"})
+    return line
+
+
+def test_external_named_names_boxes_by_their_labels(records: dict[str, Any]) -> None:
+    """Boxes become detections named by their labels; unknown labels are unnamed; low scores are left out.
+
+    Parameters
+    ----------
+    records : dict
+        The stored view records.
+    """
+    predictions = parse_view_predictions(named_line(records))
+    assert [b.label for b in predictions.boxes] == ["chair", "table", "lamp", "chair"]
+    assert parse_view_predictions(prediction_line(records)).boxes[0].label is None           # CuTR: no labels
+    before = copy.deepcopy(records)
+    out, info = external_named_records(records, predictions, "ext", min_score=0.2)
+    assert records == before
+    assert out["oracle_objects"] == records["oracle_objects"] and out["qa"] == {"oracle": records["qa"]["oracle"]}
+    assert out["view"]["depth_sources"] == ["ext"] and out["view"]["n_detections"] == 3
+    assert out["view"]["timings"] == {"oracle_visibility": records["view"]["timings"]["oracle_visibility"],
+                                      "ext": 0.12}
+    assert info["variant"] == EXTERNAL_NAMED and info["source"] == "ext" and info["min_score"] == 0.2
+    assert info["n_below_min_score"] == 1 and info["n_named"] == 2
+    unknown = UNKNOWN_LABEL.format(label="lamp", dataset="arkitscenes")
+    assert info["n_unnamed"] == {unknown: 1}
+    assert info["external_box_index"] == [0, 1, 2] and info["external_label"] == ["chair", "table", "lamp"]
+
+    dets = out["detections"]                                             # highest score first: A, B, C
+    assert [(d["phrase"], d["labels"], d["score"]) for d in dets] == [("chair", ["chair"], 0.8),
+                                                                      ("table", ["table"], 0.7), ("lamp", [], 0.5)]
+    assert dets[0]["box"] == box_json(BOX_A) and dets[2]["box"] is None
+    assert dets[2]["lift_error"] == f"{UNNAMED_PREFIX}{unknown}"
+    assert dets[1]["box2d"][2] == 640.0 and dets[1]["features"]["border_touch"] == 1.0
+    assert all(d["mask"]["box_mask"] == 1.0 and d["source"] == "ext" for d in dets)
+    f = dets[0]["features"]
+    assert set(f) == {"depth_median", "border_touch", "n_border_sides", "det_score", "external_box_index",
+                      "cover_by_nearer"}
+    assert f["depth_median"] == pytest.approx(3.1) and f["det_score"] == 0.8 and f["external_box_index"] == 0.0
+
+    every, info_all = external_named_records(records, predictions, "ext")
+    assert every["view"]["n_detections"] == 4 and info_all["n_below_min_score"] == 0
+    assert every["detections"][3]["phrase"] == "chair" and every["detections"][3]["score"] == 0.1
+
+
+def test_external_named_items_come_from_rematch(records: dict[str, Any]) -> None:
+    """The transformed records re-associate and answer as ``auto_<name>``; a stored shard re-matches the same.
+
+    Parameters
+    ----------
+    records : dict
+        The stored view records.
+    """
+    result, info = run_box_source(records, parse_view_predictions(named_line(records)), EXTERNAL_NAMED,
+                                  source_name="sparse4d", min_score=0.2)
+    assert set(result.items) == {"oracle", "auto_sparse4d"} and result.sources == ("sparse4d",)
+    assert result.config.association == "2d"
+    assert {(m.detection, m.object_id) for m in result.matches["sparse4d"].matches} == {(0, "chair-1"),
+                                                                                        (1, "table-1")}
+    assert all(m.label_correct for m in result.matches["sparse4d"].matches)
+    assert result.matches["sparse4d"].unboxed == (2,)
+    assert json.loads(to_json_line([i.to_json() for i in result.items["oracle"]])) == records["qa"]["oracle"]
+    auto = result.items["auto_sparse4d"]
+    assert auto and all(i.source == "auto_sparse4d" for i in auto)
+    counts = {i.spec.params["phrase"]: i for i in auto if i.spec.qtype == "count"}
+    assert counts["chair"].answer == 1 and counts["chair"].extra["n_detections_2d"] == 1     # D is below 0.2
+    for item in auto:
+        if item.spec.qtype != "count":
+            feats = referent_features(item.extra)
+            assert np.isfinite(feats["log_range"]) and np.isfinite(feats["det_score"])
+    again = rematch_view(json.loads(to_json_line(result.records())), association="2d")      # as a stored shard
+    assert again.items["auto_sparse4d"] == auto
+
+
+def test_external_names_put_the_box_label_first_and_name_by_phrase() -> None:
+    """A label names its class's phrase; the phrase's other classes follow, so pairing is phrase-level."""
+    assert external_names("smartspaces", "Transporter") == ("mobile robot", ("Transporter", "NovaCarter"))
+    assert external_names("smartspaces", "NovaCarter") == ("mobile robot", ("NovaCarter", "Transporter"))
+    assert external_names("smartspaces", "PalletTruck") == ("pallet jack", ("PalletTruck",))
+    assert external_names("arkitscenes", "tv_monitor") == ("tv", ("tv_monitor",))
+    assert external_names("smartspaces", "Robot") is None and external_names("smartspaces", None) is None
+    assert external_names("unknown_dataset", "Person") is None
+    assert NO_LABEL == "no label"
+
+
+def test_external_named_argument_checks(records: dict[str, Any]) -> None:
+    """Source names are checked; the variant needs one; other variants take neither it nor a minimum score.
+
+    Parameters
+    ----------
+    records : dict
+        The stored view records.
+    """
+    assert check_source_name("sparse4d") == "sparse4d" and check_source_name("tao_sparse4d_v2") == "tao_sparse4d_v2"
+    for bad in ("Sparse4D", "4d", "sparse-4d", "", "x" * 41):
+        with pytest.raises(ValueError, match="lower case"):
+            check_source_name(bad)
+    for taken in ("moge", "lidar", "laser", "gt_depth", "oracle", SAM3_SOURCE, CLIP_SOURCE, EXTERNAL_NAMED):
+        with pytest.raises(ValueError, match="taken"):
+            check_source_name(taken)
+    predictions = parse_view_predictions(named_line(records))
+    with pytest.raises(ValueError, match="needs a source name"):
+        run_box_source(records, predictions, EXTERNAL_NAMED)
+    with pytest.raises(ValueError, match="only"):
+        run_box_source(records, predictions, SAM3_SOURCE, min_score=0.2)
+    with pytest.raises(ValueError, match="finite"):
+        external_named_records(records, predictions, "ext", min_score=float("nan"))
+    with pytest.raises(ValueError, match="taken"):
+        external_named_records(records, predictions, "moge")
+
+
+def test_cover_by_nearer_and_overlap_summary() -> None:
+    """A far box half hidden by a near one is half covered; the near one is not covered at all."""
+    boxes = [(0.0, 0.0, 10.0, 10.0), (5.0, 0.0, 15.0, 10.0), (100.0, 100.0, 110.0, 110.0)]
+    np.testing.assert_allclose(cover_by_nearer(boxes, [2.0, 5.0, 1.0]), [0.0, 0.5, 0.0])
+    np.testing.assert_allclose(cover_by_nearer(boxes, [5.0, 2.0, 1.0]), [0.5, 0.0, 0.0])
+    np.testing.assert_allclose(cover_by_nearer(boxes, [3.0, 3.0, 3.0]), [0.0, 0.0, 0.0])    # equal depth: no
+    assert cover_by_nearer([], []).shape == (0,)
+    with pytest.raises(ValueError):
+        cover_by_nearer(boxes, [1.0])
+    summary = overlap_summary(boxes, [2.0, 5.0, 1.0])
+    assert summary == {"n_boxes": 3, "n_pairs_overlap": 1, "n_pairs_iou": 1, "n_boxes_overlap": 2, "n_covered": 1}
+    assert overlap_summary(boxes, [2.0, 5.0, 1.0], min_iou=0.5, min_cover=0.6)["n_pairs_iou"] == 0
+    touching = [(0.0, 0.0, 10.0, 10.0), (10.0, 0.0, 20.0, 10.0)]                             # a shared edge
+    assert overlap_summary(touching, [1.0, 2.0])["n_pairs_overlap"] == 0
+    assert overlap_summary(boxes[:1], [1.0])["n_boxes"] == 1
+
+
+# --------------------------------------------------------------------------------------------------------
 # The script
 # --------------------------------------------------------------------------------------------------------
 
@@ -768,6 +929,52 @@ def test_script_missing_predictions_stop_the_run_unless_skipped(folders: dict[st
     run = json.loads((folders["out"] / "runs.jsonl").read_text())
     assert run["counts"]["skipped_no_predictions"] == 1 and run["counts"]["processed"] == 1
     assert run["oracle_identical"]["arkitscenes"]["compared"] is False
+
+
+def test_script_external_named_builds_a_named_source(folders: dict[str, Path]) -> None:
+    """``--variant external_named --source-name ext --min-score 0.2`` writes ``qa_auto_ext`` and logs both.
+
+    Parameters
+    ----------
+    folders : dict of str to pathlib.Path
+        Source labels, predictions and the output folder.
+    """
+    script = _script_module()
+    path = folders["predictions"] / "arkitscenes" / "synthetic.jsonl"
+    lines = [json.loads(x) for x in path.read_text().splitlines()]
+    path.write_text("".join(json.dumps(named_line(stored_records(x["frame"]))) + "\n" for x in lines))
+    argv = _argv(folders, EXTERNAL_NAMED, "--source-name", "ext", "--min-score", "0.2")
+    assert script.main(argv) == 0
+    out = folders["out"] / "arkitscenes"
+    items = [json.loads(x) for x in (out / "qa_auto_ext.jsonl").read_text().splitlines()]
+    assert items and {i["source"] for i in items} == {"auto_ext"}
+    run = json.loads((folders["out"] / "runs.jsonl").read_text())
+    assert run["variant"] == EXTERNAL_NAMED and run["source_name"] == "ext" and run["min_score"] == 0.2
+    assert run["oracle_identical"]["arkitscenes"]["identical"] is True and run["counts"]["processed"] == 2
+    assert run["counts"]["detections"] == 6 and run["counts"]["named"] == 4 and run["counts"]["below_min_score"] == 2
+    assert run["counts"]["overlap_n_boxes"] == 6
+    shard = json.loads((out / "shards" / "synthetic__wide__0.json").read_text())
+    assert shard["box_source"]["external_label"] == ["chair", "table", "lamp"]
+    assert load_labels(out)["depth_source"].unique().tolist() == ["ext"]
+
+
+@pytest.mark.parametrize("extra", [(EXTERNAL_NAMED, "--min-score", "0.2"), (EXTERNAL_NAMED, "--source-name", "ext"),
+                                   (EXTERNAL_NAMED, "--source-name", "moge", "--min-score", "0.2"),
+                                   (SAM3_SOURCE, "--min-score", "0.2"), (SAM3_SOURCE, "--source-name", "ext")])
+def test_script_refuses_inconsistent_external_options(folders: dict[str, Path], extra: tuple[str, ...]) -> None:
+    """The named variant needs a valid name and a minimum score; the CuTR variants take neither.
+
+    Parameters
+    ----------
+    folders : dict of str to pathlib.Path
+        Source labels, predictions and the output folder.
+    extra : tuple of str
+        The variant and its options.
+    """
+    script = _script_module()
+    with pytest.raises(SystemExit):
+        script.main(_argv(folders, extra[0], *extra[1:]))
+    assert not folders["out"].exists()
 
 
 def test_predictions_of_another_view_are_refused(records: dict[str, Any]) -> None:
