@@ -496,6 +496,46 @@ def _read_pincam(text: str) -> Camera:
     return Camera(fx, fy, cx, cy, int(width), int(height))
 
 
+def _stamp_key(stamp: str) -> int:
+    """A timestamp's value in whole milliseconds, independent of how its file name was formatted.
+
+    Parameters
+    ----------
+    stamp : str
+        Seconds as written in a file name, e.g. ``"7031.8"`` or ``"7031.800"``.
+
+    Returns
+    -------
+    int
+        Milliseconds; ``"7031.8"`` and ``"7031.800"`` give the same key.
+    """
+    return round(float(stamp) * 1000.0)
+
+
+def _pincam_members(archive: zipfile.ZipFile, video_id: str) -> dict[int, str]:
+    """The ``.pincam`` members of a ``wide_intrinsics`` archive, keyed by timestamp value.
+
+    Frame and intrinsics names do not always format a timestamp the same way: a frame may drop trailing
+    zeros (``48458647_7031.8.png``) where its intrinsics keep three decimals (``48458647_7031.800.pincam``).
+    Matching on the value rather than the text pairs them.
+
+    Parameters
+    ----------
+    archive : zipfile.ZipFile
+        The video's ``wide_intrinsics`` archive.
+    video_id : str
+        ARKitScenes video id.
+
+    Returns
+    -------
+    dict of int to str
+        :func:`_stamp_key` of each timestamp to its member name.
+    """
+    prefix = f"wide_intrinsics/{video_id}_"
+    return {_stamp_key(n[len(prefix):-len(".pincam")]): n
+            for n in archive.namelist() if n.startswith(prefix) and n.endswith(".pincam")}
+
+
 def wide_timestamps(video_id: str, *, root: Path | None = None) -> list[str]:
     """Timestamps of every ``wide`` frame in a video's upsampling archive, as written in the file names.
 
@@ -550,6 +590,7 @@ def list_frames(video_id: str, *, root: Path | None = None, max_gap: float = 0.2
     """
     rel, _ = _upsampling_zip(video_id, root)
     intrinsics = _zip(_root(root) / "wide_intrinsics" / f"{video_id}_wide_intrinsics.zip")
+    pincams = _pincam_members(intrinsics, video_id)
     stamps = wide_timestamps(video_id, root=root)
     times, T_wc = load_trajectory(video_id, root=root)
     query = np.array([float(s) for s in stamps])
@@ -561,8 +602,10 @@ def list_frames(video_id: str, *, root: Path | None = None, max_gap: float = 0.2
     for stamp, pose, ok in zip(stamps, poses, valid):
         if not ok:
             continue
-        camera, R = rotate_camera(_read_pincam(intrinsics.read(f"wide_intrinsics/{video_id}_{stamp}.pincam")
-                                               .decode()), turns)
+        pincam = pincams.get(_stamp_key(stamp))
+        if pincam is None:
+            raise KeyError(f"no .pincam intrinsics for wide frame {stamp} of video {video_id}")
+        camera, R = rotate_camera(_read_pincam(intrinsics.read(pincam).decode()), turns)
         member = f"{video_id}/wide/{video_id}_{stamp}.png"
         views.append(FrameView(DATASET, video_id, camera_id, stamp, camera, _turn_pose(pose, R),
                                f"{rel}::{member}", WORLD_UP.copy()))

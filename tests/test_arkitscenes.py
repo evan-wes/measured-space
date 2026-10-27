@@ -178,6 +178,23 @@ def test_list_frames_interpolates_and_drops_unposed_frames(dataset: Path) -> Non
     assert [v.frame for v in ark.list_frames(VID, max_gap=1.0)] == ["10.050", "10.200", "10.600", "11.050"]
 
 
+def test_list_frames_matches_intrinsics_by_time_not_text(dataset: Path) -> None:
+    """A frame named with trailing zeros dropped (``10.2``) still finds its intrinsics (``10.200``).
+
+    Parameters
+    ----------
+    dataset : pathlib.Path
+        The fake dataset folder.
+    """
+    with zipfile.ZipFile(dataset / "upsampling" / f"{VID}.zip", "w") as z:
+        for k, stamp in enumerate(STAMPS):
+            name = "10.2" if stamp == "10.200" else stamp
+            z.writestr(f"{VID}/wide/{VID}_{name}.png", _png(np.full((6, 8, 3), k, np.uint8)))
+    views = ark.list_frames(VID, upright=False)
+    assert [v.frame for v in views] == ["10.050", "10.2", "11.050"]
+    assert views[1].camera == SENSOR_CAMERA
+
+
 def test_upright_views_turn_camera_pose_and_images_together(dataset: Path) -> None:
     """Default views describe the upright image: world up points up it, and every loader turns its array.
 
