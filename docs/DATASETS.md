@@ -57,6 +57,17 @@ inertial poses, and fixed, calibrated multi-camera installations.
   Person_0; 9,000 frames. Ceiling cameras 0000/0002 are 3.26/3.21 m above the floor. Every GT visible 2D box lies
   inside its projected 3D box (median covered share 1.000 for every class and camera). Open: Forklift_4's box
   bottom sits 0.14–0.16 m above the floor, unlike the others.
+- **Additional scenes for diversity (2026-10-26).** Warehouse_018 alone is one scene with 4 objects. Nine
+  more 2026 scenes containing forklifts, pallet trucks and people were added **without depth**: train
+  000/002/004/006/010/011/017/019 and val 020. Their questions use the GT's per-camera visible boxes for
+  visibility, and their automatic labels use monocular depth or the calibrated ground plane.
+  - Per scene: `calibration.json` + `ground_truth.json` (1.7 GB for all 9), then two cameras' videos (3.31 GB
+    for the 18 videos).
+  - The two cameras per scene were chosen from the GT alone by `scripts/select_smartspaces_cameras.py`: the pair
+    seeing the most objects in common, among pairs that see a forklift and a person together in ≥50% of
+    sampled frames.
+  - Result in `configs/smartspaces_cameras.yaml`: 3.3–24.9 shared objects per frame; joint forklift+person
+    presence 0.61–1.00.
 - **Question-type mapping:** all planned types are supported for the 7 agent classes. These are centre and closest-surface distance, size, egocentric distance, relative depth, left/right, closest same-class instance, and count in view (from `2d_bounding_box_visible`).
 - **Risks:**
   - An open-vocabulary detector will find racks and pallets that have no GT; those detections cannot be audited and must be excluded from scoring.

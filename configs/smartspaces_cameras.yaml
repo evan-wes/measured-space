@@ -1,0 +1,99 @@
+MTMC_Tracking_2026/train/Warehouse_000:
+  cameras:
+  - Camera_0003
+  - Camera_0015
+  co_visible: 24.867
+  joint_presence: 1.0
+  mean_visible:
+  - 29.43
+  - 26.9
+  n_cameras: 19
+  step: 30
+MTMC_Tracking_2026/train/Warehouse_002:
+  cameras:
+  - Camera_0002
+  - Camera_0015
+  co_visible: 18.603
+  joint_presence: 0.943
+  mean_visible:
+  - 23.95
+  - 31.37
+  n_cameras: 20
+  step: 30
+MTMC_Tracking_2026/train/Warehouse_004:
+  cameras:
+  - Camera_0011
+  - Camera_0015
+  co_visible: 11.19
+  joint_presence: 1.0
+  mean_visible:
+  - 13.87
+  - 13.43
+  n_cameras: 19
+  step: 30
+MTMC_Tracking_2026/train/Warehouse_006:
+  cameras:
+  - Camera_0001
+  - Camera_0017
+  co_visible: 10.657
+  joint_presence: 1.0
+  mean_visible:
+  - 13.52
+  - 13.74
+  n_cameras: 18
+  step: 30
+MTMC_Tracking_2026/train/Warehouse_010:
+  cameras:
+  - Camera_0000
+  - Camera_0005
+  co_visible: 21.887
+  joint_presence: 1.0
+  mean_visible:
+  - 27.65
+  - 31.22
+  n_cameras: 11
+  step: 30
+MTMC_Tracking_2026/train/Warehouse_011:
+  cameras:
+  - Camera_0002
+  - Camera_0004
+  co_visible: 7.137
+  joint_presence: 1.0
+  mean_visible:
+  - 8.46
+  - 8.7
+  n_cameras: 10
+  step: 30
+MTMC_Tracking_2026/train/Warehouse_017:
+  cameras:
+  - Camera_0000
+  - Camera_0002
+  co_visible: 4.497
+  joint_presence: 1.0
+  mean_visible:
+  - 4.5
+  - 4.6
+  n_cameras: 3
+  step: 30
+MTMC_Tracking_2026/train/Warehouse_019:
+  cameras:
+  - Camera_0001
+  - Camera_0002
+  co_visible: 3.323
+  joint_presence: 0.613
+  mean_visible:
+  - 3.33
+  - 3.77
+  n_cameras: 3
+  step: 30
+MTMC_Tracking_2026/val/Warehouse_020:
+  cameras:
+  - Camera_0003
+  - Camera_0011
+  co_visible: 20.42
+  joint_presence: 1.0
+  mean_visible:
+  - 30.62
+  - 26.45
+  n_cameras: 16
+  step: 30
