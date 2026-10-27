@@ -127,6 +127,13 @@ inertial poses, and fixed, calibrated multi-camera installations.
   - 10 × `<id>_3dod_annotation.json`: 156,558 bytes in total.
   - 6 × `upsampling/Validation/<id>.zip`: 422.7 MB (1920×1440 colour, laser `highres_depth`, lowres depth, confidence). Laser depth is aligned to the `wide` timestamps, not to `vga_wide`.
   - Optional: 10 × `<id>_3dod_mesh.ply`, 355.5 MB.
+- **Video 48458647 is excluded (2026-10-27)**, for every labeller, so all are compared on the same 106
+  videos.
+  - Its upsampling PNGs are stored 1440×1920 (portrait), while its `.pincam` intrinsics say 1920×1440, so the
+    image loader's size check rejects all 5 of its frames.
+  - The other 106 validation videos are consistent: 2,112 posed views.
+  - This video also names one frame `7031.8` against the intrinsics' `7031.800`. The loader now matches by
+    timestamp value, which fixes the lookup but not the orientation.
 - **Dense-frame test batch (2026-10-27).** It tests whether full-rate frames help a multi-view labeller
   before the whole raw subset is requested.
   - **Videos:** 5 Training-fold videos: 43828402, 42446031, 42898070, 47333565, 43828460.
