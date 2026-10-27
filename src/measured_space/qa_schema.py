@@ -92,6 +92,32 @@ class QAItem:
                       tuple(record.get("objects", ())), record.get("extra", {}))
 
 
+def is_correct(spec: QuestionSpec, predicted: Any, reference: Any) -> bool:
+    """Whether ``predicted`` matches ``reference`` under the spec's rule.
+
+    Numbers: correct if the absolute error is within ``tolerance["abs"]`` **or** within
+    ``tolerance["rel"]`` times the reference (either bound suffices; a missing bound is ignored).
+    Counts: exact integer match. Choices: case- and whitespace-insensitive match. ``None`` (an unparsed
+    prediction) is never correct.
+    """
+    if predicted is None:
+        return False
+    if spec.answer_type == "number":
+        try:
+            error = abs(float(predicted) - float(reference))
+        except (TypeError, ValueError):
+            return False
+        abs_tol, rel_tol = spec.tolerance.get("abs"), spec.tolerance.get("rel")
+        return bool((abs_tol is not None and error <= abs_tol)
+                    or (rel_tol is not None and error <= rel_tol * abs(float(reference))))
+    if spec.answer_type == "count":
+        try:
+            return int(predicted) == int(reference) and float(predicted) == int(predicted)
+        except (TypeError, ValueError):
+            return False
+    return str(predicted).strip().lower() == str(reference).strip().lower()
+
+
 def write_jsonl(items: Iterable[QAItem], path: str | Path) -> int:
     """Write items, one JSON object per line; returns the number written."""
     path = Path(path)

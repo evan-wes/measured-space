@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 
 from measured_space.geometry import Camera, OrientedBox, make_pose
-from measured_space.qa_schema import QAItem, QuestionSpec, Referent, read_jsonl, write_jsonl
+from measured_space.qa_schema import QAItem, QuestionSpec, Referent, is_correct, read_jsonl, write_jsonl
 from measured_space.scene import FrameView, SceneObject
 from measured_space.visibility import object_in_view
 
@@ -53,6 +53,27 @@ def test_visibility_uses_the_world_pose():
     obj = SceneObject("a", "box", OrientedBox([0, 0, 0], [0.5, 0.5, 0.5], np.eye(3)))
     seen, _ = object_in_view(view, obj, np.full((240, 320), 20.0))   # lower-resolution depth map
     assert seen.visible_fraction == pytest.approx(1.0)
+
+
+def _spec(answer_type: str, tolerance=None, choices=None) -> QuestionSpec:
+    return QuestionSpec("t_v1", "t", "synthetic", "s0", "cam0", "0", "img.png", (), "q?", answer_type,
+                        tolerance=tolerance or {}, choices=choices)
+
+
+def test_is_correct_numeric_uses_either_bound():
+    spec = _spec("number", {"abs": 0.1, "rel": 0.1})
+    assert is_correct(spec, 2.15, 2.0)                  # within 10% (0.2) though not within 0.1 m
+    assert is_correct(spec, 0.35, 0.3)                  # within 0.1 m though not within 10%
+    assert not is_correct(spec, 2.25, 2.0)
+    assert not is_correct(_spec("number", {"abs": None, "rel": 0.1}), 0.35, 0.3)
+    assert not is_correct(spec, None, 2.0) and not is_correct(spec, "n/a", 2.0)
+
+
+def test_is_correct_count_and_choice():
+    assert is_correct(_spec("count"), 3, 3) and is_correct(_spec("count"), "3", 3)
+    assert not is_correct(_spec("count"), 3.5, 3) and not is_correct(_spec("count"), 2, 3)
+    choice = _spec("choice", choices=("left", "right"))
+    assert is_correct(choice, " Left ", "left") and not is_correct(choice, "right", "left")
 
 
 def test_qa_item_jsonl_round_trip(tmp_path):
