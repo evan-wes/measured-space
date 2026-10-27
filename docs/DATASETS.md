@@ -74,7 +74,7 @@ inertial poses, and fixed, calibrated multi-camera installations.
   the same two cameras as their sources, so they form a paired **appearance-shift** test, not independent scenes.
   - Cameras for the independent scenes were chosen by the same script. Scenes without forklifts fall back to
     the most co-visible pair, 2.6–30.3 shared objects per frame.
-  - Downloads: 1.0 GB of calibration + GT for these 13 scenes (Warehouse_012's was already local) and 3.60 GB
+  - Downloads: 2.28 GB of GT (+ small calibration files) for 12 of these scenes (Warehouse_012's was already local) and 3.60 GB
     of video (26 videos).
   - The warehouse side is now 18 independent scenes (Warehouse_018 with depth + 17 depth-less) plus 5
     appearance variants.
