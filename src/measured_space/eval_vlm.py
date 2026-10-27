@@ -8,8 +8,9 @@ Design choices, and why:
   fallbacks recover answers from models that ignore the format. Anything still ambiguous parses to
   ``None``, a parse failure, which scoring counts as wrong.
 - **Reasoning models.** Cosmos-Reason2 writes ``<think>...</think>`` before its answer. Only the text
-  after ``</think>`` is parsed. A think block cut off by the token budget is a parse failure, never a guess
-  read from half-finished reasoning.
+  after ``</think>`` is parsed, never a guess read from half-finished reasoning. If the token budget cuts
+  the think block off, the block is closed (``</think>`` is appended) and a short answer is decoded after
+  it. That answer is flagged as forced and gets its own parse method, so scoring can count it or not.
 - **Inputs come from the tokenizer and the PIL image processor, not ``AutoProcessor``.** The Qwen3-VL
   processor in transformers 5 cannot be built without torchvision, which its video processor needs. This
   project feeds only still images. Building the inputs here also fixes the preprocessing backend, so
@@ -26,7 +27,7 @@ import json
 import math
 import re
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, Iterable, NamedTuple, Protocol
@@ -38,6 +39,9 @@ from measured_space.qa_schema import QAItem, QuestionSpec
 
 PROMPT_VERSION = "v1"
 IMAGE_PAD = "<|image_pad|>"
+FORCE_CLOSE = "\n</think>\n\n"            # appended to cut-off reasoning; the answer follows "</think>\n\n"
+FORCED_ANSWER_TOKENS = 48                    # budget for the answer decoded after a forced close
+FORCED_METHOD = "forced_after_truncation"
 
 # Metres per unit, for numeric answers asked in metres. Bare "in" is only inches when no word follows it,
 # so "2 in length" does not become 5 cm. The ' and " marks count only in a feet-and-inches pair (5'6"): a
@@ -164,6 +168,12 @@ class Generation:
         Wall time for preprocessing, generation and decoding, in seconds.
     n_image_tokens : int
         Visual tokens fed to the language model (0 without an image).
+    forced_text : str or None
+        If the budget cut off an open ``<think>`` block: the answer decoded after appending
+        :data:`FORCE_CLOSE`. None otherwise.
+    n_forced_tokens : int
+        Tokens generated in that forced phase (0 if there was none). ``n_new_tokens`` counts the first
+        phase only.
     """
 
     text: str
@@ -171,6 +181,8 @@ class Generation:
     truncated: bool
     latency_s: float
     n_image_tokens: int
+    forced_text: str | None = None
+    n_forced_tokens: int = 0
 
 
 class Parsed(NamedTuple):
@@ -182,7 +194,8 @@ class Parsed(NamedTuple):
         Metres for numbers, an int for counts, the matching choice (as spelled in the spec) for choices;
         None if unparseable.
     method : str
-        ``"json"``, ``"answer_field"``, ``"text"``, ``"unterminated_think"`` or ``"failed"``.
+        ``"json"``, ``"answer_field"``, ``"text"``, ``"unterminated_think"``, ``"failed"``, or
+        :data:`FORCED_METHOD` for an answer forced after cut-off reasoning.
     """
 
     value: float | int | str | None
@@ -370,8 +383,9 @@ def parse_number(text: str, unit: str | None = "m") -> float | None:
     """A length from free text, converted to ``unit``.
 
     Preference: a feet-and-inches pair; a range with a unit, such as "2-3 m" or "between 2 and 3 m" (its
-    midpoint); the first number carrying a length unit; otherwise the only number in the text, taken to be in ``unit``. Unit conversion applies
-    only when ``unit`` is ``"m"``; for any other unit the number is returned as written.
+    midpoint); the first number carrying a length unit; otherwise the only number in the text, taken to be
+    in ``unit``. Unit conversion applies only when ``unit`` is ``"m"``; for any other unit the number is
+    returned as written.
 
     Parameters
     ----------
@@ -623,7 +637,8 @@ class VLMRunner:
     attn_implementation = "sdpa"
 
     def __init__(self, model: ModelSpec, resolution: ResolutionPolicy = DEFAULT_RESOLUTION, *,
-                 device: str = "cuda", cache_dir: Path | None = None, max_new_tokens: int | None = None) -> None:
+                 device: str = "cuda", cache_dir: Path | None = None, max_new_tokens: int | None = None,
+                 forced_answer_tokens: int = FORCED_ANSWER_TOKENS) -> None:
         """Load the tokenizer, the PIL image processor and the weights (bf16, SDPA) onto ``device``.
 
         Parameters
@@ -639,6 +654,8 @@ class VLMRunner:
             ``local_files_only=True``: nothing is downloaded.
         max_new_tokens : int or None
             Overrides ``model.max_new_tokens``.
+        forced_answer_tokens : int
+            Budget for the answer forced after cut-off reasoning; 0 disables forcing.
 
         Raises
         ------
@@ -657,6 +674,7 @@ class VLMRunner:
         self.resolution = resolution
         self.device = device
         self.max_new_tokens = max_new_tokens or model.max_new_tokens
+        self.forced_answer_tokens = forced_answer_tokens
         common = {"cache_dir": str(cache), "local_files_only": True}
         self.tokenizer = AutoTokenizer.from_pretrained(model.repo_id, **common)
         self.image_processor = AutoImageProcessor.from_pretrained(model.repo_id, backend="pil", **common)
@@ -672,7 +690,8 @@ class VLMRunner:
             "dtype": self.dtype_name, "attn_implementation": self.attn_implementation,
             "resolution": resolution.name, "min_pixels": resolution.min_pixels,
             "max_pixels": resolution.max_pixels, "image_processor": type(self.image_processor).__name__,
-            "max_new_tokens": self.max_new_tokens, "reasoning": model.reasoning, "decoding": "greedy",
+            "max_new_tokens": self.max_new_tokens, "forced_answer_tokens": forced_answer_tokens,
+            "reasoning": model.reasoning, "decoding": "greedy",
             "prompt_version": PROMPT_VERSION, "transformers": transformers.__version__,
             "torch": torch.__version__,
         }
@@ -756,27 +775,123 @@ class VLMRunner:
         Returns
         -------
         Generation
-            Decoded text, token count, truncation flag, latency and visual-token count.
+            Decoded text, token counts, truncation flag, forced answer (if any), latency of both phases and
+            visual-token count.
         """
-        import torch
-
         start = time.perf_counter()
         inputs, n_image_tokens = self.encode(prompt, image)
-        with torch.inference_mode():
-            out = self.model.generate(**inputs, max_new_tokens=self.max_new_tokens, do_sample=False,
-                                      temperature=None, top_p=None, top_k=None)
-        new = out[0, inputs["input_ids"].shape[1]:].tolist()
-        text = self.tokenizer.decode(new, skip_special_tokens=True)
-        truncated = len(new) >= self.max_new_tokens and (not new or new[-1] not in self.eos_ids)
-        return Generation(text, len(new), truncated, time.perf_counter() - start, n_image_tokens)
+        gen = decode_greedy(self.model, self.tokenizer, inputs, max_new_tokens=self.max_new_tokens,
+                            eos_ids=self.eos_ids, forced_answer_tokens=self.forced_answer_tokens)
+        return replace(gen, latency_s=time.perf_counter() - start, n_image_tokens=n_image_tokens)
+
+
+def decode_greedy(model: Any, tokenizer: Any, inputs: dict[str, Any], *, max_new_tokens: int,
+                  eos_ids: set[int], forced_answer_tokens: int = FORCED_ANSWER_TOKENS) -> Generation:
+    """Greedy decoding, closing reasoning that the budget cut off and decoding a short answer after it.
+
+    If the first phase stops at ``max_new_tokens`` inside an open ``<think>`` block, the generated tokens
+    are kept exactly. The tokens of :data:`FORCE_CLOSE` are appended, and decoding continues for at most
+    ``forced_answer_tokens``. Image inputs are reused. The appended and forced tokens are text
+    (``mm_token_type_ids`` 0).
+
+    Parameters
+    ----------
+    model : Any
+        A transformers generation model; ``model.generate(**inputs, max_new_tokens=...)`` returns
+        ``(1, L)`` token ids, prompt included.
+    tokenizer : Any
+        Its tokenizer (``__call__`` and ``decode``).
+    inputs : dict
+        Encoded prompt for batch size 1, as from :meth:`VLMRunner.encode`. Every tensor is on the
+        model's device, and ``input_ids`` has shape ``(1, L)``.
+    max_new_tokens : int
+        First-phase budget.
+    eos_ids : set of int
+        End-of-turn token ids.
+    forced_answer_tokens : int
+        Forced-phase budget; 0 disables forcing.
+
+    Returns
+    -------
+    Generation
+        Text and token count of the first phase, its truncation flag, and the forced answer and its
+        token count if there was one. ``latency_s`` and ``n_image_tokens`` are 0, for the caller to fill.
+    """
+    import torch
+
+    new = _greedy(model, inputs, max_new_tokens)
+    text = tokenizer.decode(new, skip_special_tokens=True)
+    truncated = len(new) >= max_new_tokens and (not new or new[-1] not in eos_ids)
+    if not (truncated and forced_answer_tokens > 0 and final_answer_text(text) is None):
+        return Generation(text, len(new), truncated, 0.0, 0)
+    prompt_ids = inputs["input_ids"]
+    close = tokenizer(FORCE_CLOSE, add_special_tokens=False, return_tensors="pt")["input_ids"]
+    close = close.to(prompt_ids.device)
+    ids = torch.cat([prompt_ids, torch.tensor([new], dtype=prompt_ids.dtype, device=prompt_ids.device), close],
+                    dim=1)
+    extra = ids.shape[1] - prompt_ids.shape[1]
+    forced_inputs = {**inputs, "input_ids": ids, "attention_mask": torch.ones_like(ids)}
+    if "mm_token_type_ids" in inputs:
+        types = inputs["mm_token_type_ids"]
+        forced_inputs["mm_token_type_ids"] = torch.cat([types, types.new_zeros((1, extra))], dim=1)
+    forced = _greedy(model, forced_inputs, forced_answer_tokens)
+    return Generation(text, len(new), truncated, 0.0, 0, tokenizer.decode(forced, skip_special_tokens=True),
+                      len(forced))
+
+
+def _greedy(model: Any, inputs: dict[str, Any], max_new_tokens: int) -> list[int]:
+    """Greedy-decode and return only the new token ids.
+
+    Parameters
+    ----------
+    model : Any
+        A transformers generation model.
+    inputs : dict
+        Model inputs for batch size 1, with ``input_ids`` of shape ``(1, L)``.
+    max_new_tokens : int
+        Budget.
+
+    Returns
+    -------
+    list of int
+        Generated token ids, end-of-turn token included if one was produced.
+    """
+    import torch
+
+    with torch.inference_mode():
+        out = model.generate(**inputs, max_new_tokens=max_new_tokens, do_sample=False, temperature=None,
+                             top_p=None, top_k=None)
+    return out[0, inputs["input_ids"].shape[1]:].tolist()
+
+
+def parse_generation(spec: QuestionSpec, gen: Generation) -> Parsed:
+    """Parse a generation, using the forced answer if reasoning was cut off.
+
+    Parameters
+    ----------
+    spec : QuestionSpec
+        The question.
+    gen : Generation
+        The model output.
+
+    Returns
+    -------
+    Parsed
+        :func:`parse_answer` of the output. If an answer was forced, it is parsed instead, with method
+        :data:`FORCED_METHOD` (or ``"failed"`` if even that cannot be parsed).
+    """
+    if gen.forced_text is None:
+        return parse_answer(spec, gen.text)
+    forced = parse_answer(spec, gen.forced_text)
+    return Parsed(forced.value, FORCED_METHOD if forced.value is not None else "failed")
 
 
 # --------------------------------------------------------------------------------------------- run loop
 
 # Fields that must agree between an existing predictions file and the run appending to it.
 RESUME_KEYS = ("model_id", "snapshot", "dtype", "attn_implementation", "resolution", "min_pixels",
-               "max_pixels", "image_processor", "max_new_tokens", "reasoning", "decoding", "prompt_version",
-               "blind")
+               "max_pixels", "image_processor", "max_new_tokens", "forced_answer_tokens", "reasoning", "decoding",
+               "prompt_version", "blind")
 
 
 @dataclass(frozen=True)
@@ -902,11 +1017,12 @@ def run_predictions(runner: Runner, items: Iterable[QAItem | QuestionSpec], out_
             image = None if blind else load_image(spec)
             prompt = build_prompt(spec, blind=blind, reasoning=bool(config.get("reasoning")))
             gen = runner.generate(prompt, image)
-            parsed = parse_answer(spec, gen.text)
+            parsed = parse_generation(spec, gen)
             record = {"id": spec.id, "dataset": spec.dataset, "scene": spec.scene, "qtype": spec.qtype,
                       "answer_type": spec.answer_type, **config, "image_hw": None if image is None
                       else list(image.shape[:2]), "raw_output": gen.text, "parsed": parsed.value,
-                      "parse_method": parsed.method, **{k: v for k, v in asdict(gen).items() if k != "text"},
+                      "parse_method": parsed.method, "forced": gen.forced_text is not None,
+                      **{k: v for k, v in asdict(gen).items() if k != "text"},
                       "created": datetime.now(timezone.utc).isoformat(timespec="seconds")}
             f.write(json.dumps(record) + "\n")
             f.flush()

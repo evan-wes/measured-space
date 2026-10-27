@@ -7,9 +7,11 @@ import pandas as pd
 import pytest
 from scipy.stats import norm
 
+from measured_space.eval_vlm import FORCED_METHOD
 from measured_space.qa_schema import QAItem, QuestionSpec
 from measured_space.scoring import (delta_delta, imitation_rate, label_ceiling, label_ceiling_table,
-                                    label_table, metrics, predictions_frame, score, two_by_two)
+                                    label_table, metrics, parse_method_table, predictions_frame, score,
+                                    two_by_two)
 
 
 def _spec(name: str, answer_type: str, scene: str = "s0") -> QuestionSpec:
@@ -134,3 +136,20 @@ def test_label_ceiling_formula() -> None:
                                  QAItem(_spec("c", "choice"), "left", "auto", extra={"sigma": 0.1})])
     assert list(table["id"]) == [near.id] and table.attrs["n_without_sigma"] == 1
     assert table["tau"].iloc[0] == pytest.approx(0.1)
+
+
+def test_forced_answers_count_by_default_and_can_be_excluded() -> None:
+    """A correct forced answer counts as an answer unless excluded; its share is reported either way."""
+    a, b = _spec("a", "number"), _spec("b", "number")
+    labels = label_table([QAItem(a, 2.0, "oracle"), QAItem(b, 1.0, "oracle")],
+                         [QAItem(a, 2.0, "auto"), QAItem(b, 1.0, "auto")])
+    preds = predictions_frame([{"model": "m", "id": a.id, "parsed": 2.0, "parse_method": "json"},
+                               {"model": "m", "id": b.id, "parsed": 1.0, "parse_method": FORCED_METHOD,
+                                "forced": True}])
+    scored = score(labels, preds)
+    default = metrics(scored).set_index(["source", "qtype"]).loc[("oracle", "all")]
+    assert (default.accuracy, default.parse_failure_rate, default.forced_rate) == (1.0, 0.0, 0.5)
+    strict = metrics(scored, include_forced=False).set_index(["source", "qtype"]).loc[("oracle", "all")]
+    assert (strict.accuracy, strict.parse_failure_rate, strict.forced_rate) == (0.5, 0.5, 0.5)
+    methods = parse_method_table(scored).set_index(["source", "parse_method"]).loc["oracle"]
+    assert methods.loc[FORCED_METHOD, "share"] == 0.5 and methods.loc["json", "accuracy"] == 1.0

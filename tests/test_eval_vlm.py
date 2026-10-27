@@ -7,8 +7,10 @@ from typing import Any
 
 import numpy as np
 import pytest
+import torch
 
-from measured_space.eval_vlm import (Generation, Prompt, build_prompt, parse_answer, read_predictions,
+from measured_space.eval_vlm import (FORCE_CLOSE, FORCED_METHOD, Generation, Prompt, build_prompt,
+                                     decode_greedy, parse_answer, parse_generation, read_predictions,
                                      run_predictions)
 from measured_space.qa_schema import QAItem, QuestionSpec
 
@@ -190,3 +192,96 @@ def test_run_predictions_is_resume_safe(tmp_path: Path) -> None:
         run_predictions(FakeRunner(max_new_tokens=64), items, out, load_image, log=None)
     run_predictions(runner, items, tmp_path / "blind.jsonl", None, blind=True, log=None)
     assert all(r["blind"] and r["image_hw"] is None for r in read_predictions(tmp_path / "blind.jsonl"))
+
+
+class CharTokenizer:
+    """Character-level stand-in tokenizer: token id = code point, and id 0 is end-of-turn."""
+
+    def __call__(self, text: str, add_special_tokens: bool = False, return_tensors: str = "pt"
+                 ) -> dict[str, torch.Tensor]:
+        """Encode text.
+
+        Parameters
+        ----------
+        text : str
+            Text to encode.
+        add_special_tokens : bool
+            Ignored (there are none).
+        return_tensors : str
+            Ignored; always torch.
+
+        Returns
+        -------
+        dict
+            ``input_ids`` of shape ``(1, len(text))``.
+        """
+        return {"input_ids": torch.tensor([[ord(c) for c in text]])}
+
+    def decode(self, ids: list[int], skip_special_tokens: bool = True) -> str:
+        """Decode ids, dropping end-of-turn.
+
+        Parameters
+        ----------
+        ids : list of int
+            Token ids.
+        skip_special_tokens : bool
+            Drop id 0 if True.
+
+        Returns
+        -------
+        str
+            The text.
+        """
+        return "".join(chr(i) for i in ids if i or not skip_special_tokens)
+
+
+class LoopingReasoner:
+    """A stand-in model that reasons in circles until cut off, and answers once its think block is closed."""
+
+    def __init__(self) -> None:
+        """Start with no recorded calls."""
+        self.calls: list[dict[str, torch.Tensor]] = []
+
+    def generate(self, input_ids: torch.Tensor, max_new_tokens: int, **kwargs: Any) -> torch.Tensor:
+        """Continue a sequence.
+
+        Parameters
+        ----------
+        input_ids : torch.Tensor
+            Shape ``(1, L)``.
+        max_new_tokens : int
+            Budget.
+        **kwargs : Any
+            Other model inputs and decoding flags; recorded with the budget.
+
+        Returns
+        -------
+        torch.Tensor
+            Shape ``(1, L + n)``: the input followed by at most ``max_new_tokens`` new ids.
+        """
+        self.calls.append({"input_ids": input_ids, "max_new_tokens": max_new_tokens, **kwargs})
+        if CharTokenizer().decode(input_ids[0].tolist()).endswith(FORCE_CLOSE):
+            reply = [ord(c) for c in '{"answer": 1.8, "unit": "m"}'] + [0]
+        else:
+            reply = [ord(c) for c in "<think>\n" + "hmm " * max_new_tokens]
+        return torch.cat([input_ids, torch.tensor([reply[:max_new_tokens]])], dim=1)
+
+
+def test_cut_off_reasoning_is_closed_and_a_short_answer_forced() -> None:
+    """At the budget inside <think>, the sequence is extended with </think> and a short answer decoded."""
+    tok, model = CharTokenizer(), LoopingReasoner()
+    prompt = tok("Q?")["input_ids"]
+    inputs = {"input_ids": prompt, "attention_mask": torch.ones_like(prompt),
+              "mm_token_type_ids": torch.zeros_like(prompt)}
+    gen = decode_greedy(model, tok, inputs, max_new_tokens=20, eos_ids={0}, forced_answer_tokens=48)
+    assert gen.truncated and gen.n_new_tokens == 20 and gen.text.startswith("<think>")
+    assert gen.forced_text == '{"answer": 1.8, "unit": "m"}' and gen.n_forced_tokens == len(gen.forced_text) + 1
+    second = model.calls[1]
+    assert tok.decode(second["input_ids"][0].tolist()) == "Q?" + gen.text + FORCE_CLOSE   # phase-1 ids kept
+    assert second["max_new_tokens"] == 48 and not second["mm_token_type_ids"].any()
+    assert second["mm_token_type_ids"].shape == second["input_ids"].shape == second["attention_mask"].shape
+    assert parse_generation(_spec("number"), gen) == (1.8, FORCED_METHOD)
+
+    unforced = decode_greedy(model, tok, inputs, max_new_tokens=20, eos_ids={0}, forced_answer_tokens=0)
+    assert unforced.forced_text is None
+    assert parse_generation(_spec("number"), unforced).method == "unterminated_think"

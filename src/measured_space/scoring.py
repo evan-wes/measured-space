@@ -16,7 +16,10 @@ The analysis follows the evaluation design in ``docs/LOG.md``:
   model is scored correct against it.
 
 Parse failures (``None`` predictions) count as wrong. Accuracy over parsed answers only is reported next
-to it. Every output is a tidy DataFrame: one row per group, one column per quantity.
+to it. An answer forced after a reasoning model ran out of budget (see :mod:`measured_space.eval_vlm`)
+counts as an answer by default. Its share is reported, and :func:`count_forced_as_failures` turns it into
+a parse failure for a strict reading. Every output is a tidy DataFrame: one row per group, one column per
+quantity.
 """
 
 from __future__ import annotations
@@ -96,22 +99,25 @@ def predictions_frame(records: Iterable[dict[str, Any]]) -> pd.DataFrame:
     Parameters
     ----------
     records : iterable of dict
-        Prediction records with ``id``, ``parsed``, ``model`` (or ``model_id``) and optionally ``blind``.
+        Prediction records with ``id``, ``parsed``, ``model`` (or ``model_id``), and optionally ``blind``,
+        ``parse_method`` and ``forced``.
 
     Returns
     -------
     pandas.DataFrame
-        Columns ``model, id, prediction``; ``prediction`` is an object column where None is a parse
-        failure.
+        Columns ``model, id, prediction, parse_method, forced``. ``prediction`` is an object column where
+        None is a parse failure. ``forced`` marks answers forced after cut-off reasoning.
 
     Raises
     ------
     ValueError
         If a model has two predictions for one id.
     """
-    rows = [(_model_name(r), r["id"], r.get("parsed")) for r in records]
-    frame = pd.DataFrame({"model": [r[0] for r in rows], "id": [r[1] for r in rows],
-                          "prediction": pd.Series([r[2] for r in rows], dtype=object)})
+    records = list(records)
+    frame = pd.DataFrame({"model": [_model_name(r) for r in records], "id": [r["id"] for r in records],
+                          "prediction": pd.Series([r.get("parsed") for r in records], dtype=object),
+                          "parse_method": [r.get("parse_method") for r in records],
+                          "forced": [bool(r.get("forced", False)) for r in records]})
     duplicated = frame.duplicated(["model", "id"])
     if duplicated.any():
         first = frame[duplicated].iloc[0]
@@ -133,7 +139,8 @@ def score(labels: pd.DataFrame, predictions: pd.DataFrame) -> pd.DataFrame:
     -------
     pandas.DataFrame
         One row per (model, question, source). Columns ``model, id, dataset, scene, qtype, answer_type,
-        accepted, label_ok, source, reference, prediction, parsed, correct, rel_error``. ``rel_error`` is
+        accepted, label_ok, source, reference, prediction, parse_method, forced, parsed, correct,
+        rel_error``. ``rel_error`` is
         ``|prediction - reference| / |reference|`` for parsed numeric answers (NaN otherwise, or when the
         reference is 0). Questions a model was not asked are left out; ``attrs["n_unanswered"]`` maps
         each model to how many labelled questions it has no prediction for.
@@ -152,7 +159,7 @@ def score(labels: pd.DataFrame, predictions: pd.DataFrame) -> pd.DataFrame:
                              for t, p, r in zip(part["answer_type"], part["prediction"], part["reference"])]
         parts.append(part)
     columns = ["model", "id", "dataset", "scene", "qtype", "answer_type", "accepted", "label_ok", "source",
-               "reference", "prediction", "parsed", "correct", "rel_error"]
+               "reference", "prediction", "parse_method", "forced", "parsed", "correct", "rel_error"]
     scored = pd.concat(parts, ignore_index=True)[columns]
     scored.attrs["n_unanswered"] = {m: len(labelled) - int(answered.get(m, 0))
                                     for m in predictions["model"].unique()}
@@ -162,7 +169,8 @@ def score(labels: pd.DataFrame, predictions: pd.DataFrame) -> pd.DataFrame:
 # --------------------------------------------------------------------------------------------- metrics
 
 
-def metrics(scored: pd.DataFrame, by: Sequence[str] = ("model", "source")) -> pd.DataFrame:
+def metrics(scored: pd.DataFrame, by: Sequence[str] = ("model", "source"), *,
+            include_forced: bool = True) -> pd.DataFrame:
     """Accuracy, parse failures and numeric error, per group and question type.
 
     Parameters
@@ -172,28 +180,60 @@ def metrics(scored: pd.DataFrame, by: Sequence[str] = ("model", "source")) -> pd
     by : sequence of str
         Grouping columns; results are further split by ``qtype``, with ``qtype == "all"`` pooling every
         type.
+    include_forced : bool
+        Count answers forced after cut-off reasoning as answers (default). If False they count as parse
+        failures (see :func:`count_forced_as_failures`).
 
     Returns
     -------
     pandas.DataFrame
-        Columns ``*by, qtype, n, n_parsed, parse_failure_rate, accuracy, accuracy_parsed,
+        Columns ``*by, qtype, n, n_parsed, parse_failure_rate, forced_rate, accuracy, accuracy_parsed,
         median_rel_error``. ``accuracy`` counts parse failures as wrong; ``accuracy_parsed`` leaves them
-        out (NaN if nothing parsed). ``median_rel_error`` is over parsed numeric answers (NaN if none).
+        out (NaN if nothing parsed). ``forced_rate`` is the share of questions whose answer was forced,
+        whether or not those answers are counted. ``median_rel_error`` is over parsed numeric answers (NaN
+        if none).
     """
     by = list(by)
+    if not include_forced:
+        scored = count_forced_as_failures(scored)
     rows = []
     for keys, group in scored.groupby(by + ["qtype"], sort=True):
         rows.append({**dict(zip(by + ["qtype"], keys)), **_summary(group)})
     for keys, group in scored.groupby(by, sort=True):
         keys = keys if isinstance(keys, tuple) else (keys,)
         rows.append({**dict(zip(by, keys)), "qtype": "all", **_summary(group)})
-    columns = by + ["qtype", "n", "n_parsed", "parse_failure_rate", "accuracy", "accuracy_parsed",
+    columns = by + ["qtype", "n", "n_parsed", "parse_failure_rate", "forced_rate", "accuracy", "accuracy_parsed",
                     "median_rel_error"]
     return pd.DataFrame(rows, columns=columns).sort_values(by + ["qtype"], ignore_index=True)
 
 
-def two_by_two(scored: pd.DataFrame) -> pd.DataFrame:
+def two_by_two(scored: pd.DataFrame, *, include_forced: bool = True) -> pd.DataFrame:
     """The evaluation 2x2: item set (all, gate-accepted) by label source (oracle, auto), per model.
+
+    Parameters
+    ----------
+    scored : pandas.DataFrame
+        Output of :func:`score`.
+    include_forced : bool
+        Passed to :func:`metrics`.
+
+    Returns
+    -------
+    pandas.DataFrame
+        :func:`metrics` columns, grouped by ``model, item_set, source`` and split by ``qtype``.
+    """
+    frames = [metrics(_item_set(scored, item_set), include_forced=include_forced).assign(item_set=item_set)
+              for item_set in ITEM_SETS]
+    table = pd.concat(frames, ignore_index=True)
+    first = ["model", "item_set", "source", "qtype"]
+    return table[first + [c for c in table.columns if c not in first]].sort_values(first, ignore_index=True)
+
+
+def count_forced_as_failures(scored: pd.DataFrame) -> pd.DataFrame:
+    """A strict reading: answers forced after cut-off reasoning become parse failures.
+
+    Use it before :func:`delta_delta` or :func:`imitation_rate` to repeat an analysis without forced
+    answers. Every question stays in, so model comparisons remain paired.
 
     Parameters
     ----------
@@ -203,12 +243,36 @@ def two_by_two(scored: pd.DataFrame) -> pd.DataFrame:
     Returns
     -------
     pandas.DataFrame
-        :func:`metrics` columns, grouped by ``model, item_set, source`` and split by ``qtype``.
+        A copy where forced rows have ``prediction`` None, ``parsed`` and ``correct`` False and
+        ``rel_error`` NaN. ``forced`` and ``parse_method`` are kept, so they can still be counted.
     """
-    frames = [metrics(_item_set(scored, item_set)).assign(item_set=item_set) for item_set in ITEM_SETS]
-    table = pd.concat(frames, ignore_index=True)
-    first = ["model", "item_set", "source", "qtype"]
-    return table[first + [c for c in table.columns if c not in first]].sort_values(first, ignore_index=True)
+    out = scored.copy()
+    forced = out["forced"].astype(bool)
+    out["prediction"] = out["prediction"].astype(object).where(~forced, None)
+    out.loc[forced, ["parsed", "correct"]] = False
+    out.loc[forced, "rel_error"] = math.nan
+    return out
+
+
+def parse_method_table(scored: pd.DataFrame) -> pd.DataFrame:
+    """How each model's answers were parsed, and how accurate each kind was.
+
+    Parameters
+    ----------
+    scored : pandas.DataFrame
+        Output of :func:`score`.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per model, source and parse method. Columns ``model, source, parse_method, n, share,
+        accuracy``: ``share`` is relative to the model's questions for that source.
+    """
+    table = scored.assign(parse_method=scored["parse_method"].fillna("unknown")).groupby(
+        ["model", "source", "parse_method"], sort=True).agg(n=("correct", "size"), accuracy=("correct", "mean"))
+    table = table.reset_index()
+    table["share"] = table["n"] / table.groupby(["model", "source"])["n"].transform("sum")
+    return table[["model", "source", "parse_method", "n", "share", "accuracy"]]
 
 
 def label_quality(labels: pd.DataFrame) -> pd.DataFrame:
@@ -576,12 +640,15 @@ def _summary(group: pd.DataFrame) -> dict[str, float | int]:
     Returns
     -------
     dict
-        ``n, n_parsed, parse_failure_rate, accuracy, accuracy_parsed, median_rel_error``.
+        ``n, n_parsed, parse_failure_rate, forced_rate, accuracy, accuracy_parsed, median_rel_error``.
+        ``forced_rate`` is NaN if the rows have no ``forced`` column.
     """
     n, parsed = len(group), group["parsed"].astype(bool)
     n_parsed = int(parsed.sum())
     rel = group.loc[parsed & (group["answer_type"] == "number"), "rel_error"].astype(float).dropna()
+    forced = float(group["forced"].astype(bool).mean()) if "forced" in group and n else math.nan
     return {"n": n, "n_parsed": n_parsed, "parse_failure_rate": 1 - n_parsed / n if n else math.nan,
+            "forced_rate": forced,
             "accuracy": float(group["correct"].mean()) if n else math.nan,
             "accuracy_parsed": float(group.loc[parsed, "correct"].mean()) if n_parsed else math.nan,
             "median_rel_error": float(rel.median()) if len(rel) else math.nan}

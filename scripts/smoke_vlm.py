@@ -100,10 +100,15 @@ def load_frame(spec: QuestionSpec) -> np.ndarray:
 
 
 def main() -> None:
-    """Load the chosen model, ask the smoke questions (and one blind), and print outputs, timing and VRAM."""
+    """Load the chosen model, ask the smoke questions (and one blind), and print outputs, timing and VRAM.
+
+    With ``--blind-only`` only the blind sofa question is asked, e.g. to check the answer forced after
+    cut-off reasoning.
+    """
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--model", choices=sorted(MODELS), required=True)
     parser.add_argument("--max-new-tokens", type=int, default=None, help="override the model's budget")
+    parser.add_argument("--blind-only", action="store_true", help="ask only the blind sofa question")
     args = parser.parse_args()
 
     os.environ.setdefault("HF_HUB_CACHE", str(hf_cache_dir()))
@@ -120,25 +125,30 @@ def main() -> None:
           f"VRAM after load {torch.cuda.memory_allocated() / 2**30:.2f} GiB")
     print("config:", {k: runner.info[k] for k in ("dtype", "attn_implementation", "resolution", "min_pixels",
                                                    "max_pixels", "image_processor", "max_new_tokens",
-                                                   "reasoning", "transformers", "torch")})
+                                                   "forced_answer_tokens", "reasoning", "transformers",
+                                                   "torch")})
     print("orientation: stored frames rotated 90 deg clockwise (sky direction 'Left'); checked by eye only")
 
     start = time.perf_counter()
-    run_predictions(runner, QUESTIONS, out_path, load_frame)
+    if not args.blind_only:
+        run_predictions(runner, QUESTIONS, out_path, load_frame)
     run_predictions(runner, QUESTIONS[:1], blind_path, None, blind=True)
     total = time.perf_counter() - start
 
-    for path in (out_path, blind_path):
+    for path in ([] if args.blind_only else [out_path]) + [blind_path]:
         for record in read_predictions(path):
             mode = "blind" if record["blind"] else f"image {record['image_hw']}"
             print(f"\n--- {record['qtype']} ({mode}, {record['n_image_tokens']} image tokens)")
             print(f"raw    : {record['raw_output']!r}")
+            if record["forced"]:
+                print(f"forced : {record['forced_text']!r}")
             print(f"parsed : {record['parsed']!r} via {record['parse_method']}")
             print(f"latency: {record['latency_s']:.2f} s, {record['n_new_tokens']} new tokens, "
-                  f"truncated={record['truncated']}")
+                  f"truncated={record['truncated']}, forced={record['forced']} "
+                  f"({record['n_forced_tokens']} forced tokens)")
     print(f"\nall questions: {total:.1f} s; VRAM peak (max_memory_allocated) "
           f"{torch.cuda.max_memory_allocated() / 2**30:.2f} GiB")
-    print(f"predictions: {out_path} and {blind_path}")
+    print(f"predictions: {blind_path if args.blind_only else f'{out_path} and {blind_path}'}")
 
 
 if __name__ == "__main__":
