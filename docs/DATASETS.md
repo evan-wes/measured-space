@@ -127,6 +127,23 @@ inertial poses, and fixed, calibrated multi-camera installations.
   - 10 × `<id>_3dod_annotation.json`: 156,558 bytes in total.
   - 6 × `upsampling/Validation/<id>.zip`: 422.7 MB (1920×1440 colour, laser `highres_depth`, lowres depth, confidence). Laser depth is aligned to the `wide` timestamps, not to `vga_wide`.
   - Optional: 10 × `<id>_3dod_mesh.ply`, 355.5 MB.
+- **Dense-frame test batch (2026-10-27).** It tests whether full-rate frames help a multi-view labeller
+  before the whole raw subset is requested.
+  - **Videos:** 5 Training-fold videos: 43828402, 42446031, 42898070, 47333565, 43828460.
+  - **How they were chosen:**
+    - candidates are Training videos in both upsampling and 3DOD whose video and venue are both absent
+      from CA-1M train (205 videos, 80 venues, from Apple `raw/metadata.csv` and CA-1M's `data/train.txt`);
+    - venues are shuffled with numpy seed 0, and the lowest video id is taken per venue;
+    - these are the first 5 of a planned 24-video dev split, used for tuning only, never reported as test.
+  - **Files:** the same files as the validation videos (upsampling zip, 3DOD annotation, `lowres_wide.traj`,
+    `wide_intrinsics.zip`), plus `raw/<id>/{wide,lowres_depth,confidence,highres_depth}.zip`.
+    - 4.28 GB in total (HEAD sizes, all matched after download); 2.60 GB of it is `wide`.
+    - URLs: `.../arkitscenes/v1/{upsampling,raw}/Training/...`.
+  - **Frame counts:** 1,112 raw `wide` frames against 117 upsampling frames (counted from the zip listings).
+  - **Provenance:**
+    - `lowres_depth` is iPad LiDAR at 60 FPS, a deployable input.
+    - `highres_depth` is laser-derived and is reference only.
+  - **License:** the same Apple license as the rest of ARKitScenes (above).
 - **Question-type mapping:** distance, size, egocentric distance, relative depth, left/right and same-class closest are all supported. Count in view is **partial**: boxes are per scene, so visibility needs a frustum test plus depth or mesh occlusion.
 
 ## 3. NVIDIA SDG-Warehouse (`nvidia/PhysicalAI-WorldModel-Synthetic-Warehouse-Operations-Scenes`) — contender, not yet probed
