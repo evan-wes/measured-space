@@ -1,4 +1,5 @@
-"""Tests for scoring: metrics on hand-made data, the delta-delta bootstrap, labeller imitation, label ceiling."""
+"""Tests for scoring: metrics on hand-made data, the delta-delta bootstrap, labeller imitation, label ceiling,
+and oracle-only scoring of missed questions."""
 
 from __future__ import annotations
 
@@ -9,9 +10,9 @@ from scipy.stats import norm
 
 from measured_space.eval_vlm import FORCED_METHOD
 from measured_space.qa_schema import QAItem, QuestionSpec
-from measured_space.scoring import (delta_delta, imitation_rate, label_ceiling, label_ceiling_table,
-                                    label_table, metrics, parse_method_table, predictions_frame, score,
-                                    two_by_two)
+from measured_space.scoring import (cluster_bootstrap_difference, delta_delta, imitation_rate, label_ceiling,
+                                    label_ceiling_table, label_table, metrics, missed_vs_answerable,
+                                    parse_method_table, predictions_frame, score, score_oracle, two_by_two)
 
 
 def _spec(name: str, answer_type: str, scene: str = "s0") -> QuestionSpec:
@@ -153,3 +154,45 @@ def test_forced_answers_count_by_default_and_can_be_excluded() -> None:
     assert (strict.accuracy, strict.parse_failure_rate, strict.forced_rate) == (0.5, 0.5, 0.5)
     methods = parse_method_table(scored).set_index(["source", "parse_method"]).loc["oracle"]
     assert methods.loc[FORCED_METHOD, "share"] == 0.5 and methods.loc["json", "accuracy"] == 1.0
+
+
+def test_score_oracle_scores_questions_without_auto_labels() -> None:
+    """Oracle-only scoring matches the oracle half of :func:`score`; parse failures are wrong."""
+    a, b, c = _spec("a", "number"), _spec("b", "choice"), _spec("c", "number")
+    oracle = [QAItem(a, 2.0, "oracle"), QAItem(b, "left", "oracle"), QAItem(c, 1.0, "oracle")]
+    preds = predictions_frame([{"model": "m", "id": a.id, "parsed": 2.1}, {"model": "m", "id": b.id, "parsed": None}])
+    scored = score_oracle(oracle, preds).set_index("id")
+    assert set(scored.index) == {a.id, b.id} and set(scored["source"]) == {"oracle"}
+    assert scored.loc[a.id, "correct"] and not scored.loc[b.id, "correct"] and not scored.loc[b.id, "parsed"]
+    assert scored.loc[a.id, "rel_error"] == pytest.approx(0.05)
+    assert score_oracle(oracle, preds).attrs["n_unanswered"] == {"m": 1}
+    both = score(label_table(oracle[:2], [QAItem(a, 2.0, "auto"), QAItem(b, "left", "auto")]), preds)
+    oracle_half = both[both["source"] == "oracle"].set_index("id")
+    pd.testing.assert_series_equal(oracle_half["correct"], scored["correct"], check_names=False)
+
+
+def test_missed_vs_answerable_by_hand_and_bootstrap_formula() -> None:
+    """Accuracies and their difference by hand; types without missed questions stay out of "all"."""
+    rows = []
+    for k in range(8):                                   # answerable q0: all correct, scenes s0..s3
+        rows.append({"id": f"a{k}", "scene": f"s{k % 4}", "qtype": "q0", "correct": True, "missed": False})
+    for k in range(4):                                   # missed q0: half correct
+        rows.append({"id": f"m{k}", "scene": f"s{k % 4}", "qtype": "q0", "correct": k < 2, "missed": True})
+    for k in range(4):                                   # counts: answerable only, all wrong
+        rows.append({"id": f"c{k}", "scene": f"s{k % 4}", "qtype": "count", "correct": False, "missed": False})
+    scored = pd.DataFrame(rows).assign(model="m", dataset="d")
+    table = missed_vs_answerable(scored, n_boot=500, seed=1).set_index("qtype")
+    assert list(table.index) == ["all", "q0"]                                   # no row for counts
+    overall = table.loc["all"]
+    assert (overall.n_missed, overall.n_answerable, overall.n_scenes_missed, overall.n_scenes) == (4, 8, 4, 4)
+    assert (overall.acc_missed, overall.acc_answerable, overall.answerable_minus_missed) == (0.5, 1.0, 0.5)
+    assert overall.ci_low <= 0.5 <= overall.ci_high and overall.n_boot_valid == 500
+    pd.testing.assert_frame_equal(missed_vs_answerable(scored, n_boot=500, seed=1).set_index("qtype"), table)
+
+    values = np.array([1.0, 0.0, 1.0, 1.0])              # cluster A: two missed; cluster B: two answerable
+    first = np.array([True, True, False, False])
+    clusters = np.array(["A", "A", "B", "B"])
+    boot = cluster_bootstrap_difference(values, first, clusters, 200, np.random.default_rng(5))
+    draws = np.random.default_rng(5).multinomial(2, [0.5, 0.5], size=200)
+    both = (draws == 1).all(axis=1)                      # only replicates drawing both clusters have both groups
+    assert np.isnan(boot[~both]).all() and np.allclose(boot[both], 1.0 - 0.5)

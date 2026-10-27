@@ -12,6 +12,14 @@ Three steps, run in order from the repository root:
     the sample. The sample is the union of all draws and only ever grows, so answered questions are reused
     and only new ones are asked. Every drawn image's view is rebuilt (:mod:`measured_space.vlm_images`) and
     checked against the label pipeline's ``views.jsonl``. The specs and draws go to ``<out>/sample.json``.
+
+    Drawing only questions the automatic source answered conditions on the labeller having found the objects.
+    ``--include-missed`` adds the other side: a separate draw, with the same cells, ``--per-cell`` and keys,
+    of the questions with an oracle answer but no answer from the deployment source, because the source
+    matched no box to a referent (recorded per view in ``views.jsonl``). Count questions have no referents and
+    are always answered, so they are never missed. The draw's ``missed`` record lists these items, each tagged
+    ``"missed": true`` with its unmatched referent ids. They join the sample like any other question, so
+    ``predict`` answers them next time.
 ``predict`` (GPU, one model per process)
     A model answers every sampled question once in each requested mode (``--modes``): with the image, and
     blind (text only, the no-vision baseline). It uses the default resolution policy and token budget of
@@ -22,8 +30,21 @@ Three steps, run in order from the repository root:
 ``score`` (CPU)
     The questions of the latest draw from one label folder (``--labels-dir``, or ``--draw-from``) are scored
     against the oracle and against every automatic source in that folder, with
-    :mod:`measured_space.scoring`. Results are per source (``<dataset>/<depth>``) and for the pooled
-    deployment source:
+    :mod:`measured_space.scoring`. ``--datasets`` keeps only some of the draw's datasets, for a folder that
+    covers fewer of them. A question's id depends only on its template, view, referents and parameters, so a
+    draw made from one folder can be scored against another folder built from the same views.
+
+    The sources are found, not listed: every non-empty ``<dataset>/qa_auto_<source>.jsonl`` is one, whichever
+    labeller wrote it (depth sources, CuTR box sources, ...). Results are per source
+    (``<dataset>/<source>``) and for the pooled deployment unit. The pooled unit takes one source per dataset:
+
+    1. the one given with ``--deployment-source <dataset>=<source>``;
+    2. else the v0 deployment source (:data:`DEPLOYMENT_SOURCE`), if the folder has it;
+    3. else the folder's only source, if it has exactly one.
+
+    If a dataset has none of these, the pooled unit is skipped and ``summary.json`` says why. Its choice is
+    ``design.pooled_deployment_source``; ``design.deployment_source`` stays the source the draw required.
+    The tables are:
 
     - per-type accuracy;
     - the 2x2 (all vs gate-accepted items, oracle vs auto labels);
@@ -37,7 +58,18 @@ Three steps, run in order from the repository root:
     - with those answers counted as failures (``"strict"``).
 
     The gate-accepted half needs ``--accepted``, an ``accepted_ids.json`` made from the same label folder.
-    Without it, only the "all items" half is reported.
+    Without it, only the "all items" half is reported. The file lists accepted ids for every gate cell, but an
+    id joins the accepted item set only if its cell (dataset x answer kind, numeric or categorical) was
+    certified on held-out scenes (``certified_ok`` in the file's ``held_out``). ``summary.json``
+    (``accepted_certification``) lists the cells left out and how many items each would have added. A file
+    without ``held_out`` (written by an older audit) is read as before, every listed id counting, with a
+    warning.
+
+    Missed questions of the draw, if it has any, have no automatic label: they are scored against the oracle
+    only and enter none of the tables above. ``missed_vs_answerable`` compares, per model, dataset and question
+    type, oracle-referenced accuracy on missed and on answerable questions, with a scene-cluster bootstrap CI
+    on the difference (:func:`measured_space.scoring.missed_vs_answerable`). That difference estimates how much
+    easier a question set generated from automatic labels is than the full one.
 
 Outputs: per-item data (sampled specs, predictions, scored rows) stays under ``<out>``, by default
 ``<data root>/outputs/vlm``. The repository receives only aggregates, in ``results/vlm/<label folder name>``
@@ -53,6 +85,9 @@ Examples::
     python scripts/run_vlm_eval.py predict --model qwen3-vl-8b                 # answers only new questions
     python scripts/run_vlm_eval.py score --labels-dir <data>/outputs/labels_2d \
         --accepted <data>/outputs/audit_2d/accepted_ids.json
+    python scripts/run_vlm_eval.py score --labels-dir <data>/outputs/labels_cutr_sam3 \
+        --draw-from <data>/outputs/labels_2d --datasets arkitscenes    # another labeller, same questions
+    python scripts/run_vlm_eval.py sample --extend --include-missed --labels-dir <data>/outputs/labels_2d
 """
 
 from __future__ import annotations
@@ -81,15 +116,18 @@ from measured_space.eval_vlm import DEFAULT_RESOLUTION, MODELS, read_predictions
 from measured_space.qa_schema import QAItem, QuestionSpec, Referent, read_jsonl
 from measured_space.vlm_images import SpecImageLoader, view_key
 
-DEPTH_SOURCES: dict[str, tuple[str, ...]] = {"arkitscenes": ("laser", "lidar", "moge"),
-                                             "smartspaces": ("gt_depth", "moge")}
-"""Automatic label sources per dataset, as in ``qa_auto_<depth>.jsonl``."""
+AUTO_PREFIX = "qa_auto_"
+"""File-name prefix of an automatic label source: ``qa_auto_<source>.jsonl`` holds the items of ``<source>``."""
 
 DEPLOYMENT_SOURCE: dict[str, str] = {"arkitscenes": "lidar", "smartspaces": "moge"}
-"""The automatic source a deployment would have, per dataset; the sample requires an answer from it."""
+"""The v0 automatic source a deployment would have, per dataset. ``sample`` requires an answer from it;
+``score`` pools it by default when the label folder has it."""
 
 POOLED_UNIT = "pooled/deployment"
 """Name of the scoring unit that pools each dataset's deployment source."""
+
+ANSWER_KINDS: tuple[str, ...] = ("numeric", "categorical")
+"""The label gate's answer kinds, as in ``held_out`` of ``accepted_ids.json`` (see :func:`answer_kind`)."""
 
 MODEL_PAIRS: tuple[tuple[str, str], ...] = (
     ("qwen3-vl-8b", "cosmos-reason2-8b"),
@@ -109,13 +147,106 @@ class Unit:
     Attributes
     ----------
     name : str
-        ``"<dataset>/<depth>"``, or :data:`POOLED_UNIT`.
+        ``"<dataset>/<source>"``, or :data:`POOLED_UNIT`.
     parts : tuple of (str, str)
-        ``(dataset, depth source)`` pairs whose automatic labels are pooled.
+        ``(dataset, automatic source)`` pairs whose automatic labels are pooled.
     """
 
     name: str
     parts: tuple[tuple[str, str], ...]
+
+
+@dataclass(frozen=True)
+class AcceptedIds:
+    """The label gate's decisions, read from ``accepted_ids.json`` (written by ``scripts/run_audit.py``).
+
+    The file lists the ids the primary gate accepted in every gate cell, including cells whose error bound
+    failed on held-out scenes. Only ids of certified cells join the accepted item set (:meth:`split`).
+
+    Attributes
+    ----------
+    ids : dict of str to dict of str to frozenset of str
+        Dataset to automatic source (without the ``auto_`` prefix) to the accepted ids listed.
+    certified : dict of (str, str) to bool, or None
+        ``(dataset, answer kind)`` to ``certified_ok`` of the primary gate at ``tau_scale``: whether the error
+        among accepted labels on held-out scenes stayed within the bound. A cell without a row is not
+        certified. None if the file has no ``held_out`` results (an older audit); then every listed id counts.
+    tau_scale : float
+        Tolerance multiple the listed ids were accepted at (``settings.tau_scale``, else 1.0).
+    held_out : tuple of dict
+        The file's ``held_out`` rows at ``tau_scale``, as recorded.
+    """
+
+    ids: dict[str, dict[str, frozenset[str]]]
+    certified: dict[tuple[str, str], bool] | None
+    tau_scale: float = 1.0
+    held_out: tuple[dict[str, Any], ...] = ()
+
+    def lists(self, dataset: str, source: str) -> bool:
+        """Whether the gate's decisions cover one dataset's automatic source.
+
+        Parameters
+        ----------
+        dataset : str
+            Dataset name.
+        source : str
+            Automatic source, without the ``auto_`` prefix.
+
+        Returns
+        -------
+        bool
+            True if the file lists accepted ids (possibly none) for it.
+        """
+        return source in self.ids.get(dataset, {})
+
+    def counts(self, dataset: str, kind: str) -> bool:
+        """Whether the accepted ids of one gate cell join the accepted item set.
+
+        Parameters
+        ----------
+        dataset : str
+            Dataset name.
+        kind : str
+            Answer kind, one of :data:`ANSWER_KINDS`.
+
+        Returns
+        -------
+        bool
+            True if the cell is certified, or if the file has no held-out results (the old behaviour).
+        """
+        return self.certified is None or self.certified.get((dataset, kind)) is True
+
+    def split(self, dataset: str, source: str, kinds: Mapping[str, str]) -> tuple[set[str], dict[str, set[str]]]:
+        """The listed ids among some questions, split into those that count and those left out as uncertified.
+
+        Parameters
+        ----------
+        dataset : str
+            Dataset name.
+        source : str
+            Automatic source, without the ``auto_`` prefix.
+        kinds : mapping of str to str
+            Question id to answer kind (:func:`answer_kind`) for the questions considered. Listed ids outside
+            it are ignored.
+
+        Returns
+        -------
+        kept : set of str
+            Listed ids whose cell counts (:meth:`counts`).
+        dropped : dict of str to set of str
+            Answer kind to the listed ids of its uncertified cell; only kinds that drop something.
+        """
+        kept: set[str] = set()
+        dropped: dict[str, set[str]] = {}
+        for item_id in self.ids.get(dataset, {}).get(source, frozenset()):
+            kind = kinds.get(item_id)
+            if kind is None:
+                continue
+            if self.counts(dataset, kind):
+                kept.add(item_id)
+            else:
+                dropped.setdefault(kind, set()).add(item_id)
+        return kept, dropped
 
 
 # --------------------------------------------------------------------------------------------- paths and io
@@ -448,6 +579,59 @@ def check_views(specs: Iterable[QuestionSpec], views_path: Path, loader: SpecIma
     return {"n_views": len(seen), "max_abs_pose_diff": worst}
 
 
+def missed_questions(views_path: Path, source: str, oracle: Mapping[str, QAItem],
+                     auto: Mapping[str, QAItem]) -> dict[str, list[str]]:
+    """Questions an automatic source missed: an oracle answer but no automatic one, because a referent went unmatched.
+
+    The label pipeline records, per view and source (``auto_unanswered`` in ``views.jsonl``), every question
+    without an automatic answer and the referents that source matched no box to. Count questions have no
+    referents and always get an automatic answer, so they are never missed.
+
+    Parameters
+    ----------
+    views_path : pathlib.Path
+        A dataset's ``views.jsonl``.
+    source : str
+        Automatic source, without the ``auto_`` prefix.
+    oracle : mapping of str to QAItem
+        Oracle items by id.
+    auto : mapping of str to QAItem
+        The source's automatic items by id.
+
+    Returns
+    -------
+    dict of str to list of str
+        Question id to the ids of its unmatched referents, for questions with an oracle answer, at least one
+        unmatched referent and a type other than ``count``; sorted by question id.
+
+    Raises
+    ------
+    ValueError
+        If a view the source ran on has no ``auto_unanswered`` record for it (labels written before misses
+        were recorded), or a question recorded as unanswered has an automatic answer.
+    """
+    missed: dict[str, list[str]] = {}
+    with views_path.open() as f:
+        for line in f:
+            if not line.strip():
+                continue
+            view = json.loads(line)
+            if source not in view.get("depth_sources", []):
+                continue
+            unanswered = (view.get("auto_unanswered") or {}).get(f"auto_{source}")
+            if unanswered is None:
+                raise ValueError(f"{views_path}: view {view.get('view_key')} has no auto_unanswered record for "
+                                 f"{source}; these labels predate the record of misses")
+            for record in unanswered:
+                item_id = str(record["id"])
+                if item_id in auto:
+                    raise ValueError(f"{views_path}: question {item_id} is recorded as unanswered by {source} "
+                                     "but has an automatic answer")
+                if item_id in oracle and record.get("missing") and record.get("qtype") != "count":
+                    missed[item_id] = sorted(str(m) for m in record["missing"])
+    return dict(sorted(missed.items()))
+
+
 def sample_composition(specs: Mapping[str, QuestionSpec]) -> pd.DataFrame:
     """Questions per dataset and question type.
 
@@ -474,13 +658,18 @@ def cmd_sample(args: argparse.Namespace) -> int:
     Parameters
     ----------
     args : argparse.Namespace
-        ``labels_dir``, ``out_dir``, ``per_cell``, ``seed``, ``datasets``, ``extend``, ``force``.
+        ``labels_dir``, ``out_dir``, ``per_cell``, ``seed``, ``datasets``, ``extend``, ``force``,
+        ``include_missed``. With ``include_missed``, the draw also takes a separate stratified draw (same cells,
+        ``per_cell`` and seed) of the questions the deployment source missed (:func:`missed_questions`). It is
+        recorded in the draw's ``missed`` record, with each item tagged ``"missed": true`` and its unmatched
+        referent ids. The draw's ``ids`` stay the answerable questions.
 
     Returns
     -------
     int
         Exit status: 0 on success, 1 if a dataset's labels are unfinished, the sample exists and neither
-        ``--extend`` nor ``--force`` was given, or ``--extend`` uses another seed.
+        ``--extend`` nor ``--force`` was given, ``--extend`` uses another seed, or ``include_missed`` is set
+        but the labels do not record misses.
 
     Raises
     ------
@@ -504,6 +693,10 @@ def cmd_sample(args: argparse.Namespace) -> int:
     draw: dict[str, Any] = {"created": utc_now(), "labels_dir": str(root), "per_cell": args.per_cell,
                             "datasets": list(args.datasets), "git_commit": git_commit(), "label_files": {},
                             "view_check": {}, "cells": [], "ids": []}
+    missed: dict[str, Any] | None = None
+    if args.include_missed:
+        missed = {"sources": {d: DEPLOYMENT_SOURCE[d] for d in args.datasets}, "views_files": {}, "cells": [],
+                  "items": []}
     loader = SpecImageLoader()
     for dataset in args.datasets:
         folder = root / dataset
@@ -531,15 +724,46 @@ def cmd_sample(args: argparse.Namespace) -> int:
         draw["ids"] += sorted(drawn)
         sample["specs"].update({i: spec_to_dict(s) for i, s in drawn.items() if i not in existing})
         existing.update(drawn)
-        draw["view_check"][dataset] = check_views(list(drawn.values()), folder / "views.jsonl", loader)
+        drawn_missed: dict[str, QuestionSpec] = {}
+        if missed is not None:
+            views_path = folder / "views.jsonl"
+            try:
+                unmatched = missed_questions(views_path, source, oracle, auto)
+            except ValueError as err:
+                print(f"--include-missed: {err}", flush=True)
+                return 1
+            pool = [oracle[i].spec for i in unmatched]
+            drawn_missed = draw_sample(pool, args.per_cell, args.seed)
+            chosen_cells = group_by_cell(drawn_missed)
+            for (ds, qtype), ids in group_by_cell({s.id: s for s in pool}).items():
+                chosen = chosen_cells.get((ds, qtype), [])
+                missed["cells"].append({"dataset": ds, "qtype": qtype, "n_candidates": len(ids),
+                                        "n_drawn": len(chosen), "n_new": sum(1 for i in chosen if i not in existing),
+                                        "n_scenes": len({drawn_missed[i].scene for i in chosen})})
+            missed["items"] += [{"id": i, "dataset": dataset, "qtype": drawn_missed[i].qtype, "missed": True,
+                                 "missing_referents": unmatched[i]} for i in sorted(drawn_missed)]
+            missed["views_files"][f"{dataset}/views.jsonl"] = file_fingerprint(views_path)
+            sample["specs"].update({i: spec_to_dict(s) for i, s in drawn_missed.items() if i not in existing})
+            existing.update(drawn_missed)
+        draw["view_check"][dataset] = check_views(list(drawn.values()) + list(drawn_missed.values()),
+                                                  folder / "views.jsonl", loader)
     draw["n_drawn"] = len(draw["ids"])
     draw["n_new"] = sum(c["n_new"] for c in draw["cells"])
+    if missed is not None:
+        missed.update(n_candidates=sum(c["n_candidates"] for c in missed["cells"]), n_drawn=len(missed["items"]),
+                      n_new=sum(c["n_new"] for c in missed["cells"]))
+        draw["missed"] = missed
     sample["draws"].append(draw)
     args.out_dir.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(sample, indent=1))
     print(pd.DataFrame(draw["cells"]).to_string(index=False))
-    print(f"drew {draw['n_drawn']} ({draw['n_new']} new); sample now {len(sample['specs'])} questions; views "
-          f"checked: {draw['view_check']}; written {out_path}", flush=True)
+    if missed is not None:
+        print("\nmissed by the deployment source (oracle answer, no automatic answer):\n"
+              + pd.DataFrame(missed["cells"], columns=["dataset", "qtype", "n_candidates", "n_drawn", "n_new",
+                                                       "n_scenes"]).to_string(index=False))
+    extra = "" if missed is None else f" + {missed['n_drawn']} missed ({missed['n_new']} new)"
+    print(f"drew {draw['n_drawn']} ({draw['n_new']} new){extra}; sample now {len(sample['specs'])} questions; "
+          f"views checked: {draw['view_check']}; written {out_path}", flush=True)
     return 0
 
 
@@ -777,52 +1001,263 @@ def runtime_table(records: Sequence[Mapping[str, Any]]) -> pd.DataFrame:
 # --------------------------------------------------------------------------------------------- scoring
 
 
-def load_accepted(path: Path) -> dict[str, dict[str, set[str]]] | None:
-    """Gate-accepted ids per dataset and depth source.
+def answer_kind(spec: QuestionSpec) -> str:
+    """The label gate's answer kind of a question.
+
+    :func:`measured_space.audit.run_audit` has no named helper for this. It fits numeric gates to questions
+    with ``answer_type == "number"`` and categorical gates to all others (choices and counts). ``held_out`` in
+    ``accepted_ids.json`` has one row per dataset and answer kind. This function repeats that split.
+
+    Parameters
+    ----------
+    spec : QuestionSpec
+        The question.
+
+    Returns
+    -------
+    str
+        ``"numeric"`` or ``"categorical"`` (:data:`ANSWER_KINDS`).
+    """
+    return "numeric" if spec.answer_type == "number" else "categorical"
+
+
+def load_accepted(path: Path) -> AcceptedIds | None:
+    """Gate-accepted ids per dataset and automatic source, with the held-out certificate of each gate cell.
 
     Parameters
     ----------
     path : pathlib.Path
-        ``accepted_ids.json``: ``{"accepted": {dataset: {"auto_<depth>": [ids]}}, ...}`` or the bare
-        ``{dataset: {"auto_<depth>": [ids]}}``.
+        ``accepted_ids.json`` from ``scripts/run_audit.py``: ``{"settings": {"tau_scale": ..., ...},
+        "held_out": [{"dataset", "answer_kind", "tau_scale", "certified_ok", ...}], "accepted": {dataset:
+        {"auto_<source>": [ids]}}, ...}``. Older files have no ``held_out``. The bare ``{dataset:
+        {"auto_<source>": [ids]}}`` is also read, as having no held-out results.
 
     Returns
     -------
-    dict or None
-        Dataset to depth source (without the ``auto_`` prefix) to ids; None if the file does not exist.
+    AcceptedIds or None
+        None if the file does not exist. ``certified`` comes from the ``held_out`` rows at the file's
+        ``tau_scale``, and is None if the file has no ``held_out`` list.
     """
     if not path.exists():
         return None
     data = json.loads(path.read_text())
-    accepted = data["accepted"] if isinstance(data.get("accepted"), dict) else data
-    return {dataset: {str(source).removeprefix("auto_"): set(ids) for source, ids in by_source.items()}
-            for dataset, by_source in accepted.items() if isinstance(by_source, dict)}
+    full = isinstance(data.get("accepted"), dict)
+    accepted = data["accepted"] if full else data
+    ids = {str(dataset): {str(source).removeprefix("auto_"): frozenset(map(str, listed))
+                          for source, listed in by_source.items()}
+           for dataset, by_source in accepted.items() if isinstance(by_source, dict)}
+    settings = data.get("settings") if full and isinstance(data.get("settings"), dict) else {}
+    tau_scale = float(settings.get("tau_scale", 1.0))
+    held_out = data.get("held_out") if full else None
+    if not isinstance(held_out, list):
+        return AcceptedIds(ids, None, tau_scale)
+    rows = tuple(dict(r) for r in held_out if float(r.get("tau_scale", 1.0)) == tau_scale)
+    certified: dict[tuple[str, str], bool] = {}
+    for r in rows:
+        key = (str(r["dataset"]), str(r["answer_kind"]))
+        certified[key] = certified.get(key, True) and r.get("certified_ok") is True
+    return AcceptedIds(ids, certified, tau_scale, rows)
 
 
-def scoring_units(datasets: Iterable[str], labels_root: Path) -> list[Unit]:
-    """One unit per available ``(dataset, depth)`` source, then the pooled deployment unit.
+def discover_sources(folder: Path) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """The automatic label sources in one dataset's label folder.
+
+    Every ``qa_auto_<source>.jsonl`` is a source, whichever labeller wrote it (the label pipeline's depth
+    sources, ``scripts/run_box_source.py``'s CuTR sources, ...).
 
     Parameters
     ----------
-    datasets : iterable of str
-        Sampled datasets.
-    labels_root : pathlib.Path
-        The label pipeline's output folder.
+    folder : pathlib.Path
+        ``<label folder>/<dataset>``; a missing folder has no sources.
+
+    Returns
+    -------
+    sources : tuple of str
+        Sources whose file is not empty, sorted.
+    empty : tuple of str
+        Sources whose file is empty (nothing to score), sorted.
+    """
+    found = {p.name[len(AUTO_PREFIX):-len(".jsonl")]: p for p in folder.glob(f"{AUTO_PREFIX}*.jsonl")
+             if p.is_file()}
+    found.pop("", None)
+    sources = tuple(sorted(s for s, p in found.items() if p.stat().st_size > 0))
+    empty = tuple(sorted(s for s, p in found.items() if p.stat().st_size == 0))
+    return sources, empty
+
+
+def parse_deployment_sources(pairs: Sequence[str]) -> dict[str, str]:
+    """Read ``--deployment-source`` arguments.
+
+    Parameters
+    ----------
+    pairs : sequence of str
+        ``"<dataset>=<source>"`` strings, e.g. ``"arkitscenes=cutr_sam3"``.
+
+    Returns
+    -------
+    dict of str to str
+        Dataset to source.
+
+    Raises
+    ------
+    ValueError
+        If a string is not ``<dataset>=<source>``, or one dataset is given two different sources.
+    """
+    out: dict[str, str] = {}
+    for pair in pairs:
+        dataset, sep, source = (part.strip() for part in pair.partition("="))
+        if not (sep and dataset and source):
+            raise ValueError(f"--deployment-source expects <dataset>=<source>, got {pair!r}")
+        if out.get(dataset, source) != source:
+            raise ValueError(f"--deployment-source gives {dataset} two sources: {out[dataset]} and {source}")
+        out[dataset] = source
+    return out
+
+
+def resolve_deployment_sources(sources: Mapping[str, Sequence[str]],
+                               requested: Mapping[str, str]) -> dict[str, Any]:
+    """Choose the source each dataset contributes to the pooled deployment unit.
+
+    For each dataset, the first that applies:
+
+    1. the source requested for it (``--deployment-source``);
+    2. its v0 deployment source (:data:`DEPLOYMENT_SOURCE`), if the folder has that source;
+    3. the folder's only source, if it has exactly one.
+
+    If any dataset has none of these, the pooled unit is skipped. Pooling only some of the datasets under the
+    same name would change what the unit measures.
+
+    Parameters
+    ----------
+    sources : mapping of str to sequence of str
+        The datasets scored, each with the automatic sources its label folder has (:func:`discover_sources`).
+    requested : mapping of str to str
+        Dataset to source, from :func:`parse_deployment_sources`.
+
+    Returns
+    -------
+    dict
+        JSON-ready record:
+
+        - ``sources``: dataset to the chosen source, or None if the pooled unit is skipped;
+        - ``chosen_by``: dataset to ``"argument"``, ``"default mapping"`` or ``"only source"``, for each
+          dataset that has a source;
+        - ``note``: why the pooled unit is skipped, else None;
+        - ``ignored``: requested datasets that are not scored.
+
+    Raises
+    ------
+    ValueError
+        If a requested source has no non-empty label file for its dataset.
+    """
+    chosen: dict[str, str] = {}
+    chosen_by: dict[str, str] = {}
+    unresolved: list[str] = []
+    for dataset in sorted(sources):
+        available = list(sources[dataset])
+        default = DEPLOYMENT_SOURCE.get(dataset)
+        if dataset in requested:
+            if requested[dataset] not in available:
+                raise ValueError(f"--deployment-source {dataset}={requested[dataset]}: the label folder has no "
+                                 f"non-empty {AUTO_PREFIX}{requested[dataset]}.jsonl for {dataset} "
+                                 f"(sources: {', '.join(available) or 'none'})")
+            chosen[dataset], chosen_by[dataset] = requested[dataset], "argument"
+        elif default is not None and default in available:
+            chosen[dataset], chosen_by[dataset] = default, "default mapping"
+        elif len(available) == 1:
+            chosen[dataset], chosen_by[dataset] = available[0], "only source"
+        else:
+            unresolved.append(f"{dataset} (sources: {', '.join(available) or 'none'})")
+    note = None
+    if unresolved:
+        note = (f"{POOLED_UNIT} skipped: no deployment source for {'; '.join(unresolved)}. The default needs "
+                f"the v0 source ({', '.join(f'{d}={s}' for d, s in DEPLOYMENT_SOURCE.items())}) or exactly one "
+                "source; pass --deployment-source <dataset>=<source> to choose one.")
+    return {"sources": None if unresolved else chosen, "chosen_by": chosen_by, "note": note,
+            "ignored": sorted(set(requested) - set(sources))}
+
+
+def scoring_units(sources: Mapping[str, Sequence[str]], deployment: Mapping[str, str] | None) -> list[Unit]:
+    """One unit per ``(dataset, source)`` found, then the pooled deployment unit.
+
+    Parameters
+    ----------
+    sources : mapping of str to sequence of str
+        Dataset to its automatic sources (:func:`discover_sources`).
+    deployment : mapping of str to str or None
+        Dataset to the source it contributes to :data:`POOLED_UNIT` (``sources`` of
+        :func:`resolve_deployment_sources`); None leaves the pooled unit out.
 
     Returns
     -------
     list of Unit
-        Units whose ``qa_auto_<depth>.jsonl`` exists and is not empty, and :data:`POOLED_UNIT`.
+        Per-source units in dataset and source order, then :data:`POOLED_UNIT` unless ``deployment`` is None.
     """
-    datasets = list(datasets)
-    units = [Unit(f"{d}/{s}", ((d, s),)) for d in datasets for s in DEPTH_SOURCES[d]
-             if (p := labels_root / d / f"qa_auto_{s}.jsonl").exists() and p.stat().st_size > 0]
-    units.append(Unit(POOLED_UNIT, tuple((d, DEPLOYMENT_SOURCE[d]) for d in datasets)))
+    units = [Unit(f"{d}/{s}", ((d, s),)) for d in sorted(sources) for s in sources[d]]
+    if deployment is not None:
+        units.append(Unit(POOLED_UNIT, tuple((d, deployment[d]) for d in sorted(deployment))))
     return units
 
 
+def certification_record(accepted: AcceptedIds, sources: Mapping[str, Sequence[str]],
+                         specs: Mapping[str, QuestionSpec], labels_root: Path) -> dict[str, Any]:
+    """What the certified-cells rule did to the accepted item set, for ``summary.json``.
+
+    Parameters
+    ----------
+    accepted : AcceptedIds
+        From :func:`load_accepted`.
+    sources : mapping of str to sequence of str
+        The datasets scored, each with its automatic sources.
+    specs : mapping of str to QuestionSpec
+        The questions scored, by id.
+    labels_root : pathlib.Path
+        The label folder scored against.
+
+    Returns
+    -------
+    dict
+        JSON-ready record:
+
+        - ``rule`` and ``tau_scale``;
+        - ``legacy``: True if the file has no held-out results, so every listed id counts;
+        - ``note``: a warning in that case, else None;
+        - ``cells``: the ``held_out`` row of each dataset and answer kind (``accept_n``, ``accept_err`` and its
+          Wilson interval, ``certified_ok``);
+        - ``dropped``: one row per dataset, source and answer kind whose listed ids were left out, with
+          ``certified_ok`` (False, or None if the file has no row for the cell). ``n_listed`` counts the
+          listed ids that have an automatic label in this folder. ``n_scored`` counts those among the
+          questions scored here, which is how many items the cell would have added to the accepted set.
+    """
+    keys = ("dataset", "answer_kind", "accept_n", "accept_err", "accept_lo", "accept_hi", "certified_ok")
+    cells = [{k: r[k] for k in keys if k in r} for r in accepted.held_out]
+    dropped: list[dict[str, Any]] = []
+    for dataset in sorted(sources):
+        oracle = cached_items(labels_root / dataset / "qa_oracle.jsonl")
+        for source in sources[dataset]:
+            if not accepted.lists(dataset, source):
+                continue
+            auto = cached_items(labels_root / dataset / f"{AUTO_PREFIX}{source}.jsonl")
+            _, listed = accepted.split(dataset, source, {i: answer_kind(item.spec) for i, item in auto.items()})
+            _, scored = accepted.split(dataset, source, {i: answer_kind(s) for i, s in specs.items()
+                                                         if s.dataset == dataset and i in oracle and i in auto})
+            for kind in sorted(listed):
+                ok = None if accepted.certified is None else accepted.certified.get((dataset, kind))
+                dropped.append({"dataset": dataset, "source": source, "answer_kind": kind, "certified_ok": ok,
+                                "n_listed": len(listed[kind]), "n_scored": len(scored.get(kind, ()))})
+    note = None
+    if accepted.certified is None:
+        note = ("WARNING: the accepted ids file has no held_out results (an older audit), so every listed id "
+                "counts as accepted, including ids from gate cells that did not certify on held-out scenes. "
+                "Re-run scripts/run_audit.py to restrict the accepted set to certified cells.")
+    return {"rule": "an accepted id counts only if its dataset x answer-kind cell has certified_ok true in "
+                    "held_out at the accepted ids' tau_scale",
+            "tau_scale": accepted.tau_scale, "legacy": accepted.certified is None, "note": note,
+            "cells": cells, "dropped": dropped}
+
+
 def unit_labels(unit: Unit, specs: Mapping[str, QuestionSpec], labels_root: Path,
-                accepted: Mapping[str, Mapping[str, set[str]]] | None) -> tuple[pd.DataFrame, bool]:
+                accepted: AcceptedIds | None) -> tuple[pd.DataFrame, bool]:
     """The label table of one unit, restricted to the sampled questions.
 
     Parameters
@@ -833,16 +1268,22 @@ def unit_labels(unit: Unit, specs: Mapping[str, QuestionSpec], labels_root: Path
         The sampled questions, by id.
     labels_root : pathlib.Path
         The label folder scored against.
-    accepted : mapping or None
-        Output of :func:`load_accepted`.
+    accepted : AcceptedIds or None
+        Output of :func:`load_accepted`. A question is accepted if the gate accepted it and its gate cell
+        (dataset x :func:`answer_kind`) is certified (:meth:`AcceptedIds.split`).
 
     Returns
     -------
     labels : pandas.DataFrame
         :func:`measured_space.scoring.label_table` output (automatic items relabelled ``source="auto"``).
-        ``attrs`` adds ``n_sample_without_oracle`` and ``n_sample_without_auto`` (sampled questions this
-        label folder does not answer), and ``n_accepted_without_auto`` (accepted ids, over the whole label
-        set, that have no automatic label here: a sign that the accepted ids come from another label set).
+        ``attrs`` adds:
+
+        - ``n_sample_without_oracle`` and ``n_sample_without_auto``: sampled questions this label folder
+          does not answer;
+        - ``n_accepted_without_auto``: accepted ids, over the whole label set, that have no automatic label
+          here, a sign that the accepted ids come from another label set;
+        - ``n_accepted_dropped_uncertified``: ``"<dataset>/<answer kind>"`` to the questions of the table that
+          the gate accepted in an uncertified cell, and that are therefore not accepted.
     accepted_available : bool
         Whether the gate's decisions exist for every part of the unit. If not, ``accepted`` is all False and
         must not be reported.
@@ -857,10 +1298,11 @@ def unit_labels(unit: Unit, specs: Mapping[str, QuestionSpec], labels_root: Path
     accepted_ids: set[str] = set()
     available = accepted is not None
     n_without_oracle = n_without_auto = n_accepted_without_auto = 0
+    dropped: dict[str, int] = {}
     for dataset, source in unit.parts:
         ids = sorted(i for i, s in specs.items() if s.dataset == dataset)
         oracle = cached_items(labels_root / dataset / "qa_oracle.jsonl")
-        auto = cached_items(labels_root / dataset / f"qa_auto_{source}.jsonl")
+        auto = cached_items(labels_root / dataset / f"{AUTO_PREFIX}{source}.jsonl")
         for i in ids:
             if i in oracle and oracle[i].spec != specs[i]:
                 raise ValueError(f"Sampled question {i} differs from its spec in {labels_root / dataset}")
@@ -868,14 +1310,19 @@ def unit_labels(unit: Unit, specs: Mapping[str, QuestionSpec], labels_root: Path
         auto_items += [replace(auto[i], source="auto") for i in ids if i in auto]
         n_without_oracle += sum(1 for i in ids if i not in oracle)
         n_without_auto += sum(1 for i in ids if i not in auto)
-        if accepted is not None and source in accepted.get(dataset, {}):
-            accepted_ids |= accepted[dataset][source] & set(ids)
-            n_accepted_without_auto += len(accepted[dataset][source] - set(auto))
+        if accepted is not None and accepted.lists(dataset, source):
+            labelled = {i: answer_kind(specs[i]) for i in ids if i in oracle and i in auto}
+            kept, uncertified = accepted.split(dataset, source, labelled)
+            accepted_ids |= kept
+            for kind, gone in uncertified.items():
+                dropped[f"{dataset}/{kind}"] = dropped.get(f"{dataset}/{kind}", 0) + len(gone)
+            n_accepted_without_auto += len(accepted.ids[dataset][source] - set(auto))
         else:
             available = False
     labels = scoring.label_table(oracle_items, auto_items, accepted_ids=accepted_ids)
     labels.attrs.update(n_sample_without_oracle=n_without_oracle, n_sample_without_auto=n_without_auto,
-                        n_accepted_without_auto=n_accepted_without_auto)
+                        n_accepted_without_auto=n_accepted_without_auto,
+                        n_accepted_dropped_uncertified=dict(sorted(dropped.items())))
     return labels, available
 
 
@@ -944,7 +1391,8 @@ def analyse_unit(unit: Unit, labels: pd.DataFrame, predictions: pd.DataFrame, ac
         ``accuracy`` (2x2 by question type), ``delta_delta``, ``imitation``, ``parse_methods`` and
         ``label_quality``, each with a ``unit`` column; policy-dependent tables have ``forced_policy``.
     info : dict
-        Item, scene and accepted counts, unanswered questions per model, and notes on skipped analyses.
+        Item, scene and accepted counts, the accepted questions left out as uncertified (per dataset and
+        answer kind), unanswered questions per model, and notes on skipped analyses.
     """
     scored = scoring.score(labels, predictions)
     item_sets = list(scoring.ITEM_SETS) if accepted_available else ["all"]
@@ -982,10 +1430,114 @@ def analyse_unit(unit: Unit, labels: pd.DataFrame, predictions: pd.DataFrame, ac
             "n_sample_without_oracle": labels.attrs["n_sample_without_oracle"],
             "n_sample_without_auto": labels.attrs["n_sample_without_auto"],
             "n_accepted_without_auto": labels.attrs["n_accepted_without_auto"] if accepted_available else None,
+            "n_accepted_dropped_uncertified": (labels.attrs["n_accepted_dropped_uncertified"]
+                                               if accepted_available else None),
             "n_unanswered": {m: int(n) for m, n in scored.attrs["n_unanswered"].items()},
             "auto_label_accuracy": float(labels["label_ok"].mean()) if len(labels) else None,
             "notes": sorted(set(notes))}
     return scored, tables, info
+
+
+def missed_analysis(draw: Mapping[str, Any], specs: Mapping[str, QuestionSpec], all_specs: Mapping[str, QuestionSpec],
+                    datasets: Sequence[str], labels_root: Path, out_dir: Path, predictions: pd.DataFrame,
+                    include_partial: bool, n_boot: int,
+                    boot_seed: int) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]]:
+    """Oracle-referenced accuracy on the draw's missed questions vs on its answerable ones.
+
+    Missed questions (``sample --include-missed``) have no automatic label from the draw's deployment source,
+    so they are scored against the oracle only, and never enter the 2x2, delta-delta or imitation tables.
+    Both sides are scored against the oracle answers of ``labels_root``. Which questions are missed is fixed
+    by the draw: the deployment source of the folder the draw was made from.
+
+    Parameters
+    ----------
+    draw : mapping
+        The draw scored; its ``missed`` record lists the missed questions.
+    specs : mapping of str to QuestionSpec
+        The answerable questions scored (the draw's ``ids`` in ``datasets``).
+    all_specs : mapping of str to QuestionSpec
+        Every sampled question, by id.
+    datasets : sequence of str
+        The datasets scored.
+    labels_root : pathlib.Path
+        The label folder whose oracle answers are used.
+    out_dir : pathlib.Path
+        The per-item output folder (its ``predictions``).
+    predictions : pandas.DataFrame
+        The predictions scored on the answerable questions (runs left out as partial are already removed).
+    include_partial : bool
+        Also use runs that have not answered every missed question.
+    n_boot : int
+        Bootstrap replicates.
+    boot_seed : int
+        Bootstrap seed.
+
+    Returns
+    -------
+    scored : pandas.DataFrame
+        Per-item :func:`measured_space.scoring.score_oracle` rows of both sides, with a boolean ``missed``
+        column (kept out of the repository). Empty if the draw has no missed questions.
+    table : pandas.DataFrame
+        :func:`measured_space.scoring.missed_vs_answerable` under both forced-answer policies (column
+        ``forced_policy``). It has the columns but no rows if there is nothing to compare.
+    info : dict
+        ``included``, the deployment ``sources`` that missed, counts (``n_missed``, ``n_answerable``,
+        ``n_missed_without_oracle``), ``missed_composition``, the ``models`` compared, ``left_out_partial``
+        (models without an answer to every missed question) and a ``note`` when nothing is compared.
+
+    Raises
+    ------
+    ValueError
+        If a question's spec differs from the label folder's spec under the same id.
+    """
+    table = pd.DataFrame(columns=list(scoring.MISSED_COLUMNS) + ["forced_policy"])
+    record = draw.get("missed")
+    if not record:
+        return pd.DataFrame(), table, {"included": False, "note": "the draw has no missed questions; add them "
+                                                                  "with 'sample --extend --include-missed'"}
+    missed_specs = {r["id"]: all_specs[r["id"]] for r in record["items"] if r["dataset"] in datasets}
+    frame, _ = load_predictions(out_dir, set(missed_specs))
+    models = sorted(set(predictions["model"]))
+    answered = frame.groupby("model")["id"].nunique() if len(frame) else pd.Series(dtype=int)
+    incomplete = {m: int(answered.get(m, 0)) for m in models if answered.get(m, 0) < len(missed_specs)}
+    keep = [m for m in models if include_partial or m not in incomplete]
+    oracle_items: list[QAItem] = []
+    n_without_oracle = 0
+    for dataset in datasets:
+        oracle = cached_items(labels_root / dataset / "qa_oracle.jsonl")
+        for item_id, spec in list(specs.items()) + list(missed_specs.items()):
+            if spec.dataset != dataset:
+                continue
+            if item_id not in oracle:
+                if item_id in missed_specs:
+                    n_without_oracle += 1
+                continue
+            if oracle[item_id].spec != spec:
+                raise ValueError(f"Sampled question {item_id} differs from its spec in {labels_root / dataset}")
+            oracle_items.append(oracle[item_id])
+    scored = pd.DataFrame()
+    if keep and len(frame):
+        both = pd.concat([predictions[predictions["model"].isin(keep)], frame[frame["model"].isin(keep)]],
+                         ignore_index=True)
+        scored = scoring.score_oracle(oracle_items, both)
+        scored["missed"] = scored["id"].isin(set(missed_specs))
+        tables = []
+        for policy, include in FORCED_POLICIES.items():
+            base = scored if include else scoring.count_forced_as_failures(scored)
+            tables.append(scoring.missed_vs_answerable(base, n_boot=n_boot, seed=boot_seed)
+                          .assign(forced_policy=policy))
+        table = pd.concat(tables, ignore_index=True) if any(len(t) for t in tables) else table
+    note = None
+    if not missed_specs:
+        note = "the draw has no missed questions in the datasets scored"
+    elif not len(table):
+        note = "no model has answered every missed question yet: run 'predict' (or pass --include-partial)"
+    info = {"included": True, "sources": record.get("sources"), "n_missed": len(missed_specs),
+            "n_answerable": len(specs), "n_missed_without_oracle": n_without_oracle,
+            "missed_composition": records(sample_composition(missed_specs)),
+            "models": sorted(set(scored["model"])) if len(scored) else [],
+            "left_out_partial": {} if include_partial else incomplete, "note": note}
+    return scored, table, info
 
 
 def records(frame: pd.DataFrame) -> list[dict[str, Any]]:
@@ -1030,15 +1582,18 @@ def print_tables(tables: Mapping[str, pd.DataFrame], runtime: pd.DataFrame) -> N
     overall = acc[acc["qtype"] == "all"].pivot_table(
         index=["unit", "model", "item_set", "n"], columns=["forced_policy", "source"], values="accuracy").round(3)
     print("\n== Accuracy, all question types (columns: forced policy x label source)\n" + overall.to_string())
-    pooled = acc[(acc["unit"] == POOLED_UNIT) & (acc["forced_policy"] == "counted") & (acc["item_set"] == "all")]
-    per_type = pooled.pivot_table(index="qtype", columns=["model", "source"], values="accuracy").round(3)
-    print(f"\n== {POOLED_UNIT}: accuracy by question type (all items, forced answers counted)\n"
-          + per_type.to_string())
-    rates = acc[(acc["unit"] == POOLED_UNIT) & (acc["qtype"] == "all") & (acc["source"] == "oracle")
-                & (acc["item_set"] == "all")]
-    rate_columns = ["model", "forced_policy", "n", "n_parsed", "parse_failure_rate", "forced_rate"]
-    print(f"\n== {POOLED_UNIT}: parse-failure and forced-answer rates\n"
-          + rates[rate_columns].round(3).to_string(index=False))
+    if (acc["unit"] == POOLED_UNIT).any():
+        pooled = acc[(acc["unit"] == POOLED_UNIT) & (acc["forced_policy"] == "counted") & (acc["item_set"] == "all")]
+        per_type = pooled.pivot_table(index="qtype", columns=["model", "source"], values="accuracy").round(3)
+        print(f"\n== {POOLED_UNIT}: accuracy by question type (all items, forced answers counted)\n"
+              + per_type.to_string())
+        rates = acc[(acc["unit"] == POOLED_UNIT) & (acc["qtype"] == "all") & (acc["source"] == "oracle")
+                    & (acc["item_set"] == "all")]
+        rate_columns = ["model", "forced_policy", "n", "n_parsed", "parse_failure_rate", "forced_rate"]
+        print(f"\n== {POOLED_UNIT}: parse-failure and forced-answer rates\n"
+              + rates[rate_columns].round(3).to_string(index=False))
+    else:
+        print(f"\n== {POOLED_UNIT}: skipped (see design.pooled_deployment_source in summary.json)")
     if len(tables["delta_delta"]):
         dd = tables["delta_delta"]
         primary = (dd["model_a"] == MODEL_PAIRS[0][0]) & (dd["model_b"] == MODEL_PAIRS[0][1])
@@ -1064,16 +1619,18 @@ def cmd_score(args: argparse.Namespace) -> int:
     Parameters
     ----------
     args : argparse.Namespace
-        ``out_dir``, ``labels_dir``, ``draw_from``, ``results_dir``, ``accepted``, ``n_boot``, ``boot_seed``,
+        ``out_dir``, ``labels_dir``, ``draw_from``, ``datasets``, ``deployment_source`` (dataset to source,
+        from :func:`parse_deployment_sources`), ``results_dir``, ``accepted``, ``n_boot``, ``boot_seed``,
         ``include_partial``, ``note``, ``gpu_watch``. The questions scored are the latest draw from
-        ``draw_from`` (default ``labels_dir``). Runs that have not answered all of them are left out unless
-        ``include_partial`` is set.
+        ``draw_from`` (default ``labels_dir``), restricted to ``datasets`` if given. Runs that have not answered
+        all of them are left out unless ``include_partial`` is set.
 
     Returns
     -------
     int
-        Exit status: 0 on success, 1 if there is no draw to score, no predictions, or the label folder is
-        unfinished.
+        Exit status: 0 on success, 1 if there is no draw to score, ``datasets`` names a dataset the draw lacks,
+        the label folder is unfinished or has no automatic labels, a requested deployment source is missing,
+        or there are no predictions.
     """
     sample = load_sample(args.out_dir)
     labels_root = args.labels_dir
@@ -1085,10 +1642,37 @@ def cmd_score(args: argparse.Namespace) -> int:
     all_specs = sample_spec_map(sample)
     specs = {i: all_specs[i] for i in draw["ids"]}
     datasets = sorted({s.dataset for s in specs.values()})
+    if args.datasets:
+        missing = sorted(set(args.datasets) - set(datasets))
+        if missing:
+            print(f"--datasets {missing}: not in the draw from {draw_from} (it has {datasets})", flush=True)
+            return 1
+        datasets = sorted(set(args.datasets))
+        specs = {i: s for i, s in specs.items() if s.dataset in datasets}
     for dataset in datasets:
         if not (labels_root / dataset / "summary.json").exists():
-            print(f"{labels_root / dataset}/summary.json missing: labels are not finished", flush=True)
+            print(f"{labels_root / dataset}/summary.json missing: labels are not finished (or the folder does "
+                  f"not cover {dataset}: pass --datasets to score fewer datasets)", flush=True)
             return 1
+    sources: dict[str, tuple[str, ...]] = {}
+    empty_sources: dict[str, list[str]] = {}
+    for dataset in datasets:
+        sources[dataset], empty = discover_sources(labels_root / dataset)
+        if empty:
+            empty_sources[dataset] = list(empty)
+            print(f"{dataset}: empty label files left out: {[f'{AUTO_PREFIX}{s}.jsonl' for s in empty]}", flush=True)
+    if not any(sources.values()):
+        print(f"no non-empty {AUTO_PREFIX}*.jsonl under {labels_root} for {datasets}", flush=True)
+        return 1
+    try:
+        deployment = resolve_deployment_sources(sources, args.deployment_source)
+    except ValueError as err:
+        print(err, flush=True)
+        return 1
+    if deployment["note"]:
+        print(f"NOTE: {deployment['note']}", flush=True)
+    if deployment["ignored"]:
+        print(f"NOTE: --deployment-source ignored for datasets not scored: {deployment['ignored']}", flush=True)
     predictions, raw = load_predictions(args.out_dir, set(specs))
     counts = predictions.groupby("model")["id"].nunique() if len(predictions) else pd.Series(dtype=int)
     partial = {str(m): int(n) for m, n in counts.items() if n < len(specs)}
@@ -1109,13 +1693,22 @@ def cmd_score(args: argparse.Namespace) -> int:
     if args.accepted is not None and accepted is None:
         print(f"accepted ids file {args.accepted} does not exist", flush=True)
         return 1
-    print(f"labels: {labels_root}; questions: the {len(specs)} drawn from {draw_from}; accepted ids: "
+    print(f"labels: {labels_root}; questions: the {len(specs)} drawn from {draw_from} ({', '.join(datasets)}); "
+          f"sources: {sources}; pooled: {deployment['sources']}; accepted ids: "
           f"{args.accepted or 'none given (all-items half only)'}", flush=True)
+    certification = None if accepted is None else certification_record(accepted, sources, specs, labels_root)
+    if certification is not None:
+        if certification["note"]:
+            print(f"\n{certification['note']}\n", flush=True)
+        for row in certification["dropped"]:
+            print(f"accepted subset: left out {row['dataset']}/{row['source']} {row['answer_kind']} "
+                  f"(certified_ok={row['certified_ok']}): {row['n_scored']} scored questions, "
+                  f"{row['n_listed']} listed ids", flush=True)
     parts: dict[str, list[pd.DataFrame]] = {}
     units_info: dict[str, Any] = {}
     scored_dir = args.out_dir / "scored" / labels_root.name
     scored_dir.mkdir(parents=True, exist_ok=True)
-    for unit in scoring_units(datasets, labels_root):
+    for unit in scoring_units(sources, deployment["sources"]):
         labels, available = unit_labels(unit, specs, labels_root, accepted)
         scored, tables, info = analyse_unit(unit, labels, predictions, available, args.n_boot, args.boot_seed)
         scored.to_csv(scored_dir / f"{unit.name.replace('/', '__')}.csv", index=False)
@@ -1124,6 +1717,11 @@ def cmd_score(args: argparse.Namespace) -> int:
             parts.setdefault(name, []).append(table)
     tables = {name: pd.concat([t for t in frames if len(t)], ignore_index=True).infer_objects()
               if any(len(t) for t in frames) else pd.DataFrame() for name, frames in parts.items()}
+    missed_scored, missed_table, missed_info = missed_analysis(
+        draw, specs, all_specs, datasets, labels_root, args.out_dir, predictions, args.include_partial,
+        args.n_boot, args.boot_seed)
+    if len(missed_scored):
+        missed_scored.to_csv(scored_dir / "oracle_only__missed_vs_answerable.csv", index=False)
     runtime = runtime_table(raw)
     composition = sample_composition(specs)
     runs_path = args.out_dir / "runs.jsonl"
@@ -1131,9 +1729,12 @@ def cmd_score(args: argparse.Namespace) -> int:
         else []
     summary = {
         "created": utc_now(), "git_commit": git_commit(), "labels_dir": portable(labels_root),
-        "questions_drawn_from": portable(draw_from), "n_questions": len(specs), "n_sample_total": len(all_specs),
+        "questions_drawn_from": portable(draw_from), "datasets": datasets, "n_questions": len(specs),
+        "n_sample_total": len(all_specs),
+        "auto_sources": {"found": {d: list(s) for d, s in sources.items()}, "empty": empty_sources},
         "design": {"sample_seed": sample["seed"], "per_cell": draw["per_cell"],
-                   "deployment_source": sample["deployment_source"], "n_boot": args.n_boot,
+                   "deployment_source": sample["deployment_source"], "pooled_deployment_source": deployment,
+                   "n_boot": args.n_boot,
                    "boot_seed": args.boot_seed, "ci_level": 0.95, "model_pairs": [list(p) for p in MODEL_PAIRS],
                    "forced_policies": {"counted": "answers forced after cut-off reasoning count as answers",
                                        "strict": "forced answers count as parse failures (wrong)"},
@@ -1141,9 +1742,12 @@ def cmd_score(args: argparse.Namespace) -> int:
                    "max_new_tokens": {k: m.max_new_tokens for k, m in MODELS.items()},
                    "accepted_ids": None if accepted is None else {"path": portable(args.accepted),
                                                                   **file_fingerprint(args.accepted)}},
+        "accepted_certification": certification,
         "label_files": label_files, "label_files_changed_since_sampling": changed,
         "sample_draws": [{**{k: v for k, v in d.items() if k not in ("git_commit", "ids")},
-                          "labels_dir": portable(d["labels_dir"])} for d in sample["draws"]],
+                          "labels_dir": portable(d["labels_dir"]),
+                          **({"missed": {k: v for k, v in d["missed"].items() if k != "items"}}
+                             if isinstance(d.get("missed"), dict) else {})} for d in sample["draws"]],
         "sample_composition": records(composition),
         "model_configs": {r["model"]: dict(r["config"]) for r in runs},
         "runs": [{k: v for k, v in r.items() if k != "config"} for r in runs],
@@ -1154,17 +1758,32 @@ def cmd_score(args: argparse.Namespace) -> int:
         "units": units_info,
         "runtime": records(runtime),
         **{name: records(table) for name, table in tables.items()},
+        "missed": missed_info,
+        "missed_vs_answerable": records(missed_table),
     }
     results_dir = args.results_dir or REPO_ROOT / "results" / "vlm" / labels_root.name
     results_dir.mkdir(parents=True, exist_ok=True)
     (results_dir / "summary.json").write_text(json.dumps(summary, indent=1))
-    for name, table in {**tables, "runtime": runtime, "sample_composition": composition}.items():
+    for name, table in {**tables, "runtime": runtime, "sample_composition": composition,
+                        "missed_vs_answerable": missed_table}.items():
         table.to_csv(results_dir / f"{name}.csv", index=False, float_format="%.4f")
     print_tables(tables, runtime)
-    print("\n== Units (notes are in summary.json)\n" + pd.DataFrame([
-        {"unit": k, **{f: v for f, v in info.items() if f not in ("n_unanswered", "notes")},
+    if len(missed_table):
+        shown = missed_table[(missed_table["qtype"] == "all") & (missed_table["forced_policy"] == "counted")]
+        print("\n== Oracle-referenced accuracy on missed vs answerable questions (all shared types, forced answers "
+              "counted; scene-cluster bootstrap 95% CI)\n"
+              + shown.drop(columns=["level", "n_boot", "seed", "forced_policy"]).round(3).to_string(index=False))
+    elif missed_info.get("note"):
+        print(f"\n== Missed vs answerable: {missed_info['note']}")
+    print("\n== Units (notes and accepted questions left out as uncertified are in summary.json)\n" + pd.DataFrame([
+        {"unit": k, **{f: v for f, v in info.items()
+                       if f not in ("n_unanswered", "notes", "n_accepted_dropped_uncertified")},
+         "n_accepted_dropped": (None if info["n_accepted_dropped_uncertified"] is None
+                                else sum(info["n_accepted_dropped_uncertified"].values())),
          "max_unanswered": max(info["n_unanswered"].values(), default=0), "n_notes": len(info["notes"])}
         for k, info in units_info.items()]).round(3).to_string(index=False))
+    if certification is not None and certification["note"]:
+        print(f"\n{certification['note']}", flush=True)
     print(f"aggregates written to {results_dir}; per-item scored rows in {scored_dir}", flush=True)
     return 0
 
@@ -1184,7 +1803,8 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     -------
     argparse.Namespace
         Parsed arguments, with ``command`` naming the step. ``out_dir`` and ``labels_dir`` default to
-        ``<data root>/outputs/vlm`` and ``<data root>/outputs/labels``.
+        ``<data root>/outputs/vlm`` and ``<data root>/outputs/labels``. For ``score``, ``deployment_source`` is
+        a dict of dataset to source; a malformed ``--deployment-source`` exits with a usage error.
     """
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     parser.add_argument("--out-dir", type=Path, default=None, help="per-item outputs (default <data>/outputs/vlm)")
@@ -1196,6 +1816,9 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     p.add_argument("--datasets", nargs="+", default=list(DEPLOYMENT_SOURCE), choices=list(DEPLOYMENT_SOURCE))
     p.add_argument("--extend", action="store_true", help="add a draw to the existing sample (never removes)")
     p.add_argument("--force", action="store_true", help="discard an existing sample and redraw")
+    p.add_argument("--include-missed", action="store_true",
+                   help="also draw questions the deployment source missed (oracle answer, no automatic answer "
+                        "because a referent was not matched), stratified the same way, scored against the oracle")
     p = sub.add_parser("predict", help="answer the sample with one model (GPU)")
     p.add_argument("--model", choices=sorted(MODELS), required=True)
     p.add_argument("--modes", nargs="+", choices=["image", "blind"], default=["image", "blind"])
@@ -1204,6 +1827,12 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     p.add_argument("--labels-dir", type=Path, default=None, help="label folder (default <data>/outputs/labels)")
     p.add_argument("--draw-from", type=Path, default=None,
                    help="score the questions drawn from this label folder (default: --labels-dir)")
+    p.add_argument("--datasets", nargs="+", default=None,
+                   help="score only these datasets of the draw (default: all of them), e.g. for a label folder "
+                        "that covers fewer datasets")
+    p.add_argument("--deployment-source", action="append", default=[], metavar="DATASET=SOURCE",
+                   help="the automatic source a dataset contributes to the pooled deployment unit (repeatable; "
+                        "default: the v0 source if the folder has it, else the folder's only source)")
     p.add_argument("--results-dir", type=Path, default=None,
                    help="aggregates folder (default results/vlm/<label folder name>)")
     p.add_argument("--accepted", type=Path, default=None,
@@ -1216,6 +1845,11 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     p.add_argument("--gpu-watch", action="append", default=[], metavar="RUN=LINE",
                    help="a GPU_WATCH SUMMARY line to record, e.g. 'qwen3-vl-8b=GPU_WATCH SUMMARY ...'")
     args = parser.parse_args(argv)
+    if args.command == "score":
+        try:
+            args.deployment_source = parse_deployment_sources(args.deployment_source)
+        except ValueError as err:
+            parser.error(str(err))
     if args.out_dir is None:
         args.out_dir = default_out_dir()
     if getattr(args, "labels_dir", "unset") is None:

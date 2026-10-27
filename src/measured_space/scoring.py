@@ -14,6 +14,12 @@ The analysis follows the evaluation design in ``docs/LOG.md``:
   the wrong label rather than with the truth.
 - **Label ceiling.** For a numeric label with standard deviation sigma, the probability that a perfect
   model is scored correct against it.
+- **Missed vs answerable.** A question generated from ground truth is *missed* when the automatic labeller
+  matched no box to one of its referents, so it has no automatic label. Such questions are scored against the
+  oracle alone (:func:`score_oracle`) and kept out of every table above. :func:`missed_vs_answerable`
+  compares a model's oracle-referenced accuracy on missed and on answerable questions, with a scene-cluster
+  bootstrap interval on the difference. The difference estimates how much easier a question set generated
+  from automatic labels is than the full one.
 
 Parse failures (``None`` predictions) count as wrong. Accuracy over parsed answers only is reported next
 to it. An answer forced after a reasoning model ran out of budget (see :mod:`measured_space.eval_vlm`)
@@ -152,17 +158,55 @@ def score(labels: pd.DataFrame, predictions: pd.DataFrame) -> pd.DataFrame:
     for source in SOURCES:
         part = merged.drop(columns=[s for s in SOURCES if s != source]).rename(columns={source: "reference"})
         part.insert(0, "source", source)
-        part["parsed"] = [not _missing(p) for p in part["prediction"]]
-        part["correct"] = [is_correct(s, None if _missing(p) else p, r)
-                           for s, p, r in zip(part["spec"], part["prediction"], part["reference"])]
-        part["rel_error"] = [_relative_error(t, p, r)
-                             for t, p, r in zip(part["answer_type"], part["prediction"], part["reference"])]
-        parts.append(part)
+        parts.append(_judge(part))
     columns = ["model", "id", "dataset", "scene", "qtype", "answer_type", "accepted", "label_ok", "source",
                "reference", "prediction", "parse_method", "forced", "parsed", "correct", "rel_error"]
     scored = pd.concat(parts, ignore_index=True)[columns]
     scored.attrs["n_unanswered"] = {m: len(labelled) - int(answered.get(m, 0))
                                     for m in predictions["model"].unique()}
+    return scored
+
+
+def score_oracle(oracle: Iterable[QAItem], predictions: pd.DataFrame) -> pd.DataFrame:
+    """Score predictions against oracle labels alone, for questions that may have no automatic label.
+
+    Parameters
+    ----------
+    oracle : iterable of QAItem
+        Ground-truth labels (``source == "oracle"``).
+    predictions : pandas.DataFrame
+        Output of :func:`predictions_frame`.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per (model, question). Columns ``model, id, dataset, scene, qtype, answer_type, source,
+        reference, prediction, parse_method, forced, parsed, correct, rel_error``, as in :func:`score`, with
+        ``source`` always ``"oracle"``. Questions a model was not asked are left out;
+        ``attrs["n_unanswered"]`` maps each model to how many labelled questions it has no prediction for.
+
+    Raises
+    ------
+    ValueError
+        If an item has another source or an id repeats.
+    """
+    by_id = _by_id(oracle, "oracle")
+    labels = pd.DataFrame({
+        "id": list(by_id),
+        "dataset": [i.spec.dataset for i in by_id.values()],
+        "scene": [i.spec.scene for i in by_id.values()],
+        "qtype": [i.spec.qtype for i in by_id.values()],
+        "answer_type": [i.spec.answer_type for i in by_id.values()],
+        "reference": pd.Series([i.answer for i in by_id.values()], dtype=object),
+        "spec": pd.Series([i.spec for i in by_id.values()], dtype=object),
+    })
+    merged = predictions.merge(labels, on="id", how="inner")
+    merged.insert(0, "source", "oracle")
+    answered = merged.groupby("model")["id"].nunique()
+    columns = ["model", "id", "dataset", "scene", "qtype", "answer_type", "source", "reference", "prediction",
+               "parse_method", "forced", "parsed", "correct", "rel_error"]
+    scored = _judge(merged)[columns].reset_index(drop=True)
+    scored.attrs["n_unanswered"] = {m: len(by_id) - int(answered.get(m, 0)) for m in predictions["model"].unique()}
     return scored
 
 
@@ -403,6 +447,115 @@ def cluster_bootstrap(values: np.ndarray, clusters: np.ndarray, n_boot: int,
     return (draws @ sums) / (draws @ sizes)
 
 
+# --------------------------------------------------------------------------------------------- missed questions
+
+
+MISSED_COLUMNS: tuple[str, ...] = ("model", "dataset", "qtype", "n_missed", "n_answerable", "n_scenes_missed",
+                                   "n_scenes", "acc_missed", "acc_answerable", "answerable_minus_missed", "ci_low",
+                                   "ci_high", "n_boot_valid", "level", "n_boot", "seed")
+"""Columns of :func:`missed_vs_answerable`."""
+
+
+def missed_vs_answerable(scored: pd.DataFrame, *, n_boot: int = 2000, seed: int = 0,
+                         level: float = 0.95) -> pd.DataFrame:
+    """Oracle-referenced accuracy on questions the labeller missed vs on those it answered, per model.
+
+    ``answerable_minus_missed = acc_answerable - acc_missed``: how much higher a model scores on the questions
+    an automatic labeller can answer than on those it missed. A positive value means a question set generated
+    from automatic labels is easier than the full one. The interval is a scene-cluster bootstrap of that
+    difference: scenes (dataset and scene id) are resampled with replacement, and both accuracies are
+    recomputed on the same resampled scenes. A replicate whose scenes hold no missed (or no answerable)
+    question has no difference and is dropped; ``n_boot_valid`` counts the rest.
+
+    Parameters
+    ----------
+    scored : pandas.DataFrame
+        Oracle-referenced rows (:func:`score_oracle`, or :func:`count_forced_as_failures` of it) with a boolean
+        ``missed`` column. Uses ``model, dataset, scene, qtype, correct, missed``.
+    n_boot : int
+        Bootstrap replicates.
+    seed : int
+        Seed. Each dataset and question type draws from its own stream, derived from the seed and their names
+        and shared by all models, so every model is resampled on the same scenes.
+    level : float
+        Confidence level of the interval.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per model, dataset and question type that has both missed and answerable questions, plus
+        ``qtype == "all"`` pooling those types. Types without missed questions (counts are always answered)
+        are left out of ``"all"``, so that both sides cover the same types; the two sides' type mix can still
+        differ (see ``n_missed`` per type). Columns :data:`MISSED_COLUMNS`. ``ci_low`` and ``ci_high`` are
+        NaN if no replicate is valid.
+    """
+    rows = []
+    for (model, dataset), group in scored.groupby(["model", "dataset"], sort=True):
+        missed = group["missed"].astype(bool)
+        shared = sorted(set(group.loc[missed, "qtype"]) & set(group.loc[~missed, "qtype"]))
+        if not shared:
+            continue
+        group = group[group["qtype"].isin(shared)]
+        for qtype, part in [("all", group)] + [(q, group[group["qtype"] == q]) for q in shared]:
+            rng = np.random.default_rng([seed, zlib.crc32(f"{dataset}/{qtype}".encode())])
+            is_missed = part["missed"].astype(bool).to_numpy()
+            correct = part["correct"].astype(float).to_numpy()
+            clusters = (part["dataset"].astype(str) + "/" + part["scene"].astype(str)).to_numpy()
+            boot = cluster_bootstrap_difference(correct, is_missed, clusters, n_boot, rng)
+            valid = boot[np.isfinite(boot)]
+            ci_low, ci_high = np.quantile(valid, [(1 - level) / 2, (1 + level) / 2]) if len(valid) else (
+                math.nan, math.nan)
+            acc_missed, acc_answerable = float(correct[is_missed].mean()), float(correct[~is_missed].mean())
+            rows.append({"model": model, "dataset": dataset, "qtype": qtype, "n_missed": int(is_missed.sum()),
+                         "n_answerable": int((~is_missed).sum()),
+                         "n_scenes_missed": len(set(clusters[is_missed])), "n_scenes": len(set(clusters)),
+                         "acc_missed": acc_missed, "acc_answerable": acc_answerable,
+                         "answerable_minus_missed": acc_answerable - acc_missed, "ci_low": float(ci_low),
+                         "ci_high": float(ci_high), "n_boot_valid": int(len(valid)), "level": level,
+                         "n_boot": n_boot, "seed": seed})
+    return pd.DataFrame(rows, columns=list(MISSED_COLUMNS))
+
+
+def cluster_bootstrap_difference(values: np.ndarray, in_first: np.ndarray, clusters: np.ndarray, n_boot: int,
+                                 rng: np.random.Generator) -> np.ndarray:
+    """Bootstrap distribution of a difference of two group means, resampling whole clusters with replacement.
+
+    Each replicate draws as many clusters as there are, with replacement (as :func:`cluster_bootstrap`), and
+    returns ``mean(second group) - mean(first group)`` over the items of the drawn clusters.
+
+    Parameters
+    ----------
+    values : numpy.ndarray
+        Shape ``(N,)``, one value per item.
+    in_first : numpy.ndarray
+        Shape ``(N,)``, boolean: True for items of the first group (subtracted), False for the second.
+    clusters : numpy.ndarray
+        Shape ``(N,)``, the cluster label of each item; a cluster may hold items of both groups.
+    n_boot : int
+        Number of replicates.
+    rng : numpy.random.Generator
+        Random source.
+
+    Returns
+    -------
+    numpy.ndarray
+        Shape ``(n_boot,)``, the replicated differences; NaN where the drawn clusters hold no item of one group.
+    """
+    _, inverse = np.unique(clusters, return_inverse=True)
+    first = np.asarray(in_first, dtype=bool)
+    values = np.asarray(values, dtype=np.float64)
+    k = int(inverse.max()) + 1 if len(inverse) else 0
+    if k == 0:
+        return np.full(n_boot, math.nan)
+    sums_1 = np.bincount(inverse[first], weights=values[first], minlength=k)
+    sizes_1 = np.bincount(inverse[first], minlength=k).astype(np.float64)
+    sums_2 = np.bincount(inverse[~first], weights=values[~first], minlength=k)
+    sizes_2 = np.bincount(inverse[~first], minlength=k).astype(np.float64)
+    draws = rng.multinomial(k, np.full(k, 1.0 / k), size=n_boot)          # (n_boot, k) times drawn
+    with np.errstate(invalid="ignore", divide="ignore"):
+        return (draws @ sums_2) / (draws @ sizes_2) - (draws @ sums_1) / (draws @ sizes_1)
+
+
 # --------------------------------------------------------------------------------------------- label noise
 
 
@@ -588,6 +741,29 @@ def _model_name(record: dict[str, Any]) -> str:
     """
     name = record.get("model") or record["model_id"]
     return name + BLIND_SUFFIX if record.get("blind") else name
+
+
+def _judge(part: pd.DataFrame) -> pd.DataFrame:
+    """Score predictions against a reference column with :func:`~measured_space.qa_schema.is_correct`.
+
+    Parameters
+    ----------
+    part : pandas.DataFrame
+        Rows with ``spec``, ``answer_type``, ``prediction`` (None or NaN: a parse failure) and ``reference``.
+
+    Returns
+    -------
+    pandas.DataFrame
+        A copy with ``parsed``, ``correct`` (parse failures are wrong) and ``rel_error``
+        (:func:`_relative_error`) added.
+    """
+    part = part.copy()
+    part["parsed"] = [not _missing(p) for p in part["prediction"]]
+    part["correct"] = [is_correct(s, None if _missing(p) else p, r)
+                       for s, p, r in zip(part["spec"], part["prediction"], part["reference"])]
+    part["rel_error"] = [_relative_error(t, p, r)
+                         for t, p, r in zip(part["answer_type"], part["prediction"], part["reference"])]
+    return part
 
 
 def _missing(value: Any) -> bool:
