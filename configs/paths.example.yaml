@@ -1,0 +1,2 @@
+# Copy to configs/paths.local.yaml (git-ignored) and point data_root at the folder holding data/ and hf_cache/.
+data_root: /path/to/measured-space-data

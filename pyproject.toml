@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "measured-space"
+dynamic = ["version"]
+description = "Calibrated, physically validated uncertainty for metric 3D grounding labels"
+requires-python = ">=3.12"
+dependencies = ["numpy", "scipy", "pillow", "pyyaml"]
+
+[tool.setuptools.dynamic]
+version = { file = "VERSION" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
