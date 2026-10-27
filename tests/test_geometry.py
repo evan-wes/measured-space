@@ -1,3 +1,5 @@
+"""Tests for poses, projection and oriented boxes in :mod:`measured_space.geometry`."""
+
 import numpy as np
 import pytest
 
@@ -17,14 +19,17 @@ RNG = np.random.default_rng(0)
 
 
 def random_rotation() -> np.ndarray:
+    """Draw a random rotation matrix from the module's seeded generator."""
     return axis_angle_to_matrix(RNG.normal(size=3))
 
 
 def yaw(theta: float) -> np.ndarray:
+    """Rotation by ``theta`` radians about +z."""
     return axis_angle_to_matrix([0.0, 0.0, theta])
 
 
 def test_invert_pose_round_trip():
+    """Composing a pose with its inverse gives the identity, and points round-trip."""
     pose = make_pose(random_rotation(), RNG.normal(size=3))
     np.testing.assert_allclose(pose @ invert_pose(pose), np.eye(4), atol=1e-12)
     points = RNG.normal(size=(5, 3))
@@ -32,10 +37,12 @@ def test_invert_pose_round_trip():
 
 
 def test_axis_angle_quarter_turn_about_z_maps_x_to_y():
+    """A quarter turn about +z maps the x axis onto the y axis."""
     np.testing.assert_allclose(axis_angle_to_matrix([0, 0, np.pi / 2]) @ [1, 0, 0], [0, 1, 0], atol=1e-12)
 
 
 def test_interpolate_poses_endpoints_midpoint_and_range():
+    """Interpolation keeps the endpoints, halves rotation and translation midway, and won't extrapolate."""
     times = np.array([0.0, 1.0])
     poses = np.stack([make_pose(np.eye(3), [0, 0, 0]), make_pose(yaw(np.pi / 2), [2, 0, 0])])
     out, valid = interpolate_poses(times, poses, [0.0, 0.5, 1.0, -0.1, 1.1])
@@ -48,6 +55,7 @@ def test_interpolate_poses_endpoints_midpoint_and_range():
 
 
 def test_camera_project_backproject_round_trip_and_principal_point():
+    """Back-projecting projected points recovers them, and the optical axis hits the principal point."""
     cam = Camera(500.0, 520.0, 320.0, 240.0, 640, 480)
     points = np.column_stack([RNG.uniform(-1, 1, 20), RNG.uniform(-1, 1, 20), RNG.uniform(0.5, 5, 20)])
     uv, z = cam.project(points)
@@ -57,6 +65,7 @@ def test_camera_project_backproject_round_trip_and_principal_point():
 
 
 def test_camera_points_behind_are_nan_and_outside_image():
+    """Points behind the camera get NaN pixels and count as outside the image."""
     cam = Camera(500.0, 500.0, 320.0, 240.0, 640, 480)
     uv, z = cam.project([[0, 0, -1.0], [0, 0, 1.0], [10, 0, 1.0]])
     assert np.isnan(uv[0]).all() and z[0] == -1
@@ -64,6 +73,7 @@ def test_camera_points_behind_are_nan_and_outside_image():
 
 
 def test_camera_scaled_maps_pixel_centres_consistently():
+    """A rescaled camera sees each point at the correspondingly scaled pixel (pixel-centre convention)."""
     cam = Camera(1600.0, 1600.0, 959.5, 719.5, 1920, 1440)
     small = cam.scaled(256, 192)
     point = np.array([[0.3, -0.2, 2.0]])
@@ -73,6 +83,7 @@ def test_camera_scaled_maps_pixel_centres_consistently():
 
 
 def test_box_corners_contains_and_closest_point():
+    """Corners lie in the box, far points do not, and closest-point projection is idempotent."""
     box = OrientedBox([1, 2, 3], [2.0, 1.0, 0.5], random_rotation())
     corners = box.corners()
     assert corners.shape == (8, 3)
@@ -85,12 +96,14 @@ def test_box_corners_contains_and_closest_point():
 
 
 def test_distance_to_surface_inside_and_outside():
+    """Distance to the surface is right for points inside the box and outside it."""
     box = OrientedBox([0, 0, 0], [2.0, 2.0, 2.0], np.eye(3))
     d = box.distance_to_surface([[0, 0, 0], [0.5, 0, 0], [3, 0, 0], [2, 2, 1]])
     np.testing.assert_allclose(d, [1.0, 0.5, 2.0, np.sqrt(2)], atol=1e-12)
 
 
 def test_extent_along_up_is_height_for_yawed_box():
+    """A yawed box's extent along +z is its height; along x it mixes the two horizontal sides."""
     box = OrientedBox([0, 0, 0], [3.0, 1.0, 0.7], yaw(0.6))
     assert box.extent_along([0, 0, 1]) == pytest.approx(0.7)
     # Horizontal extent along x of a yawed box: |cos|*3 + |sin|*1
@@ -98,6 +111,7 @@ def test_extent_along_up_is_height_for_yawed_box():
 
 
 def test_sample_surface_lies_on_surface_with_outward_normals():
+    """Surface samples lie on the faces and their normals point outwards."""
     box = OrientedBox([0.5, -1, 2], [1.0, 2.0, 0.4], random_rotation())
     points, normals = box.sample_surface(0.1)
     np.testing.assert_allclose(box.distance_to_surface(points), 0.0, atol=1e-9)
@@ -106,6 +120,7 @@ def test_sample_surface_lies_on_surface_with_outward_normals():
 
 
 def test_surface_distance_axis_aligned_gap():
+    """Two axis-aligned boxes with a 3 m face-to-face gap are 3 m apart."""
     a = OrientedBox([0, 0, 0], [2, 2, 2], np.eye(3))
     b = OrientedBox([5, 0, 0], [2, 2, 2], np.eye(3))
     d, pa, pb = surface_distance(a, b)
@@ -114,6 +129,7 @@ def test_surface_distance_axis_aligned_gap():
 
 
 def test_surface_distance_overlapping_is_zero():
+    """Intersecting boxes have zero surface distance."""
     a = OrientedBox([0, 0, 0], [2, 2, 2], yaw(0.3))
     b = OrientedBox([1, 0.5, 0], [2, 2, 2], yaw(-0.4))
     assert surface_distance(a, b)[0] == pytest.approx(0.0, abs=1e-6)
@@ -121,6 +137,7 @@ def test_surface_distance_overlapping_is_zero():
 
 @pytest.mark.parametrize("seed", range(5))
 def test_surface_distance_matches_brute_force_for_rotated_boxes(seed):
+    """Alternating projections match a 1 cm brute-force search for random rotated boxes."""
     rng = np.random.default_rng(seed)
     a = OrientedBox(rng.normal(size=3), rng.uniform(0.3, 1.5, 3), axis_angle_to_matrix(rng.normal(size=3)))
     b = OrientedBox(a.center + rng.uniform(2.5, 4.0) * rng.normal(size=3) / np.sqrt(3) + 2.0,

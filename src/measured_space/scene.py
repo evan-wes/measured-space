@@ -1,9 +1,9 @@
-"""Shared data types: objects in a scene, one view of a scene, and an object as seen in a view.
+"""Shared data types: objects in a scene, one view of a scene, and an object as one view sees it.
 
-Every dataset loader produces these, the question generator and the perception pipeline consume them, and
-the oracle and the automatic pipeline differ only in where the boxes come from. Geometry conventions are
-those of :mod:`measured_space.geometry` (OpenCV camera axes, ``T_wc`` camera-to-world, boxes with axes as
-columns).
+Every dataset loader produces these, and both the question generator and the perception pipeline consume
+them. The oracle and the automatic pipeline differ only in where the boxes come from. Geometry conventions
+are those of :mod:`measured_space.geometry`: OpenCV camera axes, ``T_wc`` camera-to-world, and boxes with
+their axes as rotation columns.
 """
 
 from __future__ import annotations
@@ -15,13 +15,31 @@ import numpy as np
 from measured_space.geometry import Array, Camera, OrientedBox, invert_pose
 
 
+def _default_up() -> Array:
+    """Return the default world up direction, +z.
+
+    Returns
+    -------
+    numpy.ndarray, shape (3,)
+        ``[0, 0, 1]``.
+    """
+    return np.array([0.0, 0.0, 1.0])
+
+
 @dataclass(frozen=True)
 class SceneObject:
     """An object with a 3D box in the scene's world frame.
 
-    ``object_id`` is unique within a scene (and stable over time for objects that move). ``label`` is the
-    dataset's class name. ``source`` says where the box came from: ``"oracle"`` (ground truth) or ``"auto"``
-    (perception).
+    Parameters
+    ----------
+    object_id : str
+        Identifier, unique within a scene and stable over time for objects that move.
+    label : str
+        The dataset's class name.
+    box : OrientedBox
+        The object's box in the world frame, metres.
+    source : str, default "oracle"
+        Where the box came from: ``"oracle"`` (ground truth) or ``"auto"`` (perception).
     """
 
     object_id: str
@@ -34,10 +52,25 @@ class SceneObject:
 class FrameView:
     """One image of a scene, with its camera and pose.
 
-    ``frame`` identifies the image within the scene (a timestamp or frame index, as text). ``image_ref``
-    locates the RGB image relative to the data root (a file path, or ``"<zip>::<member>"`` for a file read
-    straight out of an archive). ``up`` is the world's up direction (gravity), used for heights and
-    "above/below".
+    Parameters
+    ----------
+    dataset : str
+        Dataset name, e.g. ``"arkitscenes"``.
+    scene : str
+        Scene identifier within the dataset.
+    camera_id : str
+        Camera identifier within the scene.
+    frame : str
+        Image identifier within the scene (a timestamp or frame index, as text).
+    camera : Camera
+        Intrinsics at the image's resolution.
+    T_wc : numpy.ndarray, shape (4, 4)
+        Camera-to-world pose.
+    image_ref : str
+        The RGB image's location relative to the dataset folder: a file path, or ``"<archive>::<member>"``
+        for a file read straight out of an archive.
+    up : numpy.ndarray, shape (3,), default +z
+        World up direction (against gravity), used for heights and "above/below".
     """
 
     dataset: str
@@ -47,14 +80,16 @@ class FrameView:
     camera: Camera
     T_wc: Array
     image_ref: str
-    up: Array = field(default_factory=lambda: np.array([0.0, 0.0, 1.0]))
+    up: Array = field(default_factory=_default_up)
 
     @property
     def T_cw(self) -> Array:
+        """numpy.ndarray, shape (4, 4): the world-to-camera pose."""
         return invert_pose(self.T_wc)
 
     @property
     def camera_center(self) -> Array:
+        """numpy.ndarray, shape (3,): the camera's optical centre in the world frame, metres."""
         return self.T_wc[:3, 3].copy()
 
 
@@ -62,9 +97,17 @@ class FrameView:
 class ObjectInView:
     """An object as one view sees it.
 
-    ``visible_fraction``: share of the object's camera-facing surface samples that are inside the image and
-    not occluded (by depth). ``truncated_fraction``: share of those samples that fall outside the image.
-    ``bbox2d``: ``(xmin, ymin, xmax, ymax)`` pixel box of the projected visible samples, or ``None``.
+    Parameters
+    ----------
+    obj : SceneObject
+        The object.
+    visible_fraction : float
+        Share of the object's camera-facing surface samples that lie inside the image, in front of the
+        camera, and are not occluded according to depth.
+    truncated_fraction : float
+        Share of the camera-facing surface samples that fall outside the image or behind the camera.
+    bbox2d : tuple of float or None
+        ``(xmin, ymin, xmax, ymax)`` pixel box of the visible samples, or ``None`` if none are visible.
     """
 
     obj: SceneObject

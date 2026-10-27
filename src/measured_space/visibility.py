@@ -1,31 +1,69 @@
 """How much of an object a view sees: sample its camera-facing surface, project, and test against depth.
 
-A surface sample counts as **visible** when it projects inside the image, lies in front of the camera, and
-the depth map at its pixel is not nearer than the sample by more than a tolerance (nothing occludes it).
-Samples with no valid depth (0 or NaN) count as not visible: this is conservative, and the fraction of such
-samples is reported so a loader can tell occlusion from missing depth.
+A surface sample counts as **visible** when three things hold:
+- it projects inside the image;
+- it lies in front of the camera;
+- the depth map at its pixel is not nearer than the sample by more than a tolerance (nothing occludes it).
+
+Samples with no valid depth (0 or NaN) count as not visible. This is conservative, and the share of such
+samples is reported so that a caller can tell occlusion from missing depth.
 """
 
 from __future__ import annotations
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 from measured_space.geometry import Array
 from measured_space.scene import FrameView, ObjectInView, SceneObject
 
 
-def depth_tolerance(z: Array, absolute: float = 0.05, relative: float = 0.03) -> Array:
-    """Allowed depth disagreement (m) at depth ``z``: the larger of an absolute and a relative bound."""
-    return np.maximum(absolute, relative * np.asarray(z))
+def depth_tolerance(z: ArrayLike, absolute: float = 0.05, relative: float = 0.03) -> Array:
+    """Allowed disagreement between a surface sample's depth and the depth map.
+
+    Parameters
+    ----------
+    z : array_like, shape (N,)
+        Sample depths, metres.
+    absolute : float, default 0.05
+        Absolute bound, metres.
+    relative : float, default 0.03
+        Relative bound, as a fraction of ``z``.
+
+    Returns
+    -------
+    numpy.ndarray, shape (N,)
+        The larger of the two bounds at each depth, metres.
+    """
+    return np.maximum(absolute, relative * np.asarray(z, dtype=np.float64))
 
 
 def object_in_view(view: FrameView, obj: SceneObject, depth: Array | None, *, spacing: float = 0.05,
                    min_z: float = 0.05) -> tuple[ObjectInView, dict[str, float]]:
-    """Visibility of ``obj`` in ``view`` against a planar depth map (metres), or geometry alone if ``None``.
+    """Measure how much of an object a view sees.
 
-    ``depth`` may have a different resolution from the camera; pixel coordinates are rescaled to it.
-    Returns the :class:`ObjectInView` and diagnostics: the number of camera-facing samples, and the fraction
-    that project into the image but have no valid depth.
+    Parameters
+    ----------
+    view : FrameView
+        The image, its camera and its pose.
+    obj : SceneObject
+        The object, with its box in the world frame.
+    depth : numpy.ndarray, shape (H, W), or None
+        Planar depth map in metres (0 or NaN = invalid). It may have a different resolution from the
+        camera; pixel coordinates are rescaled to it. With ``None``, only geometry (image bounds, being in
+        front of the camera) decides visibility.
+    spacing : float, default 0.05
+        Surface sampling grid spacing, metres.
+    min_z : float, default 0.05
+        Samples nearer than this to the camera plane count as not visible, metres.
+
+    Returns
+    -------
+    seen : ObjectInView
+        Visible and truncated fractions, and the 2D box of the visible samples.
+    diagnostics : dict of str to float
+        ``"n_samples"``: number of camera-facing samples. ``"no_depth_fraction"``: share of them that project
+        into the image but have no valid depth.
     """
     box_cam = obj.box.transformed(view.T_cw)
     points, normals = box_cam.sample_surface(spacing)
