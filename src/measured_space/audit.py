@@ -18,8 +18,10 @@ guarantee. It follows the design review in ``docs/LOG.md``.
    referent, failed lift) with a per-type rate ``pi`` and a wide scale ``sigma_g``. It is fitted by maximum
    likelihood with a ridge penalty. The features (:data:`FEATURES`) are auto-side evidence only, aggregated
    over the item's referents by taking the worst referent (:func:`referent_features`), plus the depth source as
-   one-hot columns. Match distances are *not* features: matching a detection to an oracle object uses ground
-   truth.
+   one-hot columns. A referent's detection score is its lift's own ``det_score`` when the box source stores
+   one (e.g. ``cutr_sam3``: the box detector's score, not the segmenter's), else its detection's ``score``.
+   Match distances and pairing ambiguity are *not* features: matching a detection to an oracle object uses
+   ground truth.
 3. **Out-of-scene predictions** (:func:`cross_fit`). Leave one scene out within a dataset: each item's
    prediction comes from a model that never saw its scene. Calibration scores for a test scene come from the
    other scenes, each predicted by a model that saw neither that scene nor the test scene (leave two scenes
@@ -41,6 +43,11 @@ guarantee. It follows the design review in ``docs/LOG.md``.
 Baselines, fitted on the same folds with the same likelihood: ``const`` (bias and sigma constant per question
 type) and ``prop`` (bias and sigma proportional to the label value, ``sigma = k |value|``). Mondrian calibration
 then makes ``const`` a per type-and-depth-source constant.
+
+Pairing sensitivity (:func:`exclude_ambiguous`): the pair table records per row whether any of the auto answer's
+detection pairings was ambiguous (another feasible pairing existed; ``match_ambiguous``), and the rows whose
+pairing was can be dropped before the audit, oracle and auto side together. Rows whose flag is unknown (labels
+written before it was stored, or under the 3D association) are kept and counted.
 
 Caveats stated with every result: items from one scene share objects, a capture and its errors, so Wilson
 intervals and binomial bounds, which treat items as independent, are optimistic; guarantees hold across
@@ -97,7 +104,10 @@ CATEGORICAL_KINDS: tuple[str, ...] = ("logistic", "margin", "const")
 _LIFT_KEYS = ("depth_median", "boundary_fraction", "border_touch", "depth_mad_rel", "footprint_hull_fill",
               "n_points")
 _SCORE_KEYS = ("det_score", "detection_score", "score")
+_LIFT_SCORE_KEY = "det_score"    # a lift's own detection score, preferred over its referent's (see _feature_dicts)
+_FEATURES_KEY = "features"       # where a referent's evidence holds its lift features
 _MATCH_KEYS = ("match_distance", "match_dist", "match_cost")
+_AMBIGUOUS_KEY = "match_ambiguous"
 _MIN_VALUE = 0.05          # m: floor on |value| inside logs and the proportional baseline
 _MIN_MARGIN = 1e-3         # m: floor on the decision margin inside its log
 _LOG_2PI = math.log(2.0 * math.pi)
@@ -186,8 +196,15 @@ class AuditConfig:
 # ============================================================================================================
 
 
-def _feature_dicts(node: Any, found: list[dict[str, Any]], scores: list[float], matches: list[float]) -> None:
+def _feature_dicts(node: Any, found: list[dict[str, Any]], scores: list[float], matches: list[float],
+                   skip_scores: bool = False) -> None:
     """Collect lift-feature dicts, detection scores and match distances anywhere in a nested record.
+
+    A dict's detection score is its lift's own ``det_score`` when it holds a ``features`` dict with a finite
+    one: some box sources store two scores per referent, the segmenter's as the referent's ``score`` and the
+    box detector's as the lift's ``det_score`` (``cutr_sam3``), and the box is the detector's. Otherwise every
+    finite score key (``_SCORE_KEYS``) of the dict counts. Lift features without ``det_score`` (the depth
+    sources) therefore leave the scores exactly as a plain search for score keys finds them.
 
     Parameters
     ----------
@@ -196,23 +213,86 @@ def _feature_dicts(node: Any, found: list[dict[str, Any]], scores: list[float], 
     found : list of dict
         Receives every dict holding at least two lift-feature keys (one per referent).
     scores : list of float
-        Receives every finite detection score (keys in ``_SCORE_KEYS``).
+        Receives the detection scores: per dict, its lift's ``det_score`` if present and finite, else every
+        finite value of its keys in ``_SCORE_KEYS``.
     matches : list of float
         Receives every finite match distance (keys in ``_MATCH_KEYS``).
+    skip_scores : bool, default False
+        Leave out this dict's own score keys (its ``det_score`` was already taken by the referent holding it).
     """
     if isinstance(node, Mapping):
         if sum(k in node for k in _LIFT_KEYS) >= 2:
             found.append(dict(node))
+        lift = node.get(_FEATURES_KEY)
+        lift_score = lift.get(_LIFT_SCORE_KEY) if isinstance(lift, Mapping) else None
+        prefer_lift = _finite(lift_score)
+        if prefer_lift:
+            scores.append(float(lift_score))
+        elif not skip_scores:
+            scores.extend(float(node[k]) for k in _SCORE_KEYS if k in node and _finite(node[k]))
         for key, value in node.items():
-            if key in _SCORE_KEYS and _finite(value):
-                scores.append(float(value))
-            elif key in _MATCH_KEYS and _finite(value):
+            if key in _MATCH_KEYS and _finite(value):
                 matches.append(float(value))
             elif isinstance(value, (Mapping, list, tuple)):
-                _feature_dicts(value, found, scores, matches)
+                _feature_dicts(value, found, scores, matches, skip_scores=prefer_lift and key == _FEATURES_KEY)
     elif isinstance(node, (list, tuple)):
         for value in node:
             _feature_dicts(value, found, scores, matches)
+
+
+def _ambiguity_flags(node: Any, flags: list[bool | None]) -> None:
+    """Collect, for every pairing record anywhere in a nested record, whether its pairing was ambiguous.
+
+    A pairing record is a dict with ``match_ambiguous`` or a match-distance key (``_MATCH_KEYS``): the
+    evidence the label pipeline stores per referent or counted object (:func:`measured_space.pipeline._evidence`).
+    Records are not searched further.
+
+    Parameters
+    ----------
+    node : Any
+        A JSON-like value (dict, list or scalar).
+    flags : list of bool or None
+        Receives one flag per record: False if the record has ``object_id`` None (no oracle object was paired,
+        so no pairing can be ambiguous), else ``bool(match_ambiguous)``, or None (unknown) if that is absent or
+        None (labels written before the field existed, or under the 3D association, which does not assess
+        ambiguity).
+    """
+    if isinstance(node, Mapping):
+        if _AMBIGUOUS_KEY in node or any(k in node for k in _MATCH_KEYS):
+            if "object_id" in node and node["object_id"] is None:
+                flags.append(False)
+            else:
+                value = node.get(_AMBIGUOUS_KEY)
+                flags.append(None if value is None else bool(value))
+            return
+        for value in node.values():
+            if isinstance(value, (Mapping, list, tuple)):
+                _ambiguity_flags(value, flags)
+    elif isinstance(node, (list, tuple)):
+        for value in node:
+            _ambiguity_flags(value, flags)
+
+
+def match_ambiguity(extra: Mapping[str, Any]) -> float:
+    """Whether an auto item rests on an ambiguous detection pairing.
+
+    Parameters
+    ----------
+    extra : mapping
+        An auto item's ``extra`` (searched recursively, see :func:`_ambiguity_flags`).
+
+    Returns
+    -------
+    float
+        1.0 if some referent (for a count, some counted object) was paired while another feasible pairing
+        existed (:attr:`measured_space.matching.Match.ambiguous`); NaN (unknown) if not, but some pairing's flag
+        is unknown; else 0.0, including an item that records no pairing at all.
+    """
+    flags: list[bool | None] = []
+    _ambiguity_flags(extra, flags)
+    if any(f is True for f in flags):
+        return 1.0
+    return math.nan if any(f is None for f in flags) else 0.0
 
 
 def _finite(value: Any) -> bool:
@@ -270,9 +350,12 @@ def referent_features(extra: Mapping[str, Any]) -> dict[str, float]:
     dict of str to float
         ``log_range``: log of the largest ``depth_median`` (m). ``boundary_fraction``, ``border_touch``,
         ``depth_mad_rel``: largest over referents. ``hull_fill``: smallest ``footprint_hull_fill``.
-        ``log_n_points``: log of the smallest ``n_points``. ``det_score``: smallest detection score.
-        ``match_distance``: largest match distance (a diagnostic, never a model feature, since matching uses
-        ground truth). ``n_feature_sets``: referents with lift features found. NaN where nothing was found.
+        ``log_n_points``: log of the smallest ``n_points``. ``det_score``: smallest detection score over
+        referents, each referent's being its lift's own ``det_score`` when present and finite, else its
+        ``score`` (see :func:`_feature_dicts`). ``match_distance``: largest match distance, and
+        ``match_ambiguous``: :func:`match_ambiguity` (diagnostics, never model features, since matching uses
+        ground truth). ``n_feature_sets``: referents with lift features found. NaN where nothing was found
+        (except ``match_ambiguous``, 0 when no pairing is recorded).
     """
     found: list[dict[str, Any]] = []
     scores: list[float] = []
@@ -289,6 +372,7 @@ def referent_features(extra: Mapping[str, Any]) -> dict[str, float]:
         "log_n_points": math.log(n_points) if n_points > 0 else math.nan,
         "det_score": min(scores) if scores else math.nan,
         "match_distance": max(matches) if matches else math.nan,
+        "match_ambiguous": match_ambiguity(extra),
         "n_feature_sets": float(len(found)),
     }
 
@@ -484,6 +568,73 @@ def load_labels(label_dir: str | Path) -> pd.DataFrame:
     out = pd.concat(tables, ignore_index=True)
     out.attrs.update(n_auto_only=auto_only, n_not_run=not_run)
     return out
+
+
+AMBIGUOUS_UNKNOWN_POLICY = "kept"
+"""str: what :func:`exclude_ambiguous` does with a labelled row whose pairing ambiguity is unknown."""
+
+
+def exclude_ambiguous(pairs: pd.DataFrame) -> tuple[pd.DataFrame, dict[str, dict[str, dict[str, int]]]]:
+    """Drop the rows whose auto answer rests on an ambiguous detection pairing (a pairing sensitivity analysis).
+
+    A row is dropped when its ``match_ambiguous`` is 1 (:func:`match_ambiguity`): some referent, or for a count
+    some counted object, was paired with its detection while another feasible pairing existed. The whole row
+    goes, the auto answer and the oracle question it is paired with, so it counts neither as labelled nor as a
+    miss. Labelled rows whose flag is unknown (NaN, or no ``match_ambiguous`` column: labels written before the
+    flag was stored, or under the 3D association, which does not assess ambiguity) are kept
+    (:data:`AMBIGUOUS_UNKNOWN_POLICY`) and counted. Misses have no pairing and are kept.
+
+    Parameters
+    ----------
+    pairs : pandas.DataFrame
+        A pair table (:func:`load_labels`, :func:`pair_table`, :func:`synthetic_pairs`).
+
+    Returns
+    -------
+    kept : pandas.DataFrame
+        ``pairs`` without the dropped rows, with a fresh ``RangeIndex`` and the same ``attrs``.
+    counts : dict
+        ``{dataset: {depth_source: {"n_rows", "n_labelled", "n_dropped", "n_unknown_kept"}}}``: rows and
+        labelled rows before the drop, rows dropped, and labelled rows kept with an unknown flag.
+    """
+    matched = pairs["matched"].astype(bool).to_numpy()
+    flag = pairs["match_ambiguous"].to_numpy(dtype=np.float64) if "match_ambiguous" in pairs \
+        else np.full(len(pairs), math.nan)
+    drop = matched & (flag == 1.0)
+    unknown = matched & ~np.isfinite(flag)
+    counts: dict[str, dict[str, dict[str, int]]] = {}
+    frame = pd.DataFrame({"dataset": pairs["dataset"].to_numpy(), "depth_source": pairs["depth_source"].to_numpy(),
+                          "matched": matched, "drop": drop, "unknown": unknown})
+    for (dataset, source), g in frame.groupby(["dataset", "depth_source"], sort=True):
+        counts.setdefault(str(dataset), {})[str(source)] = {
+            "n_rows": int(len(g)), "n_labelled": int(g["matched"].sum()), "n_dropped": int(g["drop"].sum()),
+            "n_unknown_kept": int(g["unknown"].sum())}
+    kept = pairs[~drop].reset_index(drop=True)
+    kept.attrs = dict(pairs.attrs)
+    return kept, counts
+
+
+def exclusion_record(counts: Mapping[str, Mapping[str, Mapping[str, int]]] | None) -> dict[str, Any]:
+    """The settings record of the ambiguous-pair exclusion, for a run's summary.
+
+    Parameters
+    ----------
+    counts : mapping or None
+        The counts returned by :func:`exclude_ambiguous`; None if the exclusion was off.
+
+    Returns
+    -------
+    dict
+        ``{"enabled": False}``, or ``{"enabled": True, "unknown_policy", "n_dropped", "n_unknown_kept",
+        "counts"}`` with the totals over datasets and depth sources and ``counts`` as given.
+    """
+    if counts is None:
+        return {"enabled": False}
+    cells = [c for by_source in counts.values() for c in by_source.values()]
+    return {"enabled": True, "unknown_policy": AMBIGUOUS_UNKNOWN_POLICY,
+            "n_dropped": sum(int(c["n_dropped"]) for c in cells),
+            "n_unknown_kept": sum(int(c["n_unknown_kept"]) for c in cells),
+            "counts": {d: {s: dict(c) for s, c in by.items()} for d, by in counts.items()}}
 
 
 # ============================================================================================================
@@ -2485,6 +2636,7 @@ def synthetic_pairs(n_scenes: int = 6, n_items: int = 80, *, sources: Sequence[s
     -------
     pandas.DataFrame
         Pair-table columns (see :func:`pair_table`), plus ``true_sigma`` (m) for numeric rows.
+        ``match_ambiguous`` is 0 on labelled rows (no pairing is simulated) and NaN on misses.
     """
     rng = np.random.default_rng(seed)
     rows = []
@@ -2516,6 +2668,7 @@ def synthetic_pairs(n_scenes: int = 6, n_items: int = 80, *, sources: Sequence[s
                         row.update(matched=False, auto=None, wrong=math.nan)
                         rows.append(row)
                         continue
+                    row["match_ambiguous"] = 0.0                  # no detection pairing to be ambiguous
                     log_sigma = (math.log(0.04) + (0.6 * (math.log(rng_range) - 1.0) + 2.5 * (boundary - 0.2)
                                                    + 0.5 * border + 0.4 * j) if heteroscedastic else math.log(0.06))
                     sigma = noise_scale * math.exp(log_sigma)

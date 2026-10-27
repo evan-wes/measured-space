@@ -44,14 +44,19 @@ perception pipeline lifts from the image ("auto"), once per depth source. The st
    source (a detection whose lift failed is not an automatic label): a detection paired with an object of
    another class keeps its own class for counting. The 2D detection count is stored next to it. Each automatic
    item's ``extra`` holds, per referent (per counted object for counts), the detection index, phrase, score,
-   match distance (3D centre distance, m), 3D IoU, 2D IoU, ``label_correct``, and the lift features; these are
-   the inputs of the uncertainty model and of the error analysis.
+   match distance (3D centre distance, m), 3D IoU, 2D IoU, ``label_correct``, whether the pairing was
+   ambiguous (``match_ambiguous``: another feasible pairing existed for the detection or its object) with the
+   runner-up 2D IoU (``match_runner_up_iou2d``), and the lift features; these are the inputs of the
+   uncertainty model and of the error analysis. Under the 3D association, which does not assess ambiguity, the
+   two ambiguity fields are ``None``; items written before they existed lack them.
 
 5. **Re-association without models** (:func:`rematch_view`). A view's stored records (one shard of
    ``scripts/run_labels.py``) hold every detection's 2D box, lifted boxes and features and every oracle object's
    visible 2D box, so the association can be redone and the automatic answers recomputed on the CPU. The
    oracle answers are recomputed too and must agree with the stored ones (to a few units in the last place),
-   which checks the reconstruction; the stored oracle items are then kept verbatim.
+   which checks the reconstruction; the stored oracle items are then kept verbatim. The automatic items'
+   evidence comes from the new association, so re-matching a shard written before a field existed (e.g.
+   ``match_ambiguous``) adds it.
 
 Depth sources: ARKitScenes ``laser`` (isolates perception error), ``lidar`` (iPad LiDAR resampled
 nearest-neighbour to the RGB size) and ``moge``; Smart Spaces ``Warehouse_018`` ``gt_depth`` and ``moge``; the
@@ -114,6 +119,10 @@ LEGACY_ASSOCIATION = "3d"
 
 EVIDENCE_KEYS_2D: tuple[str, ...] = ("match_iou2d", "label_correct")
 """tuple of str: evidence keys added with the 2D association (absent from shards written before it)."""
+
+EVIDENCE_KEYS_AMBIGUITY: tuple[str, ...] = ("match_ambiguous", "match_runner_up_iou2d")
+"""tuple of str: evidence keys of the pairing's ambiguity (absent from items written before them; re-matching
+the shard with :func:`rematch_view` adds them)."""
 
 Box2D = tuple[int, int, int, int]
 SegmentFn = Callable[..., list[Instance]]
@@ -898,16 +907,22 @@ def _evidence(key: str, detection_of: Mapping[str, int], detections: Sequence[De
     dict
         ``object_id`` (the oracle id or ``None``), ``detection``, ``phrase``, ``score``, ``match_distance``
         (3D centre distance, m), ``match_iou`` (3D prism IoU), ``match_iou2d`` (2D IoU, ``None`` under the 3D
-        association) and ``label_correct`` (whether the phrase maps to the oracle label), each ``None`` if
-        unmatched, and ``features``.
+        association), ``label_correct`` (whether the phrase maps to the oracle label), ``match_ambiguous``
+        (whether another feasible pairing existed for the detection or its object,
+        :attr:`~measured_space.matching.Match.ambiguous`) and ``match_runner_up_iou2d`` (that runner-up 2D
+        IoU, :attr:`~measured_space.matching.Match.runner_up_iou2d`), each ``None`` if unmatched, the last two
+        also ``None`` under the 3D association (which does not assess ambiguity), and ``features``.
     """
     i = detection_of[key]
     m = matched.get(i)
+    assessed = m is not None and m.runner_up_iou2d is not None          # the 2D association sets the runner-up
     return {"object_id": None if m is None else m.object_id, "detection": i,
             "phrase": detections[i].instance.phrase, "score": detections[i].instance.score,
             "match_distance": None if m is None else m.distance, "match_iou": None if m is None else m.iou,
             "match_iou2d": None if m is None else m.iou2d,
             "label_correct": None if m is None else m.label_correct,
+            "match_ambiguous": bool(m.ambiguous) if assessed else None,
+            "match_runner_up_iou2d": float(m.runner_up_iou2d) if assessed else None,
             "features": lifts[i].features}
 
 
@@ -1260,8 +1275,10 @@ def rematch_view(records: Mapping[str, Any], *, association: str, match_2d: Matc
     Returns
     -------
     ViewResult
-        The view with the new matches and automatic answers. ``timings`` keeps the stored stages and replaces
-        ``match_<source>`` and ``qa`` (seconds) with the re-association's.
+        The view with the new matches and automatic answers, whose evidence (:func:`_evidence`, including the
+        ambiguity fields :data:`EVIDENCE_KEYS_AMBIGUITY`) comes from the new matches, whatever the stored items
+        held. ``timings`` keeps the stored stages and replaces ``match_<source>`` and ``qa`` (seconds) with the
+        re-association's.
 
     Raises
     ------

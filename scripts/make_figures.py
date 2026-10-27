@@ -4,7 +4,9 @@ Figures, each 3.4 in wide (one column of a two-column paper), as PDF and PNG:
 
 - ``audit_error_vs_range``: absolute numeric error against distance from the camera (the farthest referent's
   median auto depth), per depth source; binned medians with interquartile bands, pooled over the numeric
-  question types (no per-item points, so the figure carries aggregates only).
+  question types (no per-item points, so the figure carries aggregates only). Every source in the table is
+  drawn: those in :data:`SOURCE_STYLE` with their style, any other in a neutral grey with its own name, after a
+  printed warning.
 - ``audit_coverage``: empirical against nominal coverage of the out-of-scene intervals (feature model after
   conformal calibration, its raw Gaussian interval, and the constant-sigma baseline), and 90 % coverage by
   terciles of the predicted sigma; datasets pooled, plus ``audit_coverage_<dataset>`` per dataset.
@@ -13,18 +15,22 @@ Figures, each 3.4 in wide (one column of a two-column paper), as PDF and PNG:
 - ``audit_reliability``: reliability diagram of categorical p(correct), feature model against constant.
 
 Inputs: per-item tables in ``<data root>/outputs/audit/`` (``--audit``) and aggregate tables in ``results/audit/``
-(``--results``). Outputs: ``results/figures/`` (``--figures``) and a copy in ``<audit>/figures/``.
+(``--results``). Outputs: the folder ``--figures``, required with no default so a run never overwrites the
+committed figures (``results/figures``) by accident, and a copy in each ``--copy-dir`` (none by default; the
+per-item audit folder's ``figures/`` was written by default before).
 
 Usage::
 
-    python scripts/make_figures.py
+    python scripts/make_figures.py --figures results/figures
+    python scripts/make_figures.py --figures results/figures --copy-dir <data root>/outputs/audit/figures
+    python scripts/make_figures.py --audit <audit folder> --results <aggregate folder> --figures <scratch folder>
 """
 
 from __future__ import annotations
 
 import argparse
 import sys
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from pathlib import Path
 
 import matplotlib
@@ -44,8 +50,14 @@ BLUE, ORANGE, AQUA = "#2a78d6", "#eb6834", "#1baf7a"          # categorical slot
 INK, MUTED, GRID, BASELINE = "#0b0b0b", "#898781", "#e1e0d9", "#c3c2b7"
 # Depth sources coloured by class: monocular (MoGe-2), device sensor (iPad LiDAR), reference (laser scan in
 # ARKitScenes, rendered depth in the synthetic warehouse; the two never share a panel). Markers tell them apart too.
+# Box sources: the two CuTR variants share ARKitScenes panels with the three depth sources, so they take the two
+# remaining palette colours (ink, grey); Sparse4D (Smart Spaces, never in a panel with iPad LiDAR) takes aqua with
+# its own marker.
 SOURCE_STYLE = {"moge": (BLUE, "o", "MoGe-2 (monocular)"), "lidar": (AQUA, "s", "iPad LiDAR"),
-                "laser": (ORANGE, "^", "Laser scan"), "gt_depth": (ORANGE, "D", "Rendered depth")}
+                "laser": (ORANGE, "^", "Laser scan"), "gt_depth": (ORANGE, "D", "Rendered depth"),
+                "cutr_sam3": (INK, "v", "CuTR + SAM 3 names"), "cutr_clip": (MUTED, "P", "CuTR + CLIP names"),
+                "sparse4d": (AQUA, "X", "Sparse4D (multi-camera)")}
+DEFAULT_SOURCE_STYLE = (MUTED, "*")   # colour and marker of a source missing from SOURCE_STYLE (labelled by name)
 DATASET_NAME = {"arkitscenes": "ARKitScenes", "smartspaces": "Smart Spaces"}
 METHOD_STYLE = {"sigma": (BLUE, "o", "Feature model, conformal"),
                 "sigma_raw": (AQUA, "s", "Feature model, as fitted"),
@@ -83,8 +95,50 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--audit", type=Path, default=None, help="per-item audit outputs (default <data root>/outputs/audit)")
     parser.add_argument("--results", type=Path, default=REPO_ROOT / "results" / "audit", help="aggregate tables")
-    parser.add_argument("--figures", type=Path, default=REPO_ROOT / "results" / "figures", help="figure folder")
+    parser.add_argument("--figures", type=Path, required=True,
+                        help="figure folder; required (no default). The committed figures are in "
+                             f"{REPO_ROOT / 'results' / 'figures'}")
+    parser.add_argument("--copy-dir", type=Path, action="append", default=[],
+                        help="also save every figure into this folder (repeatable; none by default)")
     return parser.parse_args(argv)
+
+
+def source_style(source: str) -> tuple[str, str, str]:
+    """Colour, marker and legend label of a depth or box source.
+
+    Parameters
+    ----------
+    source : str
+        Source name, as in the pair table's ``depth_source``.
+
+    Returns
+    -------
+    tuple of str
+        :data:`SOURCE_STYLE`'s entry; for a source missing from it, :data:`DEFAULT_SOURCE_STYLE` labelled with
+        the source's own name, after a warning on standard error.
+    """
+    if source in SOURCE_STYLE:
+        return SOURCE_STYLE[source]
+    print(f"warning: no style for source {source!r} in make_figures.SOURCE_STYLE; drawn in neutral grey",
+          file=sys.stderr)
+    return DEFAULT_SOURCE_STYLE[0], DEFAULT_SOURCE_STYLE[1], source
+
+
+def ordered_sources(sources: Iterable[str]) -> list[str]:
+    """Sources in drawing order: those in :data:`SOURCE_STYLE` in its order, then the others by name.
+
+    Parameters
+    ----------
+    sources : iterable of str
+        Source names (repeats allowed).
+
+    Returns
+    -------
+    list of str
+        Each source once.
+    """
+    present = set(sources)
+    return [s for s in SOURCE_STYLE if s in present] + sorted(present - set(SOURCE_STYLE))
 
 
 def save(fig: Figure, name: str, folders: list[Path]) -> list[Path]:
@@ -213,7 +267,8 @@ def fig_error_vs_range(pairs: pd.DataFrame) -> Figure:
     Returns
     -------
     matplotlib.figure.Figure
-        One panel per dataset; median ``|e|`` per equal-count range bin with an interquartile band.
+        One panel per dataset; median ``|e|`` per equal-count range bin with an interquartile band, one line
+        per source (:func:`ordered_sources`, styled by :func:`source_style`).
     """
     num = pairs[(pairs["answer_type"] == "number") & pairs["matched"].astype(bool)
                 & np.isfinite(pairs["log_range"]) & np.isfinite(pairs["abs_e"])]
@@ -221,9 +276,9 @@ def fig_error_vs_range(pairs: pd.DataFrame) -> Figure:
     fig, axes = panels(len(datasets), 2.2)
     for ax, dataset in zip(axes, datasets):
         d = num[num["dataset"] == dataset]
-        for source in [s for s in SOURCE_STYLE if s in set(d["depth_source"])]:
+        for source in ordered_sources(d["depth_source"]):
             g = d[d["depth_source"] == source]
-            colour, marker, label = SOURCE_STYLE[source]
+            colour, marker, label = source_style(source)
             b = binned(np.exp(g["log_range"].to_numpy(float)), g["abs_e"].to_numpy(float),
                        int(np.clip(len(g) // 40, 3, 8)))
             ax.fill_between(b["x"], b["p25"], b["p75"], color=colour, alpha=0.12, linewidth=0)
@@ -386,7 +441,7 @@ def main(argv: list[str] | None = None) -> int:
     """
     args = parse_args(argv)
     audit = args.audit or data_root() / "outputs" / "audit"
-    folders = [args.figures, audit / "figures"]
+    folders = [args.figures, *args.copy_dir]
     style()
     jobs: list[tuple[str, Path, Callable[[], Figure]]] = [
         ("audit_error_vs_range", audit / "pairs.csv", lambda: fig_error_vs_range(pd.read_csv(audit / "pairs.csv"))),

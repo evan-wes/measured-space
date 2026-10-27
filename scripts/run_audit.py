@@ -7,20 +7,29 @@ calibration, categorical p(correct), and the Learn-then-Test label gate.
 
 Outputs:
 
-- ``<data root>/outputs/audit/`` (or ``--out``): per-item tables (``pairs.csv``, ``numeric.csv``,
+- ``<data root>/outputs/audit/`` (or ``--out``; with ``--exclude-ambiguous`` the default is
+  ``<data root>/outputs/audit_exclude_ambiguous/``): per-item tables (``pairs.csv``, ``numeric.csv``,
   ``categorical.csv``, ``gate.csv``) that the figures are drawn from, a copy of every aggregate table, and
   ``accepted_ids.json``: ``{"settings": {...}, "accepted": {dataset: {"auto_<depth source>": [item ids]}}}``, the
   labels the primary gate accepted (numeric: feature model at the question's tolerance; categorical: logistic
   p(correct); thresholds certified by Learn-then-Test on held-out scenes), for scoring models on the accepted
   item set. These hold per-item derived labels, so they stay out of the repository.
-- ``results/audit/`` (or ``--results``): aggregate tables only (CSV) and ``summary.json`` (settings, counts,
+- ``--results`` (required, no default, so a run never overwrites the committed tables by accident; the
+  committed run used ``results/audit``): aggregate tables only (CSV) and ``summary.json`` (settings, counts,
   input checksums, notes, runtime). These are small and meant for committing.
+
+``--exclude-ambiguous`` (a pairing sensitivity analysis) drops, before the audit, every (question, depth source)
+pair whose auto answer rests on an ambiguous detection pairing (:func:`measured_space.audit.exclude_ambiguous`):
+auto and oracle side together. Labels whose ambiguity is unknown (written before the flag was stored; re-match
+them with ``scripts/run_labels.py --rematch-from`` to add it) are kept. ``summary.json`` records, per dataset and
+depth source, the rows dropped and the unknown rows kept.
 
 Usage::
 
-    python scripts/run_audit.py                       # both datasets, default settings
-    python scripts/run_audit.py --wait-minutes 120    # wait for the label pipeline's summary.json first
-    python scripts/run_audit.py --synthetic           # dry run on synthetic data (writes under --out only)
+    python scripts/run_audit.py --results results/audit                       # both datasets, default settings
+    python scripts/run_audit.py --results results/audit --wait-minutes 120    # wait for the labels' summary.json
+    python scripts/run_audit.py --results <scratch folder> --exclude-ambiguous --labels <label root>
+    python scripts/run_audit.py --synthetic       # dry run on synthetic data (writes under --out only)
 """
 
 from __future__ import annotations
@@ -36,7 +45,8 @@ from typing import Any
 
 import pandas as pd
 
-from measured_space.audit import AuditConfig, AuditResult, dumps, load_labels, run_audit, synthetic_pairs
+from measured_space.audit import (AuditConfig, AuditResult, dumps, exclude_ambiguous, exclusion_record, load_labels,
+                                  run_audit, synthetic_pairs)
 from measured_space.config import REPO_ROOT, data_root
 
 DATASETS = ("arkitscenes", "smartspaces")
@@ -61,9 +71,14 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--labels", type=Path, default=None,
                         help="label root holding one folder per dataset (default <data root>/outputs/labels)")
     parser.add_argument("--out", type=Path, default=None,
-                        help="per-item output folder (default <data root>/outputs/audit)")
-    parser.add_argument("--results", type=Path, default=REPO_ROOT / "results" / "audit",
-                        help="aggregate-table folder (default results/audit)")
+                        help="per-item output folder (default <data root>/outputs/audit, or "
+                             "<data root>/outputs/audit_exclude_ambiguous with --exclude-ambiguous)")
+    parser.add_argument("--results", type=Path, default=None,
+                        help="aggregate-table folder; required (no default), except with --synthetic, which "
+                             "writes no aggregate folder. The committed tables live in results/audit")
+    parser.add_argument("--exclude-ambiguous", action="store_true",
+                        help="drop (question, depth source) pairs whose auto answer rests on an ambiguous "
+                             "detection pairing; pairs of unknown ambiguity are kept and counted")
     parser.add_argument("--epsilon", type=float, default=AuditConfig.epsilon, help="certified error bound")
     parser.add_argument("--delta", type=float, default=AuditConfig.delta, help="certificate failure probability")
     parser.add_argument("--kappa", type=float, default=AuditConfig.kappa, help="numeric reject threshold (tolerances)")
@@ -76,7 +91,11 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
                         help="poll for each dataset's summary.json for up to this long (0: do not wait)")
     parser.add_argument("--synthetic", action="store_true",
                         help="audit synthetic data instead (outputs under <out>/_synthetic, results/ untouched)")
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.results is None and not args.synthetic:
+        parser.error("--results is required: the aggregate-table folder (the committed tables are in "
+                     f"{REPO_ROOT / 'results' / 'audit'}; pass it explicitly to overwrite them)")
+    return args
 
 
 def wait_for_labels(label_root: Path, datasets: list[str], minutes: float) -> list[str]:
@@ -204,7 +223,8 @@ def _accepted_at(result: AuditResult, tau_scale: float) -> tuple[pd.DataFrame, d
     return primary, accepted, counts
 
 
-def accepted_ids(result: AuditResult, config: AuditConfig) -> dict[str, Any]:
+def accepted_ids(result: AuditResult, config: AuditConfig,
+                 exclusion: dict[str, Any] | None = None) -> dict[str, Any]:
     """Item ids the primary gate accepted, per dataset and auto source, with the settings and held-out results.
 
     The primary gate is the numeric feature model at the question's own tolerance (``tau_scale == 1``, the
@@ -219,6 +239,9 @@ def accepted_ids(result: AuditResult, config: AuditConfig) -> dict[str, Any]:
         The audit (its ``gate`` holds per-item decisions).
     config : AuditConfig
         Its settings.
+    exclusion : dict, optional
+        The ``--exclude-ambiguous`` record (:func:`measured_space.audit.exclusion_record`), stored under the
+        settings' ``exclude_ambiguous``; omitted: the key is not written.
 
     Returns
     -------
@@ -250,6 +273,8 @@ def accepted_ids(result: AuditResult, config: AuditConfig) -> dict[str, Any]:
                         "binomial Learn-then-Test on the other scenes (P(wrong | accepted) <= epsilon at "
                         "confidence 1 - delta, items treated as independent and scenes as exchangeable)",
                 "skipped": result.notes}
+    if exclusion is not None:
+        settings["exclude_ambiguous"] = exclusion
     return {"settings": settings, "held_out": held_out, "counts": counts, "accepted": accepted,
             "alternative_2tau": {"note": "numeric labels certified against twice the tolerance; not the scoring "
                                          "rule's tolerance", "counts": alt_counts, "accepted": alternative}}
@@ -325,7 +350,7 @@ def main(argv: list[str] | None = None) -> int:
     started = time.time()
     config = dataclasses.replace(AuditConfig(), epsilon=args.epsilon, delta=args.delta, kappa=args.kappa,
                                  ridge_grid=tuple(args.ridge_grid), n_boot=args.n_boot, n_jobs=args.n_jobs)
-    out = args.out or data_root() / "outputs" / "audit"
+    out = args.out or data_root() / "outputs" / ("audit_exclude_ambiguous" if args.exclude_ambiguous else "audit")
     inputs: dict[str, Any] = {}
     if args.synthetic:
         pairs = synthetic_pairs(n_scenes=6, n_items=80, noise_scale=1.8, seed=3)
@@ -348,15 +373,23 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{dataset}: {len(tables[-1])} (question, depth source) rows from {folder}", flush=True)
         pairs = pd.concat(tables, ignore_index=True)
         results = args.results
+    counts: dict[str, dict[str, dict[str, int]]] | None = None
+    if args.exclude_ambiguous:
+        pairs, counts = exclude_ambiguous(pairs)
+    exclusion = exclusion_record(counts)
+    if counts is not None:
+        print(f"--exclude-ambiguous: dropped {exclusion['n_dropped']} pairs, kept {exclusion['n_unknown_kept']} "
+              f"of unknown ambiguity: {dumps(exclusion['counts'])}", flush=True)
     result = run_audit(pairs, config, log=lambda m: print(m, flush=True))
     write_tables(result, out, results)
     summary = {"config": dataclasses.asdict(config), "gate_z": config.gate_z, "datasets": sorted(pairs["dataset"].unique()),
                "n_rows": int(len(pairs)), "n_labelled": int(pairs["matched"].sum()), "inputs": inputs,
+               "exclude_ambiguous": exclusion,
                "notes": result.notes, "git_commit": git_commit(), "seconds": round(time.time() - started, 1)}
     for folder in [out] + ([results] if results is not None else []):
         (folder / "summary.json").write_text(dumps(summary))
     if len(result.gate):
-        (out / "accepted_ids.json").write_text(dumps(accepted_ids(result, config)))
+        (out / "accepted_ids.json").write_text(dumps(accepted_ids(result, config, exclusion)))
     print(headline(result, config))
     print(f"\nwrote per-item tables to {out}" + (f" and aggregate tables to {results}" if results else "")
           + f" ({summary['seconds']} s)")

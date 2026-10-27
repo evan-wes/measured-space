@@ -6,24 +6,36 @@ scene out, and runs :func:`measured_space.references.run_reference_experiment`: 
 random references (items whose oracle answer is revealed) recalibrate the scene (scale per depth source, bias per
 question type, spread factor), and the scene's other labels are gated at ``tau`` and ``2 tau``.
 
-Outputs:
+Outputs (``--results`` and ``--figure`` are required, with no default, so a run never overwrites the committed
+results by accident; the committed run used ``--results results/references --figure
+results/figures/references_curve``):
 
-- ``results/references/<tag>/`` (or ``--results``/``<tag>``; ``<tag>`` defaults to the label root's folder name,
-  e.g. ``labels`` or ``labels_2d``): ``summary.csv`` (per dataset, variant, reference count and tolerance
-  multiple), ``scenes.csv`` (the same per held-out scene, over draws) and ``summary.json`` (settings, input
-  checksums, notes, runtime). Aggregates only: counts and rates per scene, nothing per item.
-- ``results/figures/references_curve.pdf`` / ``.png`` (``--figure``): references per site against the error
-  among accepted labels and the accepted share at ``tau``, per dataset, for every tag found under the results
-  folder (the 2D-overlap labels, ``labels_2d``, drawn as primary when present).
+- ``<results>/<tag>/`` (``<tag>`` defaults to the label root's folder name, e.g. ``labels`` or ``labels_2d``,
+  with ``_exclude_ambiguous`` appended under ``--exclude-ambiguous``): ``summary.csv`` (per dataset, variant,
+  reference count and tolerance multiple), ``scenes.csv`` (the same per held-out scene, over draws) and
+  ``summary.json`` (settings, input checksums, notes, runtime). Aggregates only: counts and rates per scene,
+  nothing per item.
+- ``<figure>.pdf`` / ``.png``: references per site against the error among accepted labels and the accepted
+  share at ``tau``, per dataset, for every tag found under the results folder (the 2D-overlap labels,
+  ``labels_2d``, drawn as primary when present).
 - ``--cache``: the cross-fitted per-item predictions (a pickle), so a rerun skips the model fits. Per-item data:
   keep it out of the repository.
 
+``--exclude-ambiguous`` (a pairing sensitivity analysis) drops, before the fits, every (question, depth source)
+pair whose auto answer rests on an ambiguous detection pairing (:func:`measured_space.audit.exclude_ambiguous`):
+auto and oracle side together, so such a pair is neither evaluated nor drawn as a reference. Pairs of unknown
+ambiguity (labels written before the flag was stored) are kept. ``summary.json`` records, per dataset and depth
+source, the pairs dropped and the unknown pairs kept.
+
 Usage::
 
-    python scripts/run_reference_experiment.py                                  # current labels
-    python scripts/run_reference_experiment.py --labels <data root>/outputs/labels_2d --wait-minutes 120
-    python scripts/run_reference_experiment.py --figure-only                    # redraw from the CSVs
-    python scripts/run_reference_experiment.py --synthetic                      # dry run, results/ untouched
+    python scripts/run_reference_experiment.py --results results/references \\
+        --figure results/figures/references_curve --labels <data root>/outputs/labels_2d --wait-minutes 120
+    python scripts/run_reference_experiment.py --results results/references \\
+        --figure results/figures/references_curve --figure-only                # redraw from the CSVs
+    python scripts/run_reference_experiment.py --results <scratch folder> --figure <scratch folder>/curve \\
+        --labels <data root>/outputs/labels_2d --exclude-ambiguous             # pairing sensitivity
+    python scripts/run_reference_experiment.py --synthetic                     # dry run, writes to --cache only
 """
 
 from __future__ import annotations
@@ -42,7 +54,7 @@ import numpy as np
 import pandas as pd
 
 from make_figures import BLUE, INK, MUTED, ORANGE, WIDTH, save, style   # scripts/ is on sys.path when run
-from measured_space.audit import AuditConfig, dumps
+from measured_space.audit import AuditConfig, dumps, exclude_ambiguous, exclusion_record
 from measured_space.config import REPO_ROOT, data_root
 from measured_space.references import (ReferenceConfig, ReferenceResult, cross_fit_sigma, load_reference_pairs,
                                        run_reference_experiment, synthetic_site_pairs)
@@ -70,11 +82,18 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--datasets", nargs="+", default=list(DATASETS), help="datasets to run")
     parser.add_argument("--labels", type=Path, default=None,
                         help="label root holding one folder per dataset (default <data root>/outputs/labels)")
-    parser.add_argument("--tag", default=None, help="results subfolder (default: the label root's folder name)")
-    parser.add_argument("--results", type=Path, default=REPO_ROOT / "results" / "references",
-                        help="aggregate-table folder; tables go to <results>/<tag>")
-    parser.add_argument("--figure", type=Path, default=REPO_ROOT / "results" / "figures" / "references_curve",
-                        help="figure path without extension")
+    parser.add_argument("--tag", default=None,
+                        help="results subfolder (default: the label root's folder name, plus _exclude_ambiguous "
+                             "with --exclude-ambiguous)")
+    parser.add_argument("--results", type=Path, default=None,
+                        help="aggregate-table folder, tables go to <results>/<tag>; required (no default) except "
+                             "with --synthetic. The committed tables are in results/references")
+    parser.add_argument("--figure", type=Path, default=None,
+                        help="figure path without extension; required (no default) except with --synthetic. The "
+                             "committed figure is results/figures/references_curve")
+    parser.add_argument("--exclude-ambiguous", action="store_true",
+                        help="drop (question, depth source) pairs whose auto answer rests on an ambiguous "
+                             "detection pairing; pairs of unknown ambiguity are kept and counted")
     parser.add_argument("--cache", type=Path, default=None,
                         help="folder for the cross-fitted per-item predictions (default: no cache)")
     parser.add_argument("--n-refs", type=int, nargs="+", default=list(ReferenceConfig.n_refs),
@@ -87,7 +106,16 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     parser.add_argument("--figure-only", action="store_true", help="only redraw the figure from the results")
     parser.add_argument("--synthetic", action="store_true",
                         help="run on synthetic sites (one with a 12 %% scale error); writes to --cache only")
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if args.figure_only or not args.synthetic:
+        missing = [flag for flag, value in (("--results", args.results), ("--figure", args.figure)) if value is None]
+        if missing:
+            parser.error(f"{' and '.join(missing)} {'is' if len(missing) == 1 else 'are'} required (no default: "
+                         "the committed outputs are "
+                         f"{REPO_ROOT / 'results' / 'references'} and "
+                         f"{REPO_ROOT / 'results' / 'figures' / 'references_curve'}; pass them explicitly to "
+                         "overwrite them)")
+    return args
 
 
 def wait_for_labels(label_root: Path, datasets: list[str], minutes: float) -> list[str]:
@@ -335,13 +363,14 @@ def main(argv: list[str] | None = None) -> int:
             print(f"wrote {path}")
         return 0
     inputs: dict[str, Any] = {}
+    suffix = "_exclude_ambiguous" if args.exclude_ambiguous else ""
     if args.synthetic:
         pairs = synthetic_site_pairs(6, 80, scale_errors={"scene00": 1.12}, seed=3, noise_scale=1.0)
-        tag, out = "synthetic", None
+        tag, out = f"synthetic{suffix}", None
         audit = dataclasses.replace(audit, ridge_grid=(1.0,))
     else:
         label_root = args.labels or data_root() / "outputs" / "labels"
-        tag = args.tag or label_root.name
+        tag = args.tag or f"{label_root.name}{suffix}"
         ready = wait_for_labels(label_root, args.datasets, args.wait_minutes)
         missing = sorted(set(args.datasets) - set(ready))
         if missing:
@@ -357,17 +386,26 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{dataset}: {len(tables[-1])} (question, depth source) rows from {folder}", flush=True)
         pairs = pd.concat(tables, ignore_index=True)
         out = args.results / tag
+    counts: dict[str, dict[str, dict[str, int]]] | None = None
+    if args.exclude_ambiguous:
+        pairs, counts = exclude_ambiguous(pairs)
+    exclusion = exclusion_record(counts)
+    if counts is not None:
+        print(f"--exclude-ambiguous: dropped {exclusion['n_dropped']} pairs, kept {exclusion['n_unknown_kept']} "
+              f"of unknown ambiguity: {dumps(exclusion['counts'])}", flush=True)
     pairs = pairs.reset_index(drop=True)
     model_key = {k: v for k, v in dataclasses.asdict(audit).items() if k != "n_jobs"}
-    test, cal, notes, cached = predictions(pairs, audit, {"inputs": inputs, "audit": model_key, "tag": tag,
-                                                  "n_rows": len(pairs)}, args.cache, tag)
+    key: dict[str, Any] = {"inputs": inputs, "audit": model_key, "tag": tag, "n_rows": len(pairs)}
+    if counts is not None:                    # only then, so caches written before the option stay valid
+        key["exclude_ambiguous"] = exclusion
+    test, cal, notes, cached = predictions(pairs, audit, key, args.cache, tag)
     fitted = time.time()
     result = run_reference_experiment(pairs, config, audit, predictions=(test, cal),
                                       log=lambda m: print(m, flush=True))
     result.notes[:0] = notes
     summary = {"tag": tag, "config": dataclasses.asdict(config), "audit_config": dataclasses.asdict(audit),
                "gate_z": audit.gate_z, "datasets": sorted(pairs["dataset"].unique()), "n_rows": int(len(pairs)),
-               "inputs": inputs, "notes": result.notes, "git_commit": git_commit(),
+               "inputs": inputs, "exclude_ambiguous": exclusion, "notes": result.notes, "git_commit": git_commit(),
                "predictions": "read from cache" if cached else "fitted", "seconds_fit": round(fitted - started, 1),
                "seconds_experiment": round(time.time() - fitted, 1)}
     folders = [f for f in (out, None if args.cache is None else args.cache / tag) if f is not None]

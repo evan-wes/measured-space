@@ -4,18 +4,23 @@ Covers: the scale and bias fits against noiseless truth, with their fallbacks; t
 balanced stratified reference draws; tolerances as ``is_correct`` defines them; with no references, the
 experiment reproduces the audit's gate exactly; and with one site whose auto answers are 25 % too large (a
 capture scale error no per-label feature sees), the pooled gate fails there while recalibration from 40
-references brings the error among accepted labels back within epsilon.
+references brings the error among accepted labels back within epsilon. Also: the experiment runs on a pair table
+with ambiguous pairs excluded, and ``scripts/run_reference_experiment.py`` has no default for its outputs.
 """
 
 from __future__ import annotations
 
+import importlib.util
 import math
+import sys
+from pathlib import Path
+from types import ModuleType
 
 import numpy as np
 import pandas as pd
 import pytest
 
-from measured_space.audit import AuditConfig, AuditResult, run_audit
+from measured_space.audit import AuditConfig, AuditResult, exclude_ambiguous, run_audit
 from measured_space.references import (ReferenceConfig, ReferenceResult, Variant, fit_site_correction,
                                        reference_order, run_reference_experiment, site_quantile_factor,
                                        synthetic_site_pairs, tolerance_at)
@@ -175,3 +180,73 @@ def test_references_restore_the_bound_at_a_site_with_a_scale_error(experiment: R
     assert summary.loc[(40, 1.0), "yield_pooled"] > summary.loc[(0, 1.0), "yield_pooled"]
     assert summary.loc[(40, 1.0), "cov_pooled"] == pytest.approx(0.9, abs=0.05)
     assert not math.isnan(summary.loc[(40, 2.0), "err_pooled"])
+
+
+def test_experiment_runs_with_ambiguous_pairs_excluded() -> None:
+    """Dropping some (question, depth source) pairs leaves items answered by one source only; the experiment
+    still runs and evaluates only the kept pairs."""
+    pairs = synthetic_site_pairs(4, 30, seed=5)
+    labelled = pairs.index[pairs["matched"].astype(bool) & (pairs["depth_source"] == "moge")]
+    pairs.loc[labelled[::7], "match_ambiguous"] = 1.0
+    kept, counts = exclude_ambiguous(pairs)
+    assert counts["synthetic"]["moge"]["n_dropped"] == len(labelled[::7]) > 0
+    assert counts["synthetic"]["laser"]["n_dropped"] == 0
+    config = ReferenceConfig(n_refs=(0, 5), n_draws=1, variants=(Variant("abc_uniform"),))
+    result = run_reference_experiment(kept, config, FAST)
+    zero = result.draws[(result.draws["n_refs"] == 0) & (result.draws["tau_scale"] == 1.0)]
+    numeric = kept[(kept["answer_type"] == "number") & kept["matched"].astype(bool)]
+    assert int(zero["n_eval"].sum()) == len(numeric)                     # every kept numeric pair, no dropped one
+
+
+def _script(name: str) -> ModuleType:
+    """Import a script of ``scripts/`` as a module, registered in ``sys.modules`` (sibling imports need it).
+
+    Parameters
+    ----------
+    name : str
+        Script name without ``.py``.
+
+    Returns
+    -------
+    types.ModuleType
+        The module; importing it has no other side effects.
+    """
+    if name in sys.modules:
+        return sys.modules[name]
+    spec = importlib.util.spec_from_file_location(name, Path(__file__).resolve().parents[1] / "scripts" / f"{name}.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+@pytest.mark.parametrize("argv", [[], ["--figure", "f"], ["--results", "r"], ["--figure-only", "--results", "r"],
+                                  ["--synthetic", "--figure-only"]])
+def test_reference_script_requires_its_output_paths(argv: list[str], capsys: pytest.CaptureFixture[str]) -> None:
+    """Without ``--results`` or ``--figure`` the script exits with a usage error naming what is missing.
+
+    Parameters
+    ----------
+    argv : list of str
+        Arguments lacking at least one of the two output paths.
+    capsys : pytest.CaptureFixture
+        Captures the usage error.
+    """
+    _script("make_figures")                                                # its sibling import
+    parse = _script("run_reference_experiment").parse_args
+    with pytest.raises(SystemExit) as raised:
+        parse(argv)
+    missing = [flag for flag in ("--results", "--figure") if flag not in argv]
+    verb = "is" if len(missing) == 1 else "are"
+    assert raised.value.code == 2
+    assert f"error: {' and '.join(missing)} {verb} required" in capsys.readouterr().err
+
+
+def test_reference_script_accepts_explicit_outputs_and_synthetic_runs() -> None:
+    """Explicit outputs parse; a ``--synthetic`` dry run (writes to ``--cache`` only) needs neither."""
+    _script("make_figures")
+    parse = _script("run_reference_experiment").parse_args
+    args = parse(["--results", "r", "--figure", "f", "--exclude-ambiguous"])
+    assert (args.results, args.figure, args.exclude_ambiguous) == (Path("r"), Path("f"), True)
+    assert parse(["--synthetic"]).results is None

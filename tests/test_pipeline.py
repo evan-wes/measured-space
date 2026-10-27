@@ -3,24 +3,34 @@
 The scene is a chair and a table in front of a wall, seen by a camera at the origin looking along world +y
 (world z up). Depth and instance masks are ray-cast exactly, so the pipeline runs without any model; a depth
 map scaled by 3 stands in for a badly wrong monocular estimate. Re-association from stored records is checked
-against the full pipeline. An opt-in test runs the real models on one ARKitScenes view
+against the full pipeline, including the pairing-ambiguity evidence it adds to old records on a view where one
+detection covers two adjacent objects; on that view the audit's and the fusion evaluation's ``--exclude-ambiguous``
+drop exactly the ambiguous items and detections. An opt-in test runs the real models on one ARKitScenes view
 (``MEASURED_SPACE_GPU_TESTS=1``).
 """
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
+import sys
+from pathlib import Path
+from types import ModuleType
+from typing import Any
 
 import numpy as np
 import pytest
 from numpy.typing import NDArray
 
+from measured_space.audit import exclude_ambiguous, pair_table
+from measured_space.fusion_eval import load_detections
 from measured_space.geometry import Array, Camera, OrientedBox, make_pose
 from measured_space.matching import Match2DConfig
 from measured_space.perception import Instance
 from measured_space.pipeline import (
     AUTO_KEY_PREFIX,
+    EVIDENCE_KEYS_AMBIGUITY,
     GT_BOX2D,
     PipelineConfig,
     gt_box_visibility,
@@ -252,6 +262,139 @@ def test_rematch_view_reproduces_the_pipeline(scene: tuple[FrameView, Array, lis
     numeric["answer"] += 1e-6
     with pytest.raises(ValueError, match="oracle answer"):
         rematch_view(tampered, association="2d")
+
+
+@pytest.fixture(scope="module")
+def overlap() -> tuple[FrameView, list[SceneObject], Array, list[Instance]]:
+    """A chair and a table side by side, one detection covering both, and a sofa well apart.
+
+    Returns
+    -------
+    tuple
+        ``(view, objects, depth, instances)``: the "chair" detection's mask is the chair's and the table's pixels
+        together, so its 2D box overlaps both objects; the "table" and "sofa" detections are exact.
+    """
+    view = make_view()
+    objects = [SceneObject("chair-1", "chair", OrientedBox([-0.3, 3.0, 0.0], [0.5, 0.5, 0.9], np.eye(3))),
+               SceneObject("table-1", "table", OrientedBox([0.3, 3.0, 0.0], [0.5, 0.5, 0.8], np.eye(3))),
+               SceneObject("sofa-1", "sofa", OrientedBox([-1.6, 4.0, 0.0], [0.8, 0.8, 0.8], np.eye(3)))]
+    depth, index = render(view, objects)
+    return view, objects, depth, [instance("chair", (index == 0) | (index == 1), 0.9),
+                                  instance("table", index == 1, 0.8), instance("sofa", index == 2, 0.7)]
+
+
+def _evidence_of(item: dict[str, Any]) -> list[dict[str, Any]]:
+    """An automatic item record's evidence: its referents, or for a count its counted objects.
+
+    Parameters
+    ----------
+    item : dict
+        A :meth:`QAItem.to_json` record.
+
+    Returns
+    -------
+    list of dict
+        The evidence records.
+    """
+    return item["extra"].get("referents", []) + item["extra"].get("counted", [])
+
+
+def test_rematch_adds_the_pairing_ambiguity_to_old_records(
+        overlap: tuple[FrameView, list[SceneObject], Array, list[Instance]]) -> None:
+    """Re-matching records written without the ambiguity evidence adds it: both pairs that share the covering
+    detection are ambiguous, with its overlap as runner-up; the sofa's pair is not; the 3D association leaves
+    both fields unknown.
+
+    Parameters
+    ----------
+    overlap : tuple
+        The overlapping view.
+    """
+    view, objects, depth, instances = overlap
+    old = json.loads(to_json_line(process_view(view, objects, instances, {"laser": depth, "moge": depth * 1.2},
+                                               visibility="laser", config=PipelineConfig(association="3d")).records()))
+    for items in old["qa"].values():                                    # as written before the fields existed
+        for item in items:
+            for ev in _evidence_of(item):
+                for key in EVIDENCE_KEYS_AMBIGUITY:
+                    ev.pop(key)
+    result = rematch_view(old, association="2d")
+    by_object = result.matches["laser"].by_object()
+    runner_up = by_object["chair-1"].runner_up_iou2d
+    assert by_object["chair-1"].ambiguous and by_object["table-1"].ambiguous and not by_object["sofa-1"].ambiguous
+    assert by_object["table-1"].runner_up_iou2d == runner_up and 0.3 <= runner_up < by_object["chair-1"].iou2d
+    records = json.loads(to_json_line(result.records()))
+    full = json.loads(to_json_line(process_view(view, objects, instances, {"laser": depth, "moge": depth * 1.2},
+                                                visibility="laser").records()))
+    assert json_close(records["qa"], full["qa"])                        # as the 2D pipeline writes them
+    for source in ("auto_laser", "auto_moge"):
+        assert records["qa"][source]
+        for item in records["qa"][source]:
+            for ev in _evidence_of(item):
+                shared = ev["object_id"] in ("chair-1", "table-1")
+                assert ev["match_ambiguous"] is shared
+                assert ev["match_runner_up_iou2d"] == pytest.approx(runner_up if shared else 0.0)
+    gated = json.loads(to_json_line(rematch_view(old, association="3d").records()))
+    evidence = [ev for item in gated["qa"]["auto_laser"] for ev in _evidence_of(item)]
+    assert evidence and all(ev["match_ambiguous"] is None and ev["match_runner_up_iou2d"] is None
+                            for ev in evidence)
+
+
+def _script(name: str) -> ModuleType:
+    """Import a script of ``scripts/`` as a module, registered in ``sys.modules`` (sibling imports need it).
+
+    Parameters
+    ----------
+    name : str
+        Script name without ``.py``.
+
+    Returns
+    -------
+    types.ModuleType
+        The module; importing it has no other side effects.
+    """
+    if name in sys.modules:
+        return sys.modules[name]
+    spec = importlib.util.spec_from_file_location(name, Path(__file__).resolve().parents[1] / "scripts" / f"{name}.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_exclude_ambiguous_drops_exactly_the_ambiguous_items_and_detections(
+        overlap: tuple[FrameView, list[SceneObject], Array, list[Instance]], tmp_path: Path) -> None:
+    """On the overlapping view, the audit drops exactly the items naming the chair or the table (counts too), and
+    the fusion evaluation drops exactly their two detections; the sofa's survive.
+
+    Parameters
+    ----------
+    overlap : tuple
+        The overlapping view.
+    tmp_path : pathlib.Path
+        Scratch folder from pytest.
+    """
+    view, objects, depth, instances = overlap
+    result = process_view(view, objects, instances, {"laser": depth}, visibility="laser")
+    pairs = pair_table(result.items["oracle"], result.items["auto_laser"], "laser")
+    kept, counts = exclude_ambiguous(pairs)
+    involved = {i.id for i in result.items["auto_laser"]
+                if {"chair-1", "table-1"} & {ev["object_id"] for ev in _evidence_of(i.to_json())}}
+    assert involved and set(pairs["id"]) - set(kept["id"]) == involved
+    assert counts[view.dataset]["laser"]["n_dropped"] == len(involved)
+    assert counts[view.dataset]["laser"]["n_unknown_kept"] == 0
+
+    records = result.records()
+    (tmp_path / "views.jsonl").write_text(to_json_line(records["view"]) + "\n")
+    (tmp_path / "detections.jsonl").write_text("".join(to_json_line(r) + "\n" for r in records["detections"]))
+    fusion = _script("run_fusion_eval")
+    detections, _ = load_detections(tmp_path)
+    ambiguous, unknown = fusion.pairing_ambiguity(tmp_path)
+    kept_detections, record = fusion.drop_ambiguous(detections, ambiguous, unknown)
+    assert {d.object_id for d in detections} == {"chair-1", "table-1", "sofa-1"}
+    assert [d.object_id for d in kept_detections] == ["sofa-1"] and not unknown
+    assert record["counts"] == {"laser": {"n_matched": 3, "n_dropped": 2, "n_unknown_kept": 0}}
 
 
 def test_config_json_round_trip_and_legacy_association() -> None:

@@ -22,14 +22,15 @@ Per dataset, depth source and association:
   stored detections and visible boxes with :func:`measured_space.matching.match_detections_2d` (the run's own
   threshold must reproduce its stored pairs exactly, which is checked).
 
-Writes aggregates only (no per-item rows) to ``results/association/`` (``--results``): ``summary.json`` and the
-CSVs ``comparison.csv`` (one row per dataset, depth source and association), ``errors.csv`` (per question type
-and subset), ``sensitivity.csv`` and ``confusions.csv`` (detection phrase -> ground-truth label counts).
+Writes aggregates only (no per-item rows) to ``--results`` (required, with no default, so a run never overwrites
+the committed tables by accident; the committed run used ``results/association``): ``summary.json`` and the CSVs
+``comparison.csv`` (one row per dataset, depth source and association), ``errors.csv`` (per question type and
+subset), ``sensitivity.csv`` and ``confusions.csv`` (detection phrase -> ground-truth label counts).
 
 Usage (from the repository root)::
 
-    python scripts/compare_association.py
-    python scripts/compare_association.py --gated <labels folder> --primary <labels_2d folder>
+    python scripts/compare_association.py --results results/association
+    python scripts/compare_association.py --results <folder> --gated <labels folder> --primary <labels_2d folder>
 """
 
 from __future__ import annotations
@@ -103,8 +104,9 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     p.add_argument("--primary", type=Path, default=None,
                    help="2D-association label folder (default <data root>/outputs/labels_2d)")
     p.add_argument("--datasets", nargs="+", default=list(DATASETS), help="datasets to compare")
-    p.add_argument("--results", type=Path, default=REPO_ROOT / "results" / "association",
-                   help="aggregate output folder (default results/association)")
+    p.add_argument("--results", type=Path, required=True,
+                   help="aggregate output folder; required (no default). The committed tables are in "
+                        f"{REPO_ROOT / 'results' / 'association'}")
     p.add_argument("--sensitivity", type=float, nargs="+", default=[0.2, 0.3, 0.5],
                    help="2D IoU thresholds for the pair-count sensitivity")
     return p.parse_args(argv)

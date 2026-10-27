@@ -10,14 +10,26 @@ matched object three ways and audits each estimate against the ground-truth box 
 
 Writes:
 
-- ``<data root>/outputs/fusion/records.jsonl``: every per-object and per-measurement record;
-- ``<data root>/outputs/fusion/summary.json``: the full summary;
-- ``results/fusion/summary.json``, ``results/fusion/summary.csv`` (one row per depth source and estimator)
-  and ``results/fusion/log_scale.csv`` (one row per video and depth source): aggregates only.
+- ``<out dir>/records.jsonl``: every per-object and per-measurement record;
+- ``<out dir>/summary.json``: the full summary. ``--out-dir`` defaults to ``<data root>/outputs/fusion``
+  (``<data root>/outputs/fusion_exclude_ambiguous`` with ``--exclude-ambiguous``);
+- ``<results dir>/summary.json``, ``<results dir>/summary.csv`` (one row per depth source and estimator) and
+  ``<results dir>/log_scale.csv`` (one row per video and depth source): aggregates only. ``--results-dir`` is
+  required, with no default, so a run never overwrites the committed tables by accident (the committed run
+  used ``results/fusion``).
+
+``--exclude-ambiguous`` (a pairing sensitivity analysis) drops every matched detection whose pairing with its
+ground-truth object was ambiguous (its ``detections.jsonl`` match has ``ambiguous`` True: another feasible
+pairing existed for the detection or the object) before the noise fit and the evaluation, since detections are
+grouped into objects by their matched id. Detections of unknown ambiguity (match records written before the
+2D association, or by the 3D one, which does not assess it: no ``runner_up_iou2d``) are kept. The summary's
+``config.exclude_ambiguous`` records, per depth source, the detections dropped and the unknown ones kept.
 
 Usage (from the repository root)::
 
-    python scripts/run_fusion_eval.py [--scale-prior-sigma 0.1] [--gate-prob 0.997] [--min-frames 2]
+    python scripts/run_fusion_eval.py --results-dir results/fusion [--scale-prior-sigma 0.1] [--gate-prob 0.997]
+        [--min-frames 2] [--labels-dir <labels folder>/arkitscenes]
+    python scripts/run_fusion_eval.py --results-dir <scratch folder> --exclude-ambiguous
 """
 
 from __future__ import annotations
@@ -37,6 +49,7 @@ from measured_space.datasets import arkitscenes as ark
 from measured_space.estimation import box_to_state
 from measured_space.fusion_eval import (
     TABLE_COLUMNS,
+    Detection,
     NoiseModel,
     evaluate_capture,
     fit_noise_model,
@@ -70,9 +83,14 @@ def parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
                         help="folder with detections.jsonl and views.jsonl "
                              "(default <data root>/outputs/labels/arkitscenes)")
     parser.add_argument("--out-dir", type=Path, default=None,
-                        help="full outputs (default <data root>/outputs/fusion)")
-    parser.add_argument("--results-dir", type=Path, default=REPO_ROOT / "results" / "fusion",
-                        help="aggregate summaries (default results/fusion)")
+                        help="full outputs (default <data root>/outputs/fusion, or "
+                             "<data root>/outputs/fusion_exclude_ambiguous with --exclude-ambiguous)")
+    parser.add_argument("--results-dir", type=Path, required=True,
+                        help="aggregate summaries; required (no default). The committed tables are in "
+                             f"{REPO_ROOT / 'results' / 'fusion'}")
+    parser.add_argument("--exclude-ambiguous", action="store_true",
+                        help="drop matched detections whose pairing was ambiguous; detections of unknown "
+                             "ambiguity are kept and counted")
     parser.add_argument("--scale-prior-sigma", type=float, default=0.1,
                         help="prior sd of each capture's log scale in scale-aware fusion")
     parser.add_argument("--gate-prob", type=float, default=0.997, help="chi-square(7) innovation gate")
@@ -102,6 +120,89 @@ def ground_truth(videos: Sequence[str]) -> tuple[dict[str, dict[str, np.ndarray]
         truth[video] = {o.object_id: box_to_state(o.box) for o in objects}
         labels[video] = {o.object_id: o.label for o in objects}
     return truth, labels
+
+
+DetectionKey = tuple[str, str, str, str]
+"""``(video, source, frame, object_id)``: how :func:`measured_space.fusion_eval.load_detections` keys a detection."""
+
+
+def pairing_ambiguity(labels_dir: Path) -> tuple[set[DetectionKey], set[DetectionKey]]:
+    """Which matched detections were paired ambiguously, read from ``detections.jsonl``.
+
+    The rows are filtered exactly as :func:`measured_space.fusion_eval.load_detections` filters them (status
+    ``"matched"``, a box and a match record) and keyed the same way.
+
+    Parameters
+    ----------
+    labels_dir : pathlib.Path
+        Folder with ``detections.jsonl``.
+
+    Returns
+    -------
+    ambiguous : set of tuple
+        Keys of matched detections whose match has ``ambiguous`` True: another feasible pairing existed for
+        the detection or its object (:attr:`measured_space.matching.Match.ambiguous`).
+    unknown : set of tuple
+        Keys of matched detections whose match has no ``runner_up_iou2d`` (records written before the 2D
+        association, or by the 3D one, which does not assess ambiguity) and is not ambiguous.
+    """
+    ambiguous: set[DetectionKey] = set()
+    unknown: set[DetectionKey] = set()
+    with (labels_dir / "detections.jsonl").open() as handle:
+        for line in handle:
+            if not line.strip():
+                continue
+            row = json.loads(line)
+            status = row["status"] if row.get("box") is not None else "unboxed"
+            match = row.get("match")
+            if status != "matched" or match is None:
+                continue
+            key = (str(row["scene"]), str(row["source"]), str(row["frame"]), str(match["object_id"]))
+            if match.get("runner_up_iou2d") is None or "ambiguous" not in match:
+                unknown.add(key)
+            elif match["ambiguous"]:
+                ambiguous.add(key)
+    return ambiguous, unknown - ambiguous
+
+
+def drop_ambiguous(detections: Sequence[Detection], ambiguous: set[DetectionKey], unknown: set[DetectionKey]
+                   ) -> tuple[list[Detection], dict[str, Any]]:
+    """Drop the detections whose pairing was ambiguous, and count what was dropped and kept per depth source.
+
+    Parameters
+    ----------
+    detections : sequence of Detection
+        Matched detections (:func:`measured_space.fusion_eval.load_detections`).
+    ambiguous : set of tuple
+        Keys of ambiguously paired detections (:func:`pairing_ambiguity`). A key shared by several rows (a
+        duplicate match, which :func:`measured_space.fusion_eval.group_captures` drops anyway) drops them all.
+    unknown : set of tuple
+        Keys of detections of unknown ambiguity; they are kept and counted.
+
+    Returns
+    -------
+    kept : list of Detection
+        The detections not dropped, in input order.
+    record : dict
+        ``enabled`` (True), ``unknown_policy`` (``"kept"``), totals ``n_dropped`` and ``n_unknown_kept``, and
+        ``counts``: per depth source ``n_matched``, ``n_dropped`` and ``n_unknown_kept``.
+    """
+    kept: list[Detection] = []
+    counts: dict[str, dict[str, int]] = {}
+    for d in detections:
+        key = (d.video, d.source, d.frame, d.object_id)
+        entry = counts.setdefault(d.source, {"n_matched": 0, "n_dropped": 0, "n_unknown_kept": 0})
+        entry["n_matched"] += 1
+        if key in ambiguous:
+            entry["n_dropped"] += 1
+            continue
+        entry["n_unknown_kept"] += key in unknown
+        kept.append(d)
+    record: dict[str, Any] = {"enabled": True, "unknown_policy": "kept",
+                              "n_dropped": sum(c["n_dropped"] for c in counts.values()),
+                              "n_unknown_kept": sum(c["n_unknown_kept"] for c in counts.values()),
+                              "counts": dict(sorted(counts.items()))}
+    return kept, record
 
 
 def log_scale_rows(captures: Sequence[Mapping[str, Any]]) -> list[dict[str, Any]]:
@@ -228,13 +329,19 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     start = time.perf_counter()
     labels_dir = args.labels_dir or data_root() / "outputs" / "labels" / "arkitscenes"
-    out_dir = args.out_dir or data_root() / "outputs" / "fusion"
+    out_dir = args.out_dir or data_root() / "outputs" / ("fusion_exclude_ambiguous" if args.exclude_ambiguous
+                                                         else "fusion")
     if not (labels_dir / "detections.jsonl").exists():
         print(f"{labels_dir / 'detections.jsonl'} not found; run the labelling step first", file=sys.stderr)
         return 1
     detections, counts = load_detections(labels_dir)
     if args.sources:
         detections = [d for d in detections if d.source in args.sources]
+    exclusion: dict[str, Any] = {"enabled": False}
+    if args.exclude_ambiguous:
+        detections, exclusion = drop_ambiguous(detections, *pairing_ambiguity(labels_dir))
+        print(f"--exclude-ambiguous: dropped {exclusion['n_dropped']} detections, kept "
+              f"{exclusion['n_unknown_kept']} of unknown ambiguity: {json.dumps(exclusion['counts'])}", flush=True)
     captures = group_captures(detections)
     truth, labels = ground_truth(sorted({video for video, _ in captures}))
 
@@ -256,7 +363,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         for source, fit in fits.items()}
     summary["config"] = {"scale_prior_sigma": args.scale_prior_sigma, "gate_prob": args.gate_prob,
                          "min_frames": args.min_frames, "labels_dir": labels_dir.name,
-                         "detection_counts": counts}
+                         "detection_counts": counts, "exclude_ambiguous": exclusion}
     summary["runtime_s"] = round(time.perf_counter() - start, 2)
 
     out_dir.mkdir(parents=True, exist_ok=True)
