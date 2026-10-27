@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Environments
+.venv/
+venv/
+.env
+
+# Data, weights and run outputs never live in the repo (they're on external storage)
+/data/
+/datasets/
+/hf_cache/
+/checkpoints/
+/runs/
+/outputs/
+*.h5
+*.npz
+*.pt
+*.pth
+*.safetensors
+*.zip
+*.tar
+*.tar.gz
+*.parquet
+*.mp4
+
+# Machine-specific paths
+configs/paths.local.yaml
+
+# Documents that are not part of the project
+*.docx
+
+# Tool state
+.gstack/
+
+# LaTeX build products
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz

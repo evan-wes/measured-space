@@ -1,0 +1,99 @@
+name: Tag main release
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Commit SHA (full or short), branch, or tag (default: triggering ref)'
+        required: false
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    permissions: { contents: write, pull-requests: read }
+    steps:
+      # Same two-step checkout pattern as tag-on-version-bump.yml — see
+      # the "Why the two-step checkout?" note below for the rationale.
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - id: target
+        run: |
+          REF="${{ inputs.ref || github.sha }}"
+          FULL_SHA=$(git rev-parse --verify "$REF")
+          git checkout "$FULL_SHA"
+          echo "sha=$FULL_SHA" >> "$GITHUB_OUTPUT"
+      - id: ver
+        run: echo "v=$(cat VERSION | tr -d '[:space:]')" >> "$GITHUB_OUTPUT"
+      - id: chk
+        run: |
+          if git rev-parse "release-v${{ steps.ver.outputs.v }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.chk.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          V="${{ steps.ver.outputs.v }}"
+          SHA="${{ steps.target.outputs.sha }}"
+
+          # PR number from the merge commit's subject (no API call →
+          # no indexing race). Handles two merge strategies:
+          #   - "Merge pull request #N from owner/branch" (Create a
+          #     merge commit, default merge strategy)
+          #   - "Title goes here (#N)" (Squash and merge)
+          # Rebase-and-merge / unrecognized subjects fall through to
+          # empty PR_NUMBER → bare-SHA tag annotation + minimal
+          # release-body fallback below. See "Why merge-subject
+          # parsing?" in repo-setup.md for the design rationale.
+          # `gh pr view` by ID is used below for the PR body — that's
+          # a direct lookup keyed on a number that exists from the
+          # moment the PR is opened, no indexing required.
+          PR_NUMBER=$(git log -1 --format='%s' "$SHA" | sed -nE \
+            -e 's|^Merge pull request #([0-9]+) from .*|\1|p' \
+            -e 's|^.* \(#([0-9]+)\)$|\1|p' | head -n 1)
+          PR_URL=""
+          PR_BODY=""
+          if [ -n "$PR_NUMBER" ]; then
+            PR_URL="https://github.com/${REPO}/pull/${PR_NUMBER}"
+            # Fetch the body for the GitHub Release notes below.
+            PR_BODY=$(gh pr view "$PR_NUMBER" --json body --jq '.body' 2>/dev/null || echo "")
+          fi
+
+          # Annotated tag — plain text (git's format). The hyperlinked
+          # version of these notes lives in the GitHub Release created
+          # below, which renders the PR body as markdown.
+          if [ -n "$PR_URL" ]; then
+            TAG_MSG="Release v${V} at ${SHA}
+
+          Release PR: ${PR_URL}"
+          else
+            TAG_MSG="Release v${V} at ${SHA}"
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "release-v${V}" -m "${TAG_MSG}"
+          git push origin "release-v${V}"
+
+          # GitHub Release pinned to the tag we just pushed. Body =
+          # the merged release PR's body verbatim — markdown renders,
+          # links auto-hyperlink, every section heading shows up on
+          # the release page. Only `release-v*` tags get this Release
+          # treatment; develop-side `v*` tags from
+          # `tag-on-version-bump.yml` stay as plain tags (dev-facing,
+          # PR URL in plain text is fine there).
+          if [ -n "$PR_BODY" ]; then
+            RELEASE_BODY="$PR_BODY"
+          else
+            RELEASE_BODY="Release commit: \`${SHA}\`
+
+          See \`CHANGELOG.md\` at this commit for the full release history."
+          fi
+          gh release create "release-v${V}" \
+            --title "v${V}" \
+            --notes "$RELEASE_BODY" \
+            --verify-tag

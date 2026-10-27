@@ -1,0 +1,77 @@
+name: Tag develop version bump
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: 'Commit SHA (full or short), branch, or tag (default: triggering ref)'
+        required: false
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    permissions: { contents: write, pull-requests: read }
+    steps:
+      # Initial checkout uses the triggering ref directly. We do NOT pass
+      # `inputs.ref` here because actions/checkout rejects short SHAs
+      # (the ref input is treated as a branch/tag name first, and short
+      # SHAs aren't unique enough to resolve in an empty repo). The
+      # `Resolve target` step below handles short SHAs by re-checking-out
+      # to the user's input after history is fetched.
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+      - id: target
+        run: |
+          REF="${{ inputs.ref || github.sha }}"
+          FULL_SHA=$(git rev-parse --verify "$REF")
+          git checkout "$FULL_SHA"
+          echo "sha=$FULL_SHA" >> "$GITHUB_OUTPUT"
+      - id: ver
+        run: echo "v=$(cat VERSION | tr -d '[:space:]')" >> "$GITHUB_OUTPUT"
+      - id: chk
+        run: |
+          if git rev-parse "v${{ steps.ver.outputs.v }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+      - if: steps.chk.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          V="${{ steps.ver.outputs.v }}"
+          SHA="${{ steps.target.outputs.sha }}"
+          # PR number from the merge commit's subject (no API call →
+          # no indexing race). Handles two merge strategies:
+          #   - "Merge pull request #N from owner/branch" (Create a
+          #     merge commit, default for this repo)
+          #   - "Title goes here (#N)" (Squash and merge)
+          # Falls back to empty on rebase-and-merge / unrecognized
+          # subjects, in which case the tag drops to the bare-SHA
+          # annotation. See `tag-on-release.yml` for the full
+          # commentary on why this beats every API-based approach.
+          # No GitHub Release is created from this workflow — only the
+          # develop→main release tags get GitHub Releases via
+          # `tag-on-release.yml`; develop-side tags stay as plain
+          # annotated tags (dev-facing, plain-text PR URL is fine).
+          PR_NUMBER=$(git log -1 --format='%s' "$SHA" | sed -nE \
+            -e 's|^Merge pull request #([0-9]+) from .*|\1|p' \
+            -e 's|^.* \(#([0-9]+)\)$|\1|p' | head -n 1)
+          PR_URL=""
+          if [ -n "$PR_NUMBER" ]; then
+            PR_URL="https://github.com/${REPO}/pull/${PR_NUMBER}"
+          fi
+          if [ -n "$PR_URL" ]; then
+            MSG="Develop bump v${V} at ${SHA}
+
+          PR: ${PR_URL}"
+          else
+            MSG="Develop bump v${V} at ${SHA}"
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${V}" -m "${MSG}"
+          git push origin "v${V}"

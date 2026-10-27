@@ -1,0 +1,11 @@
+# Conda environment for the prototype. Python from conda-forge only (no Anaconda `defaults` channel);
+# PyTorch from PyPI, whose default Linux wheel for 2.14.1 is built against CUDA 13.0 (needs driver >= 580).
+# Further pinned dependencies are added here as pipeline stages land.
+name: metric-grounding-audit
+channels:
+  - conda-forge
+dependencies:
+  - python=3.12
+  - pip
+  - pip:
+      - torch==2.14.1
