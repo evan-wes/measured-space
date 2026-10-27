@@ -23,6 +23,7 @@ produced by a script in this repository, with the command to rerun it.
 ```bash
 conda env create -f environment.yml      # Python 3.12 from conda-forge; PyTorch via pip (CUDA 13.0 wheels)
 conda activate metric-grounding-audit
+pip install --no-deps -r requirements-nodeps.txt   # MoGe-2 (monocular metric depth), pinned commits
 ```
 
 Data and model weights live outside the repository (their location is configured, not hard-coded). Raw
