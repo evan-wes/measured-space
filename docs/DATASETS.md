@@ -83,15 +83,30 @@ inertial poses, and fixed, calibrated multi-camera installations.
 - **Domain [V]:** real homes; iPad Pro LiDAR plus a Faro laser scanner.
 - **Self-contained copy (decided 2026-10-26):** this project uses only its own downloads, not a raw-subset copy
   elsewhere on the machine. For the 6 validation videos with laser depth, each `upsampling/Validation/<id>.zip`
-  holds about 31 filtered frames, each with `wide` (1920×1440 RGB), `highres_depth` (Faro laser), `lowres_depth`
+  holds 31/19/14/23/31/31 filtered frames (149 in total, 148 with an interpolable pose), each with `wide` (1920×1440 RGB), `highres_depth` (Faro laser), `lowres_depth`
   (iPad LiDAR) and `confidence`. Checked on 42444946: 31 files per folder. Alongside the zips we downloaded
   `wide_intrinsics.zip` (per-frame `.pincam`), `<id>_3dod_annotation.json` and `lowres_wide.traj` (ARKit poses,
   10 Hz; 539,358 B for all 6, fetched 2026-10-26). Poses must be interpolated to each `wide` frame's timestamp.
   The 4 videos without laser depth are not used.
 - **Those 10 videos [V, Apple `raw/metadata.csv`]:** all 10 have `is_in_threedod=True` and laser point clouds. **Six have laser `highres_depth`** (`is_in_upsampling=True`): 42444946, 42444966, 42445021, 42445028, 42445429, 42446100. `sky_direction` is Left ×6, Down ×3, Up ×1, so frames must be rotated upright before VLM use, with left/right defined in the upright image.
 - **Boxes [V]:** 17 furniture classes, oriented (`obbAligned` centroid, axesLengths (full size), normalizedAxes). Human-labelled; no published accuracy.
-  - Gravity-aligned / yaw-only [U]: implied by the official code's reduction to 7-DoF, but not documented.
-  - Coordinate frame [U]: the 3DOD README says labels share the "world coordinate" of the camera poses, so they are very probably in the same frame as raw `lowres_wide.traj`. **Check by projecting box corners into a few frames.**
+  - Gravity-aligned / yaw-only [V, measured]: the world is z-up and every box is yaw-only except two in 42444946
+    (tilted 9.47°) and one in 42445028 (2.21°).
+  - Coordinate frame [V, measured with `scripts/check_arkitscenes_oracle.py`]: boxes share the frame of
+    `lowres_wide.traj`.
+    - Trajectory rows are world→camera and are inverted, with OpenCV camera axes (no ARKit axis flip).
+    - Box rotation = `reshape(normalizedAxes, (3,3)).T` (the stored rows are the box axes).
+    - No time offset is needed: the fit peaks at 0 s within ±0.02 s.
+    - Over all 148 posed frames, the boxes explain a median 0.75 of the laser points in their ray region. In-box
+      laser points lie a median 3.8 cm from the box surface (90th percentile 16.4 cm; objects are not boxes).
+      The rejected conventions explain 0.00–0.54.
+  - **Object ids:** `objectId` repeats within a file; the loader uses `uid`.
+  - **Image orientation:** the rotation to upright is derived from gravity (pose), not the `sky_direction`
+    text. It agrees with the metadata on all 6 videos ("Left" = turn 90° clockwise, "Down" = 180°).
+  - **Laser vs LiDAR:** laser depth reads a median 2.1 cm deeper than iPad LiDAR at confidence-2 pixels (+1.7
+    to +2.3 cm per video; 6.15 M pixels). This is a small systematic offset for the error model.
+  - **Coverage:** 10 of the 78 boxes are never visible in a laser frame (6 never in frustum, 4 behind nearer
+    surfaces).
 - **Incremental download [V, HEAD sizes]:**
   - 10 × `<id>_3dod_annotation.json`: 156,558 bytes in total.
   - 6 × `upsampling/Validation/<id>.zip`: 422.7 MB (1920×1440 colour, laser `highres_depth`, lowres depth, confidence). Laser depth is aligned to the `wide` timestamps, not to `vga_wide`.
