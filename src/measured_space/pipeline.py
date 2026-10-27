@@ -17,9 +17,15 @@ perception pipeline lifts from the image ("auto"), once per depth source. The st
 
 2. **Automatic boxes.** SAM 3 segments the dataset's prompt phrases once per image. For each depth source,
    :func:`~measured_space.perception.lift_instance` lifts every mask to a gravity-aligned world box with 17
-   image-evidence features, and :func:`~measured_space.matching.match_detections` matches the boxes to the
-   present oracle objects. Large masks may be lifted from a pixel subsample: a mask with at least
-   ``PipelineConfig.lift_stride_min_pixels`` pixels is lifted from every ``s``-th pixel in each direction
+   image-evidence features, and the lifted detections are associated with the present oracle objects
+   (:func:`match_view`). The primary association (``PipelineConfig.association == "2d"``) is
+   :func:`~measured_space.matching.match_detections_2d`: Hungarian on 2D IoU between the detection's box and the
+   object's *visible* 2D box (:func:`visible_box_edges`), class-agnostic, with no 3D gate, so far 3D errors and
+   class confusions are paired and measured rather than censored. Detections without a box from a depth source
+   take no part for that source. The 3D-gated, label-compatible association
+   (:func:`~measured_space.matching.match_detections`, ``association == "3d"``) is kept for comparison; shards
+   written before the field existed used it. Large masks may be lifted from a pixel subsample: a mask with at
+   least ``PipelineConfig.lift_stride_min_pixels`` pixels is lifted from every ``s``-th pixel in each direction
    (``s = PipelineConfig.lift_stride``) with exactly rescaled intrinsics and an erosion radius of
    ``max(1, round(erode_px / s))`` pixels; smaller masks are lifted at full resolution, so the 50-point
    minimum never rejects a small object because of subsampling. The stride used is recorded per lift
@@ -32,12 +38,20 @@ perception pipeline lifts from the image ("auto"), once per depth source. The st
 
 4. **Answers.** Every spec is answered from the oracle boxes (``source="oracle"``) and, per depth source, from
    the automatic boxes (``source="auto_<depth>"``). Automatic boxes are keyed by the id of the oracle object
-   they matched, so a spec whose referent was not matched has no automatic answer; it is recorded as
-   unanswered. Unmatched detections are keyed ``"auto:<index>"`` and take part only in counts. An automatic
-   count is the number of that class's detections that have a box from that depth source (a detection whose
-   lift failed is not an automatic label); the 2D detection count is stored next to it. Each automatic item's
-   ``extra`` holds, per referent (per counted object for counts), the detection index, phrase, score, match
-   distance and IoU, and the lift features; these are the inputs of the uncertainty model.
+   they matched, whatever the detection's class, so a spec whose referent was not matched has no automatic
+   answer; it is recorded as unanswered. Unmatched detections are keyed ``"auto:<index>"`` and take part only
+   in counts. An automatic count is the number of that class's detections that have a box from that depth
+   source (a detection whose lift failed is not an automatic label): a detection paired with an object of
+   another class keeps its own class for counting. The 2D detection count is stored next to it. Each automatic
+   item's ``extra`` holds, per referent (per counted object for counts), the detection index, phrase, score,
+   match distance (3D centre distance, m), 3D IoU, 2D IoU, ``label_correct``, and the lift features; these are
+   the inputs of the uncertainty model and of the error analysis.
+
+5. **Re-association without models** (:func:`rematch_view`). A view's stored records (one shard of
+   ``scripts/run_labels.py``) hold every detection's 2D box, lifted boxes and features and every oracle object's
+   visible 2D box, so the association can be redone and the automatic answers recomputed on the CPU. The
+   oracle answers are recomputed too and must agree with the stored ones (to a few units in the last place),
+   which checks the reconstruction; the stored oracle items are then kept verbatim.
 
 Depth sources: ARKitScenes ``laser`` (isolates perception error), ``lidar`` (iPad LiDAR resampled
 nearest-neighbour to the RGB size) and ``moge``; Smart Spaces ``Warehouse_018`` ``gt_depth`` and ``moge``; the
@@ -60,7 +74,7 @@ import numpy as np
 from numpy.typing import NDArray
 
 from measured_space.geometry import Camera, OrientedBox
-from measured_space.matching import MatchConfig, MatchResult, match_detections
+from measured_space.matching import Match2DConfig, MatchConfig, MatchResult, match_detections, match_detections_2d
 from measured_space.perception import (
     Instance,
     LiftError,
@@ -92,6 +106,15 @@ MASK_FEATURE_KEYS: tuple[str, ...] = ("mask_area_px", "n_components", "boundary_
 AUTO_KEY_PREFIX = "auto:"
 """str: prefix of the key of an unmatched detection's automatic box (``"auto:<detection index>"``)."""
 
+ASSOCIATIONS: tuple[str, ...] = ("2d", "3d")
+"""tuple of str: detection-to-oracle associations: 2D overlap, class-agnostic (primary); 3D-gated (comparison)."""
+
+LEGACY_ASSOCIATION = "3d"
+"""str: the association of stored configs without an ``association`` field (written before 2D association)."""
+
+EVIDENCE_KEYS_2D: tuple[str, ...] = ("match_iou2d", "label_correct")
+"""tuple of str: evidence keys added with the 2D association (absent from shards written before it)."""
+
 Box2D = tuple[int, int, int, int]
 SegmentFn = Callable[..., list[Instance]]
 DepthFn = Callable[[NDArray[np.uint8], Camera], NDArray[np.floating]]
@@ -108,7 +131,12 @@ class PipelineConfig:
     qa_seed : int, default 0
         Seed of the per-type question cap.
     match : MatchConfig, default MatchConfig()
-        Distance gate for matching.
+        Distance gate of the 3D association.
+    association : str, default "2d"
+        One of :data:`ASSOCIATIONS`: ``"2d"`` (image overlap, class-agnostic) or ``"3d"`` (gated centre
+        distance, label-compatible).
+    match_2d : Match2DConfig, default Match2DConfig()
+        Overlap threshold of the 2D association.
     score_threshold : float, default 0.5
         Minimum SAM 3 detection score.
     dedupe_iou : float or None, default 0.7
@@ -128,6 +156,8 @@ class PipelineConfig:
     qa: QAConfig = field(default_factory=QAConfig)
     qa_seed: int = 0
     match: MatchConfig = field(default_factory=MatchConfig)
+    association: str = "2d"
+    match_2d: Match2DConfig = field(default_factory=Match2DConfig)
     score_threshold: float = 0.5
     dedupe_iou: float | None = 0.7
     lift_stride: int = 1
@@ -137,15 +167,17 @@ class PipelineConfig:
     visibility_spacing: float = 0.05
 
     def __post_init__(self) -> None:
-        """Validate the stride.
+        """Validate the stride and the association.
 
         Raises
         ------
         ValueError
-            If ``lift_stride`` is below 1.
+            If ``lift_stride`` is below 1 or ``association`` is not one of :data:`ASSOCIATIONS`.
         """
         if self.lift_stride < 1:
             raise ValueError("lift_stride must be at least 1")
+        if self.association not in ASSOCIATIONS:
+            raise ValueError(f"association must be one of {ASSOCIATIONS}, got {self.association!r}")
 
     def to_json(self) -> dict[str, Any]:
         """The settings as a JSON-serialisable dict.
@@ -156,6 +188,35 @@ class PipelineConfig:
             Every field, nested configs included.
         """
         return asdict(self)
+
+    @classmethod
+    def from_json(cls, record: Mapping[str, Any]) -> PipelineConfig:
+        """Rebuild settings from :meth:`to_json` output, including records written before newer fields.
+
+        A record without ``association`` was written by the 3D-gated pipeline, so it gets
+        :data:`LEGACY_ASSOCIATION`, not the current default; a missing ``match_2d`` gets the default threshold.
+
+        Parameters
+        ----------
+        record : mapping
+            A ``config`` record, e.g. from a shard's view record.
+
+        Returns
+        -------
+        PipelineConfig
+            The settings.
+
+        Raises
+        ------
+        TypeError
+            If the record has a field this class does not know.
+        """
+        data = dict(record)
+        qa = QAConfig(**data.pop("qa", {}))
+        match = MatchConfig(**data.pop("match", {}))
+        match_2d = Match2DConfig(**data.pop("match_2d", {}))
+        association = data.pop("association", LEGACY_ASSOCIATION)
+        return cls(qa=qa, match=match, match_2d=match_2d, association=association, **data)
 
 
 @dataclass(frozen=True)
@@ -317,7 +378,8 @@ class ViewResult:
         Returns
         -------
         list of dict
-            Box, visibility, truncation, 2D box, presence and per-source match of each object.
+            Box, visibility, truncation, 2D box, presence and per-source match of each object (detection,
+            3D centre distance in m, 3D IoU, 2D IoU, ``label_correct``, ``ambiguous``).
         """
         present = visible_ids(self.oracle, self.config.qa)
         by_object = {source: result.by_object() for source, result in self.matches.items()}
@@ -328,7 +390,9 @@ class ViewResult:
             for source in self.sources:
                 m = by_object[source].get(oid)
                 match[source] = None if m is None else {"detection": m.detection, "distance": m.distance,
-                                                        "iou": m.iou}
+                                                        "iou": m.iou, "iou2d": m.iou2d,
+                                                        "label_correct": m.label_correct,
+                                                        "ambiguous": m.ambiguous}
             records.append({
                 **identity, "object_id": oid, "label": seen.obj.label, "box": box_json(seen.obj.box),
                 "visible_fraction": seen.visible_fraction, "truncated_fraction": seen.truncated_fraction,
@@ -350,7 +414,9 @@ class ViewResult:
         Returns
         -------
         list of dict
-            Phrase, labels, score, 2D box, mask statistics, world box, features and match of each lift.
+            Phrase, labels, score, 2D box, mask statistics, world box, features and match of each lift. The
+            match holds the oracle object's id and label, the 3D centre distance (m), 3D IoU, gate (m, ``None``
+            under the 2D association), 2D IoU, ``label_correct``, runner-up 2D IoU and ``ambiguous``.
         """
         oracle_labels = {o.obj.object_id: o.obj.label for o in self.oracle}
         records = []
@@ -369,7 +435,10 @@ class ViewResult:
                     "lift_error": lift.error, "box": None if lift.box is None else box_json(lift.box),
                     "features": lift.features, "status": status,
                     "match": None if m is None else {"object_id": m.object_id, "label": oracle_labels[m.object_id],
-                                                     "distance": m.distance, "iou": m.iou, "gate": m.gate},
+                                                     "distance": m.distance, "iou": m.iou, "gate": m.gate,
+                                                     "iou2d": m.iou2d, "label_correct": m.label_correct,
+                                                     "runner_up_iou2d": m.runner_up_iou2d,
+                                                     "ambiguous": m.ambiguous},
                 })
         return records
 
@@ -685,6 +754,82 @@ def lift_detection(detection: Detection, depth: NDArray[np.floating], view: Fram
 
 
 # --------------------------------------------------------------------------------------------------------
+# Association
+# --------------------------------------------------------------------------------------------------------
+
+
+def visible_box_edges(bbox2d: Sequence[float], visibility: str) -> tuple[float, float, float, float]:
+    """An oracle object's visible 2D box in the edge convention of :attr:`Instance.box2d`.
+
+    The two visibility methods store the box differently:
+
+    - :data:`GT_BOX2D` (the ground truth's visible box): inclusive pixel indices, so the box spans
+      ``[xmin, xmax + 1) x [ymin, ymax + 1)`` in edge coordinates;
+    - a depth source (:func:`~measured_space.visibility.object_in_view`): the extent of the visible surface
+      samples' projections with pixel *centres* at integer coordinates, so edges are 0.5 px further along.
+
+    Parameters
+    ----------
+    bbox2d : sequence of float, shape (4,)
+        :attr:`ObjectInView.bbox2d` ``(xmin, ymin, xmax, ymax)``, pixels.
+    visibility : str
+        How the box was measured: :data:`GT_BOX2D` or a depth source name.
+
+    Returns
+    -------
+    tuple of float
+        ``(xmin, ymin, xmax, ymax)`` with pixel edges at integer coordinates.
+    """
+    x0, y0, x1, y1 = (float(v) for v in bbox2d)
+    if visibility == GT_BOX2D:
+        return x0, y0, x1 + 1.0, y1 + 1.0
+    return x0 + 0.5, y0 + 0.5, x1 + 0.5, y1 + 0.5
+
+
+def match_view(detections: Sequence[Detection], lifts: Sequence[Lift], present: Sequence[ObjectInView],
+               visibility: str, config: PipelineConfig, up: NDArray[np.floating]) -> MatchResult:
+    """Associate one depth source's lifted detections with the present oracle objects.
+
+    Parameters
+    ----------
+    detections : sequence of Detection
+        The view's detections.
+    lifts : sequence of Lift
+        One lift per detection from this depth source; detections without a box take no part.
+    present : sequence of ObjectInView
+        Oracle objects present in the view (each with a visible 2D box).
+    visibility : str
+        How the oracle's visible boxes were measured (:data:`GT_BOX2D` or a depth source), for
+        :func:`visible_box_edges`.
+    config : PipelineConfig
+        Supplies ``association`` and its settings (``match_2d`` or ``match``).
+    up : numpy.ndarray, shape (3,)
+        World up direction, for the 3D IoU prisms.
+
+    Returns
+    -------
+    MatchResult
+        :func:`~measured_space.matching.match_detections_2d` (``association == "2d"``) or
+        :func:`~measured_space.matching.match_detections` (``"3d"``).
+
+    Raises
+    ------
+    ValueError
+        If a present object has no visible 2D box under the 2D association, or as the matching functions.
+    """
+    boxes = [lift.box for lift in lifts]
+    labels = [d.labels for d in detections]
+    objects = [o.obj for o in present]
+    if config.association == "3d":
+        return match_detections(boxes, labels, objects, config.match, up=up)
+    if any(o.bbox2d is None for o in present):
+        raise ValueError("every present oracle object needs a visible 2D box for the 2D association")
+    return match_detections_2d([d.instance.box2d for d in detections], boxes, labels, objects,
+                               [visible_box_edges(o.bbox2d, visibility) for o in present],  # type: ignore[arg-type]
+                               config.match_2d, up=up)
+
+
+# --------------------------------------------------------------------------------------------------------
 # Answering
 # --------------------------------------------------------------------------------------------------------
 
@@ -707,8 +852,10 @@ def auto_objects(detections: Sequence[Detection], lifts: Sequence[Lift], match: 
     Returns
     -------
     objects_by_id : dict of str to SceneObject
-        A matched detection under its oracle object's id and label; an unmatched one under
-        ``"auto:<index>"`` with its :attr:`Detection.qa_label`. Detections without a box are left out.
+        A matched detection under its oracle object's id, whatever its class; an unmatched one under
+        ``"auto:<index>"``. The label is the oracle object's when the detection's phrase maps to it
+        (``label_correct``), else the detection's own :attr:`Detection.qa_label`, so counts keep counting
+        detections of the counted class. Detections without a box are left out.
     detection_of : dict of str to int
         Key -> detection index.
     """
@@ -719,10 +866,11 @@ def auto_objects(detections: Sequence[Detection], lifts: Sequence[Lift], match: 
         if lift.box is None:
             continue
         m = matched.get(det.index)
+        own_label = det.qa_label or det.instance.phrase
         if m is not None:
-            key, label = m.object_id, oracle_labels[m.object_id]
+            key, label = m.object_id, oracle_labels[m.object_id] if m.label_correct else own_label
         else:
-            key, label = f"{AUTO_KEY_PREFIX}{det.index}", det.qa_label or det.instance.phrase
+            key, label = f"{AUTO_KEY_PREFIX}{det.index}", own_label
         objects_by_id[key] = SceneObject(key, label, lift.box, source="auto")
         detection_of[key] = det.index
     return objects_by_id, detection_of
@@ -749,13 +897,17 @@ def _evidence(key: str, detection_of: Mapping[str, int], detections: Sequence[De
     -------
     dict
         ``object_id`` (the oracle id or ``None``), ``detection``, ``phrase``, ``score``, ``match_distance``
-        and ``match_iou`` (``None`` if unmatched), and ``features``.
+        (3D centre distance, m), ``match_iou`` (3D prism IoU), ``match_iou2d`` (2D IoU, ``None`` under the 3D
+        association) and ``label_correct`` (whether the phrase maps to the oracle label), each ``None`` if
+        unmatched, and ``features``.
     """
     i = detection_of[key]
     m = matched.get(i)
     return {"object_id": None if m is None else m.object_id, "detection": i,
             "phrase": detections[i].instance.phrase, "score": detections[i].instance.score,
             "match_distance": None if m is None else m.distance, "match_iou": None if m is None else m.iou,
+            "match_iou2d": None if m is None else m.iou2d,
+            "label_correct": None if m is None else m.label_correct,
             "features": lifts[i].features}
 
 
@@ -901,7 +1053,7 @@ def process_view(view: FrameView, objects: Sequence[SceneObject], instances: Seq
 
     detections = make_detections(view, instances, config.boundary_px)
     present_ids = visible_ids(oracle, config.qa)
-    present = [o.obj for o in oracle if o.obj.object_id in present_ids]
+    present = [o for o in oracle if o.obj.object_id in present_ids]
     lifts: dict[str, list[Lift]] = {}
     matches: dict[str, MatchResult] = {}
     for source, depth in depths.items():
@@ -909,8 +1061,7 @@ def process_view(view: FrameView, objects: Sequence[SceneObject], instances: Seq
         lifts[source] = [lift_detection(det, depth, view, config) for det in detections]
         timings[f"lift_{source}"] = time.perf_counter() - t
         t = time.perf_counter()
-        matches[source] = match_detections([lift.box for lift in lifts[source]], [d.labels for d in detections],
-                                           present, config.match, up=view.up)
+        matches[source] = match_view(detections, lifts[source], present, visibility, config, view.up)
         timings[f"match_{source}"] = time.perf_counter() - t
 
     t = time.perf_counter()
@@ -926,6 +1077,240 @@ def process_view(view: FrameView, objects: Sequence[SceneObject], instances: Seq
     timings["qa"] = time.perf_counter() - t
     return ViewResult(view, visibility, tuple(depths), oracle, oracle_diag, detections, lifts, matches, specs,
                       items, unanswered, drops, timings, config)
+
+
+# --------------------------------------------------------------------------------------------------------
+# Re-association from stored records (no models)
+# --------------------------------------------------------------------------------------------------------
+
+_NO_MASK: NDArray[np.bool_] = np.zeros((0, 0), dtype=bool)
+"""numpy.ndarray, shape (0, 0): stand-in mask of a detection rebuilt from records (masks are not stored)."""
+
+
+def json_close(a: Any, b: Any, rtol: float = 1e-12, atol: float = 1e-12) -> bool:
+    """Whether two JSON-like values agree: same structure and key order, exact non-floats, close floats.
+
+    Parameters
+    ----------
+    a, b : Any
+        Parsed JSON values (dicts, lists, strings, numbers, booleans, ``None``).
+    rtol : float, default 1e-12
+        Relative tolerance on floats.
+    atol : float, default 1e-12
+        Absolute tolerance on floats (in the values' units, metres for distances).
+
+    Returns
+    -------
+    bool
+        True if dicts have the same keys in the same order, lists the same length, floats agree within
+        ``max(atol, rtol * max(|a|, |b|))`` and every other value is equal and of the same type.
+    """
+    if isinstance(a, Mapping) and isinstance(b, Mapping):
+        return list(a) == list(b) and all(json_close(a[k], b[k], rtol, atol) for k in a)
+    if isinstance(a, list) and isinstance(b, list):
+        return len(a) == len(b) and all(json_close(x, y, rtol, atol) for x, y in zip(a, b))
+    if isinstance(a, float) and isinstance(b, float):
+        return bool(np.isclose(a, b, rtol=0.0, atol=max(atol, rtol * max(abs(a), abs(b)))))
+    return type(a) is type(b) and a == b
+
+
+def box_from_json(record: Mapping[str, Any]) -> OrientedBox:
+    """Rebuild a box written by :func:`box_json`.
+
+    Parameters
+    ----------
+    record : mapping
+        ``center`` (3,), ``size`` (3,) in metres and ``rotation`` (3, 3).
+
+    Returns
+    -------
+    OrientedBox
+        The box (float64 values round-trip exactly through JSON).
+    """
+    return OrientedBox(record["center"], record["size"], record["rotation"])
+
+
+def view_from_record(record: Mapping[str, Any]) -> FrameView:
+    """Rebuild a view from its record in :meth:`ViewResult.records`.
+
+    Parameters
+    ----------
+    record : mapping
+        The ``"view"`` record: identity, ``image_ref``, ``camera``, ``T_wc`` (4, 4) and ``up`` (3,).
+
+    Returns
+    -------
+    FrameView
+        The view.
+    """
+    cam = record["camera"]
+    return FrameView(record["dataset"], record["scene"], record["camera_id"], record["frame"],
+                     Camera(cam["fx"], cam["fy"], cam["cx"], cam["cy"], int(cam["width"]), int(cam["height"])),
+                     np.asarray(record["T_wc"], dtype=np.float64), record["image_ref"],
+                     up=np.asarray(record["up"], dtype=np.float64))
+
+
+def oracle_from_records(records: Sequence[Mapping[str, Any]]) -> tuple[list[ObjectInView],
+                                                                        dict[str, dict[str, Any]]]:
+    """Rebuild the oracle objects as the view saw them from their ``oracle_objects`` records.
+
+    Parameters
+    ----------
+    records : sequence of mapping
+        One record per ground-truth object (object id, label, box, visible and truncated fractions, visible
+        2D box, diagnostics), in pipeline order.
+
+    Returns
+    -------
+    seen : list of ObjectInView
+        One per record, in order.
+    diagnostics : dict of str to dict
+        Object id -> visibility diagnostics.
+    """
+    seen, diagnostics = [], {}
+    for r in records:
+        bbox: tuple[float, float, float, float] | None = None
+        if r["bbox2d"] is not None:
+            x0, y0, x1, y1 = (float(v) for v in r["bbox2d"])
+            bbox = (x0, y0, x1, y1)
+        seen.append(ObjectInView(SceneObject(r["object_id"], r["label"], box_from_json(r["box"])),
+                                 float(r["visible_fraction"]), float(r["truncated_fraction"]), bbox))
+        diagnostics[r["object_id"]] = dict(r.get("diagnostics") or {})
+    return seen, diagnostics
+
+
+def detections_from_records(records: Sequence[Mapping[str, Any]], sources: Sequence[str], n_detections: int
+                            ) -> tuple[list[Detection], dict[str, list[Lift]]]:
+    """Rebuild a view's detections and per-source lifts from its ``detections`` records.
+
+    Masks are not stored, so each rebuilt :class:`Detection` carries an empty stand-in mask: it can be matched
+    and answered from, but not lifted again. Its full-resolution mask statistics are the stored ones.
+
+    Parameters
+    ----------
+    records : sequence of mapping
+        One record per detection and depth source (phrase, labels, score, ``box2d``, ``mask`` statistics,
+        ``lift_stride``, ``lift_error``, world ``box`` or ``None``, ``features``).
+    sources : sequence of str
+        The view's depth sources.
+    n_detections : int
+        The view's number of detections; every source must have a record for each.
+
+    Returns
+    -------
+    detections : list of Detection
+        One per detection index ``0 .. n_detections - 1``.
+    lifts : dict of str to list of Lift
+        Depth source -> one lift per detection.
+
+    Raises
+    ------
+    ValueError
+        If a source lacks a detection, has one twice, or the sources disagree about a detection.
+    """
+    by_source: dict[str, dict[int, Mapping[str, Any]]] = {s: {} for s in sources}
+    for r in records:
+        rows = by_source.setdefault(r["source"], {})
+        if r["detection"] in rows:
+            raise ValueError(f"detection {r['detection']} appears twice for source {r['source']!r}")
+        rows[r["detection"]] = r
+    if set(by_source) != set(sources) or any(set(rows) != set(range(n_detections)) for rows in by_source.values()):
+        raise ValueError(f"detection records do not cover {n_detections} detections for sources {list(sources)}")
+    detections: list[Detection] = []
+    for i in range(n_detections):
+        rows = [by_source[s][i] for s in sources]
+        first = rows[0]
+        identity = (first["phrase"], first["labels"], first["score"], first["box2d"], first["mask"])
+        if any((r["phrase"], r["labels"], r["score"], r["box2d"], r["mask"]) != identity for r in rows[1:]):
+            raise ValueError(f"depth sources disagree about detection {i}")
+        labels = tuple(first["labels"])
+        x0, y0, x1, y1 = (float(v) for v in first["box2d"])
+        instance = Instance(first["phrase"], _NO_MASK, (x0, y0, x1, y1), float(first["score"]))
+        detections.append(Detection(i, instance, labels, labels[0] if labels else None, dict(first["mask"])))
+    lifts = {s: [Lift(None if by_source[s][i]["box"] is None else box_from_json(by_source[s][i]["box"]),
+                      dict(by_source[s][i]["features"]), by_source[s][i]["lift_error"],
+                      int(by_source[s][i]["lift_stride"])) for i in range(n_detections)] for s in sources}
+    return detections, lifts
+
+
+def rematch_view(records: Mapping[str, Any], *, association: str, match_2d: Match2DConfig | None = None,
+                 match: MatchConfig | None = None) -> ViewResult:
+    """Redo the association of a stored view and recompute its answers, without any model.
+
+    The questions are the stored oracle questions. The oracle answers are recomputed from the rebuilt oracle
+    objects and must equal the stored records (:func:`json_close`: identical structure, strings, choices and
+    integers; floats within a few units in the last place, since array memory layout can change the rounding of
+    a matrix product), which checks that the view, boxes and visibility were rebuilt faithfully; the presence
+    flags must match exactly. The stored oracle items are then returned verbatim, so oracle outputs written from
+    the result are byte-identical to the stored ones. Every other setting (question generation, lifting) is the
+    stored one; only the association changes.
+
+    Parameters
+    ----------
+    records : mapping
+        A view's :meth:`ViewResult.records` as stored in a shard (``view``, ``oracle_objects``, ``detections``,
+        ``qa``).
+    association : str
+        One of :data:`ASSOCIATIONS`.
+    match_2d : Match2DConfig, optional
+        Overlap threshold of the 2D association; defaults to the stored one, else ``Match2DConfig()``.
+    match : MatchConfig, optional
+        Gate of the 3D association; defaults to the stored one.
+
+    Returns
+    -------
+    ViewResult
+        The view with the new matches and automatic answers. ``timings`` keeps the stored stages and replaces
+        ``match_<source>`` and ``qa`` (seconds) with the re-association's.
+
+    Raises
+    ------
+    ValueError
+        If the stored records are inconsistent, or a recomputed oracle answer or presence flag differs from the
+        stored one.
+    """
+    view_record = records["view"]
+    stored = PipelineConfig.from_json(view_record["config"])
+    config = replace(stored, association=association, match_2d=match_2d or stored.match_2d,
+                     match=match or stored.match)
+    view = view_from_record(view_record)
+    key = view_record["view_key"]
+    visibility = view_record["visibility"]
+    sources = tuple(view_record["depth_sources"])
+    oracle, oracle_diag = oracle_from_records(records["oracle_objects"])
+    detections, lifts = detections_from_records(records["detections"], sources, int(view_record["n_detections"]))
+    stored_oracle = records["qa"].get("oracle", [])
+    specs = [QAItem.from_json(r).spec for r in stored_oracle]
+    if len(specs) != int(view_record["n_specs"]):
+        raise ValueError(f"{key}: {len(specs)} stored oracle items for {view_record['n_specs']} questions")
+
+    present_ids = visible_ids(oracle, config.qa)
+    if {r["object_id"] for r in records["oracle_objects"] if r["present"]} != present_ids:
+        raise ValueError(f"{key}: recomputed presence differs from the stored flags")
+    present = [o for o in oracle if o.obj.object_id in present_ids]
+    timings = dict(view_record.get("timings") or {})
+    matches: dict[str, MatchResult] = {}
+    for source in sources:
+        t = time.perf_counter()
+        matches[source] = match_view(detections, lifts[source], present, visibility, config, view.up)
+        timings[f"match_{source}"] = time.perf_counter() - t
+
+    t = time.perf_counter()
+    recomputed = answer_oracle(specs, view, oracle, config.qa)
+    if len(recomputed) != len(stored_oracle):
+        raise ValueError(f"{key}: {len(recomputed)} recomputed oracle answers for {len(stored_oracle)} stored")
+    for item, stored_item in zip(recomputed, stored_oracle):
+        if not json_close(json.loads(to_json_line(item.to_json())), stored_item):
+            raise ValueError(f"{key}: recomputed oracle answer of question {item.id} differs from the stored one")
+    items = {"oracle": [QAItem.from_json(r) for r in stored_oracle]}          # verbatim: byte-identical output
+    oracle_labels = {o.obj.object_id: o.obj.label for o in oracle}
+    unanswered: dict[str, list[dict[str, Any]]] = {}
+    for source in sources:
+        items[f"auto_{source}"], unanswered[f"auto_{source}"] = answer_auto(
+            specs, view, source, detections, lifts[source], matches[source], oracle_labels)
+    timings["qa"] = time.perf_counter() - t
+    return ViewResult(view, visibility, sources, oracle, oracle_diag, detections, lifts, matches, specs, items,
+                      unanswered, dict(view_record.get("qa_drops") or {}), timings, config)
 
 
 # --------------------------------------------------------------------------------------------------------

@@ -1,8 +1,10 @@
-"""Tests for the label pipeline on a synthetic view: oracle visibility, lifting, matching and paired answers.
+"""Tests for the label pipeline on a synthetic view: oracle visibility, lifting, association and paired answers.
 
 The scene is a chair and a table in front of a wall, seen by a camera at the origin looking along world +y
-(world z up). Depth and instance masks are ray-cast exactly, so the pipeline runs without any model. An
-opt-in test runs the real models on one ARKitScenes view (``MEASURED_SPACE_GPU_TESTS=1``).
+(world z up). Depth and instance masks are ray-cast exactly, so the pipeline runs without any model; a depth
+map scaled by 3 stands in for a badly wrong monocular estimate. Re-association from stored records is checked
+against the full pipeline. An opt-in test runs the real models on one ARKitScenes view
+(``MEASURED_SPACE_GPU_TESTS=1``).
 """
 
 from __future__ import annotations
@@ -15,15 +17,19 @@ import pytest
 from numpy.typing import NDArray
 
 from measured_space.geometry import Array, Camera, OrientedBox, make_pose
+from measured_space.matching import Match2DConfig
 from measured_space.perception import Instance
 from measured_space.pipeline import (
     AUTO_KEY_PREFIX,
     GT_BOX2D,
     PipelineConfig,
     gt_box_visibility,
+    json_close,
     process_view,
     projected_extent,
+    rematch_view,
     to_json_line,
+    visible_box_edges,
 )
 from measured_space.scene import FrameView, SceneObject
 
@@ -139,7 +145,12 @@ def test_process_view_pairs_oracle_and_auto(scene: tuple[FrameView, Array, list[
     match = result.matches["laser"]
     assert {(m.detection, m.object_id) for m in match.matches} == {(0, "chair-1"), (1, "table-1")}
     assert match.false_positives == (2,) and match.missed == ()
-    assert all(m.distance < m.gate for m in match.matches)
+    assert all(m.gate is None and m.iou2d > 0.95 and m.label_correct and not m.ambiguous and m.distance < 0.5
+               for m in match.matches)                                   # 2D association: no gate
+    gated = process_view(view, [CHAIR, TABLE, HIDDEN], instances, {"laser": depth}, visibility="laser",
+                         config=PipelineConfig(association="3d")).matches["laser"]
+    assert {(m.detection, m.object_id) for m in gated.matches} == {(0, "chair-1"), (1, "table-1")}
+    assert all(m.iou2d is None and m.distance < m.gate for m in gated.matches)
 
     oracle = {i.id: i for i in result.items["oracle"]}
     assert set(oracle) == {s.id for s in result.specs} and len(oracle) > 0
@@ -154,6 +165,7 @@ def test_process_view_pairs_oracle_and_auto(scene: tuple[FrameView, Array, list[
         for ref in item.extra["referents"]:
             assert ref["object_id"] in ("chair-1", "table-1") and ref["score"] in (0.9, 0.8)
             assert len(ref["features"]) == 17 and ref["match_distance"] < 0.5
+            assert ref["label_correct"] is True and ref["match_iou2d"] > 0.95
         if item.spec.qtype == "size_height":
             # Exact depth, but erosion (3 px of a ~100 px tall mask) and percentile trimming shrink the height.
             assert -0.1 < item.answer - oracle[item_id].answer < 0.0
@@ -169,7 +181,90 @@ def test_process_view_pairs_oracle_and_auto(scene: tuple[FrameView, Array, list[
     records = result.records()
     assert len(records["oracle_objects"]) == 3 and len(records["detections"]) == 3 * 2
     assert {r["status"] for r in records["detections"]} == {"matched", "false_positive"}
+    assert all(r["match"]["label_correct"] and r["match"]["gate"] is None
+               for r in records["detections"] if r["match"] is not None)
     json.loads(to_json_line(records))
+
+
+def test_far_errors_and_class_confusions_are_paired_not_censored(
+        scene: tuple[FrameView, Array, list[Instance]]) -> None:
+    """A "stool" on the chair and boxes 3x too far are paired in 2D and answered; the 3D gate drops them.
+
+    Parameters
+    ----------
+    scene : tuple
+        The synthetic view, depth and detections.
+    """
+    view, depth, instances = scene
+    stool = Instance("stool", instances[0].mask, instances[0].box2d, 0.9)          # the chair, misnamed
+    detections = [stool, instances[1]]
+    depths = {"laser": depth, "moge": depth * 3.0}
+    result = process_view(view, [CHAIR, TABLE], detections, depths, visibility="laser")
+    for source in depths:
+        by_object = result.matches[source].by_object()
+        assert set(by_object) == {"chair-1", "table-1"}
+        assert not by_object["chair-1"].label_correct and by_object["table-1"].label_correct
+        assert result.unanswered[f"auto_{source}"] == []                   # every question has an auto answer
+    assert min(m.distance for m in result.matches["moge"].matches) > 5.0   # measured, not gated
+    auto = {i.id: i for i in result.items["auto_moge"]}
+    chair_items = [i for i in auto.values() if "chair-1" in [r.object_id for r in i.spec.referents]]
+    assert chair_items
+    for item in chair_items:
+        ref = next(r for r in item.extra["referents"] if r["object_id"] == "chair-1")
+        assert ref["label_correct"] is False and ref["phrase"] == "stool" and ref["match_distance"] > 5.0
+        assert next(o["label"] for o in item.objects if o["object_id"] == "chair-1") == "stool"
+    counts = {i.spec.params["phrase"]: i for i in result.items["auto_laser"] if i.spec.qtype == "count"}
+    assert counts["chair"].answer == 0 and counts["chair"].extra["n_detections_2d"] == 0   # counts by own class
+    records = result.records()
+    chair_record = next(r for r in records["oracle_objects"] if r["object_id"] == "chair-1")
+    assert chair_record["match"]["moge"]["label_correct"] is False
+
+    gated = process_view(view, [CHAIR, TABLE], detections, depths, visibility="laser",
+                         config=PipelineConfig(association="3d"))
+    assert gated.matches["laser"].missed == ("chair-1",)                    # the confusion becomes a miss
+    assert gated.matches["moge"].matches == ()                              # the far boxes fall outside the gate
+    assert len(gated.unanswered["auto_moge"]) == len(gated.specs) - 2       # only the two counts remain
+
+
+def test_rematch_view_reproduces_the_pipeline(scene: tuple[FrameView, Array, list[Instance]]) -> None:
+    """Re-associating stored records gives the pipeline's own answers, keeps the oracle verbatim and checks it.
+
+    Parameters
+    ----------
+    scene : tuple
+        The synthetic view, depth and detections.
+    """
+    view, depth, instances = scene
+    depths = {"laser": depth, "moge": depth * 3.0}
+    run = {a: process_view(view, [CHAIR, TABLE, HIDDEN], instances, depths, visibility="laser",
+                           config=PipelineConfig(association=a)) for a in ("2d", "3d")}
+    stored = json.loads(to_json_line(run["3d"].records()))                 # as written to a shard
+    for association in ("3d", "2d"):
+        expected = json.loads(to_json_line(run[association].records()))
+        got = json.loads(to_json_line(rematch_view(stored, association=association).records()))
+        assert [to_json_line(r) for r in got["qa"]["oracle"]] == [to_json_line(r) for r in stored["qa"]["oracle"]]
+        assert json_close(got["qa"], expected["qa"]) and json_close(got["detections"], expected["detections"])
+        assert got["view"]["config"]["association"] == association
+    assert rematch_view(stored, association="2d", match_2d=Match2DConfig(0.999)).matches["laser"].matches == ()
+
+    tampered = json.loads(to_json_line(run["3d"].records()))
+    numeric = next(r for r in tampered["qa"]["oracle"] if r["answer_type"] == "number")
+    numeric["answer"] += 1e-6
+    with pytest.raises(ValueError, match="oracle answer"):
+        rematch_view(tampered, association="2d")
+
+
+def test_config_json_round_trip_and_legacy_association() -> None:
+    """Settings survive JSON; a stored config from before the 2D association reads as the 3D association."""
+    config = PipelineConfig(lift_stride=3, association="2d", match_2d=Match2DConfig(0.4))
+    assert PipelineConfig.from_json(json.loads(json.dumps(config.to_json()))) == config
+    legacy = config.to_json()
+    del legacy["association"], legacy["match_2d"]
+    assert PipelineConfig.from_json(legacy).association == "3d"
+    with pytest.raises(ValueError):
+        PipelineConfig(association="nearest")
+    assert visible_box_edges((10.0, 20.0, 30.0, 40.0), GT_BOX2D) == (10.0, 20.0, 31.0, 41.0)
+    assert visible_box_edges((10.0, 20.0, 30.0, 40.0), "laser") == (10.5, 20.5, 30.5, 40.5)
 
 
 def test_missed_referent_leaves_spec_unanswered(scene: tuple[FrameView, Array, list[Instance]]) -> None:

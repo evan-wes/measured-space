@@ -1,17 +1,37 @@
 """Match automatic detections to ground-truth objects in one view.
 
-A detection is matched to at most one ground-truth ("oracle") object and vice versa. Candidate pairs must be
+A detection is matched to at most one ground-truth ("oracle") object and vice versa. Two associations are
+available; both use the Hungarian method (:func:`scipy.optimize.linear_sum_assignment`).
+
+**2D image overlap, class-agnostic (primary;** :func:`match_detections_2d` **).** A detection's 2D box is
+compared with each oracle object's *visible* 2D box in the same image by intersection-over-union, and the
+assignment maximises the summed IoU over pairs with ``IoU >= min_iou`` (default 0.3). Pairs below the threshold
+earn nothing, so a detection is never pushed onto a weakly overlapping object just to raise the number of
+matches. The association never looks at 3D geometry or at the class, so:
+
+- a detection whose 3D box is far from the object's (monocular depth at range) is still paired, and its 3D
+  centre distance and IoU are *measured errors*, recorded per match, never a gate;
+- a detection whose phrase does not map to the object's label (a parked forklift detected as "pallet jack") is
+  still paired, with ``label_correct`` False: a semantic error, not a miss.
+
+Overlaps can be ambiguous (two objects behind one detection, or two detections on one object). The assignment
+resolves them globally, and every match records the runner-up overlap: the largest IoU of its detection with
+another candidate object, or of its object with another detection. ``ambiguous`` is True when that runner-up
+also clears ``min_iou``, i.e. when another feasible pairing existed for either member.
+
+**3D centre distance, label-gated (comparison;** :func:`match_detections` **).** Candidate pairs must be
 **label-compatible**: a detection's prompt phrase can stand for several dataset labels (a "mobile robot" may be
 a NovaCarter or a Transporter), and it may only match an object with one of them. Among compatible pairs the
-assignment minimises the summed 3D centre distance (the Hungarian method, :func:`scipy.optimize.
-linear_sum_assignment`), subject to a **distance gate** per oracle object of
+assignment minimises the summed 3D centre distance, subject to a **distance gate** per oracle object of
 
     gate = max(min_gate, gate_diagonal_fraction * |oracle box diagonal|)
 
 (default ``max(0.5 m, 0.5 * diagonal)``), so a large object tolerates a larger centre offset than a small one.
 Infeasible pairs (incompatible or beyond the gate) get a cost larger than any feasible assignment's total, so
 the solver first maximises the number of feasible matches and then minimises their summed distance; infeasible
-pairs it is forced to assign are then discarded.
+pairs it is forced to assign are then discarded. This association censors exactly the errors an audit must
+measure (large 3D errors fall outside the gate, class confusions become misses); it is kept to report how much
+it hides.
 
 Each match also reports the 3D intersection-over-union of the two boxes, computed for **gravity-aligned
 prisms** (:func:`prism_iou`): each box is replaced by the vertical prism over the convex hull of its corners
@@ -20,6 +40,8 @@ projected onto the horizontal plane, spanning the box's extent along ``up``. For
 boxes tilted by 2-9.5 degrees) the prism is the box itself and the IoU is exact; for a tilted box it is the IoU
 of its gravity-aligned bounding prism, which overstates the box's volume.
 
+2D boxes are ``(xmin, ymin, xmax, ymax)`` in pixels with pixel *edges* at integer coordinates (a box covering a
+``W x H`` image is ``(0, 0, W, H)``), the convention of :attr:`measured_space.perception.Instance.box2d`.
 Distances are in metres. Conventions are those of :mod:`measured_space.geometry`.
 """
 
@@ -36,6 +58,33 @@ from measured_space.geometry import Array, OrientedBox
 from measured_space.scene import SceneObject
 
 _WORLD_UP = (0.0, 0.0, 1.0)
+
+Box2D = tuple[float, float, float, float]
+"""tuple of float: an image box ``(xmin, ymin, xmax, ymax)`` in pixels, pixel edges at integer coordinates."""
+
+
+@dataclass(frozen=True)
+class Match2DConfig:
+    """Overlap threshold of the class-agnostic 2D association.
+
+    Parameters
+    ----------
+    min_iou : float, default 0.3
+        Smallest 2D IoU at which a detection and an oracle object may be paired, in (0, 1].
+    """
+
+    min_iou: float = 0.3
+
+    def __post_init__(self) -> None:
+        """Validate the threshold.
+
+        Raises
+        ------
+        ValueError
+            If ``min_iou`` is not in (0, 1].
+        """
+        if not 0.0 < self.min_iou <= 1.0:
+            raise ValueError(f"min_iou must be in (0, 1], got {self.min_iou}")
 
 
 @dataclass(frozen=True)
@@ -80,18 +129,34 @@ class Match:
     object_id : str
         The oracle object's id.
     distance : float
-        Distance between the two box centres, metres.
+        Distance between the two box centres, metres (a measured error under the 2D association).
     iou : float
         3D IoU of the two boxes' gravity-aligned prisms (see :func:`prism_iou`), in [0, 1].
-    gate : float
-        The distance gate that applied to this oracle object, metres.
+    gate : float or None
+        The distance gate that applied to this oracle object, metres; ``None`` under the 2D association, which
+        has no gate.
+    iou2d : float or None, default None
+        IoU of the detection's 2D box with the object's visible 2D box, in [0, 1]; ``None`` under the 3D
+        association.
+    label_correct : bool, default True
+        Whether the detection's phrase maps to the object's label. Always True under the 3D association, which
+        only pairs label-compatible boxes.
+    runner_up_iou2d : float or None, default None
+        Largest 2D IoU of the detection with another candidate object or of the object with another boxed
+        detection (0 if there is none); ``None`` under the 3D association.
+    ambiguous : bool, default False
+        True if ``runner_up_iou2d`` also clears the association's ``min_iou``: another feasible pairing existed.
     """
 
     detection: int
     object_id: str
     distance: float
     iou: float
-    gate: float
+    gate: float | None
+    iou2d: float | None = None
+    label_correct: bool = True
+    runner_up_iou2d: float | None = None
+    ambiguous: bool = False
 
 
 @dataclass(frozen=True)
@@ -387,8 +452,137 @@ def match_detections(boxes: Sequence[OrientedBox | None], labels: Sequence[Colle
             i = boxed[r]
             matches.append(Match(i, objects[c].object_id, float(distance[r, c]),
                                  prism_iou(boxes[i], objects[c].box, up), float(gates[c])))  # type: ignore[arg-type]
-    matches.sort(key=lambda m: m.detection)
+    return _result(matches, objects, boxed, unboxed)
+
+
+def _result(matches: list[Match], objects: Sequence[SceneObject], boxed: Sequence[int],
+            unboxed: tuple[int, ...]) -> MatchResult:
+    """Collect matches, misses and false positives into a :class:`MatchResult`.
+
+    Parameters
+    ----------
+    matches : list of Match
+        The accepted pairs, in any order (sorted here by detection index).
+    objects : sequence of SceneObject
+        The candidate oracle objects, in input order.
+    boxed : sequence of int
+        Indices of the detections that took part (those with a 3D box), ascending.
+    unboxed : tuple of int
+        Indices of the detections without a box.
+
+    Returns
+    -------
+    MatchResult
+        The matches sorted by detection, unmatched object ids in input order, unmatched boxed detections.
+    """
+    matches = sorted(matches, key=lambda m: m.detection)
     matched_det = {m.detection for m in matches}
     matched_obj = {m.object_id for m in matches}
     return MatchResult(tuple(matches), tuple(o.object_id for o in objects if o.object_id not in matched_obj),
                        tuple(i for i in boxed if i not in matched_det), unboxed)
+
+
+# --------------------------------------------------------------------------------------------------------
+# 2D image-overlap association (class-agnostic)
+# --------------------------------------------------------------------------------------------------------
+
+
+def box_iou_2d(a: ArrayLike, b: ArrayLike) -> Array:
+    """Pairwise intersection-over-union of axis-aligned image boxes.
+
+    Parameters
+    ----------
+    a : array_like, shape (N, 4)
+        Boxes ``(xmin, ymin, xmax, ymax)``, pixels, edges at integer coordinates.
+    b : array_like, shape (M, 4)
+        Boxes in the same convention.
+
+    Returns
+    -------
+    numpy.ndarray, shape (N, M)
+        IoU in [0, 1]; 0 where either box has no area.
+    """
+    a = np.asarray(a, dtype=np.float64).reshape(-1, 4)
+    b = np.asarray(b, dtype=np.float64).reshape(-1, 4)
+    width = np.minimum(a[:, None, 2], b[None, :, 2]) - np.maximum(a[:, None, 0], b[None, :, 0])
+    height = np.minimum(a[:, None, 3], b[None, :, 3]) - np.maximum(a[:, None, 1], b[None, :, 1])
+    intersection = np.clip(width, 0.0, None) * np.clip(height, 0.0, None)
+    area_a = np.clip(a[:, 2] - a[:, 0], 0.0, None) * np.clip(a[:, 3] - a[:, 1], 0.0, None)
+    area_b = np.clip(b[:, 2] - b[:, 0], 0.0, None) * np.clip(b[:, 3] - b[:, 1], 0.0, None)
+    union = area_a[:, None] + area_b[None, :] - intersection
+    with np.errstate(divide="ignore", invalid="ignore"):
+        iou = np.where(union > 0.0, intersection / union, 0.0)
+    return np.clip(iou, 0.0, 1.0)
+
+
+def match_detections_2d(boxes2d: Sequence[ArrayLike], boxes: Sequence[OrientedBox | None],
+                        labels: Sequence[Collection[str]], objects: Sequence[SceneObject],
+                        object_boxes2d: Sequence[ArrayLike], config: Match2DConfig | None = None, *,
+                        up: ArrayLike = _WORLD_UP) -> MatchResult:
+    """Match one view's detections to its oracle objects by 2D overlap, class-agnostic (Hungarian on IoU).
+
+    The assignment maximises the summed 2D IoU over pairs with ``IoU >= config.min_iou``; pairs below the
+    threshold cost as much as leaving both members unmatched. Labels never restrict a pair: they only set
+    :attr:`Match.label_correct`. 3D geometry never restricts a pair either: the centre distance and the prism
+    IoU of every match are recorded as measured errors.
+
+    Parameters
+    ----------
+    boxes2d : sequence of array_like, shape (4,)
+        Each detection's 2D box ``(xmin, ymin, xmax, ymax)``, pixels, edges at integer coordinates.
+    boxes : sequence of OrientedBox or None
+        Each detection's 3D box in the oracle boxes' frame; ``None`` for a detection without a box, which takes
+        no part (as in :func:`match_detections`). Same length as ``boxes2d``.
+    labels : sequence of collection of str
+        For each detection, the dataset labels its phrase may stand for (e.g. from
+        :func:`measured_space.perception.labels_for_phrase`); same length as ``boxes2d``.
+    objects : sequence of SceneObject
+        Oracle objects that may be matched (normally those present in the view); ids must be unique.
+    object_boxes2d : sequence of array_like, shape (4,)
+        Each object's visible 2D box in the same convention as ``boxes2d``; same length as ``objects``.
+    config : Match2DConfig, optional
+        The overlap threshold; defaults to ``Match2DConfig()``.
+    up : array_like, shape (3,), default (0, 0, 1)
+        Up direction for the 3D IoU prisms.
+
+    Returns
+    -------
+    MatchResult
+        Matches with their 2D IoU, label correctness, runner-up overlap, 3D centre distance and 3D IoU;
+        unmatched oracle ids, unmatched boxed detections, and detections without a box.
+
+    Raises
+    ------
+    ValueError
+        If the per-detection or per-object sequences differ in length, or object ids repeat.
+    """
+    config = config or Match2DConfig()
+    if not len(boxes2d) == len(boxes) == len(labels):
+        raise ValueError(f"{len(boxes2d)} 2D boxes, {len(boxes)} 3D boxes and {len(labels)} label sets")
+    if len(object_boxes2d) != len(objects):
+        raise ValueError(f"{len(objects)} objects but {len(object_boxes2d)} object 2D boxes")
+    if len({o.object_id for o in objects}) != len(objects):
+        raise ValueError("oracle object ids must be unique")
+    boxed = [i for i, box in enumerate(boxes) if box is not None]
+    unboxed = tuple(i for i, box in enumerate(boxes) if box is None)
+    if not boxed or not objects:
+        return MatchResult((), tuple(o.object_id for o in objects), tuple(boxed), unboxed)
+
+    overlap = box_iou_2d(np.stack([np.asarray(boxes2d[i], dtype=np.float64) for i in boxed]),
+                         np.stack([np.asarray(b, dtype=np.float64) for b in object_boxes2d]))
+    feasible = overlap >= config.min_iou
+    # Cost 1 - IoU for a feasible pair and 1 (no credit) otherwise: the optimum maximises summed feasible IoU.
+    rows, cols = linear_sum_assignment(np.where(feasible, 1.0 - overlap, 1.0))
+
+    matches = []
+    for r, c in zip(rows, cols):
+        if not feasible[r, c]:
+            continue
+        i, obj = boxed[r], objects[c]
+        box: OrientedBox = boxes[i]                                                   # type: ignore[assignment]
+        others = np.concatenate([np.delete(overlap[r], c), np.delete(overlap[:, c], r)])
+        runner_up = float(others.max()) if others.size else 0.0
+        matches.append(Match(i, obj.object_id, float(np.linalg.norm(box.center - obj.box.center)),
+                             prism_iou(box, obj.box, up), None, float(overlap[r, c]), obj.label in labels[i],
+                             runner_up, runner_up >= config.min_iou))
+    return _result(matches, objects, boxed, unboxed)

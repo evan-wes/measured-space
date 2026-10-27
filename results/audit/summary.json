@@ -44,20 +44,20 @@
   "smartspaces"
  ],
  "n_rows": 34446,
- "n_labelled": 14054,
+ "n_labelled": 22834,
  "inputs": {
   "arkitscenes": {
    "qa_auto_laser.jsonl": {
-    "bytes": 549744,
-    "sha256": "7df3b547d36e590b47a4064b59d768d3c35bc819b978b20ea728af2b3e09d0ee"
+    "bytes": 569039,
+    "sha256": "8a6ca0e671c1a3a756264cb1ce8bfeb0417a4693a8cd4e76722649c6056fe9a2"
    },
    "qa_auto_lidar.jsonl": {
-    "bytes": 544144,
-    "sha256": "0f053bd278b4ff4fc32d7de473328b4e9923eca5142ae4f7712261de5c7e581a"
+    "bytes": 563484,
+    "sha256": "afaebbd83321c235611a72f0bd66011cf9dcc75029100ff8c3a35c378e55084b"
    },
    "qa_auto_moge.jsonl": {
-    "bytes": 543593,
-    "sha256": "e60f6b6f824e1c1c0fa8e30be2650b9f2182f0706fb4c0ab5371654d7cd68a10"
+    "bytes": 562950,
+    "sha256": "3032f7effda4f213397637c4eb878874f46b7ba6a5cba1a457c364784f334aa9"
    },
    "qa_oracle.jsonl": {
     "bytes": 327510,
@@ -71,12 +71,12 @@
   },
   "smartspaces": {
    "qa_auto_gt_depth.jsonl": {
-    "bytes": 8933826,
-    "sha256": "f44ef7485121b2ba7283f54c254a4f0ab40ad5b51d794557dde0557b79ece0ce"
+    "bytes": 13716230,
+    "sha256": "5eb827016fb30faac501de0dae6cf7a818f25a9b0cb36507305499b87fd943c3"
    },
    "qa_auto_moge.jsonl": {
-    "bytes": 20240658,
-    "sha256": "d1c8458a7d5833e94496bc6e69a3dc2d168f78beafff07d8f16a0acbed5d3155"
+    "bytes": 39789640,
+    "sha256": "5d20267d7c9b533b2ccb36bdaded4679c06603bb39815895f478644b67fc5723"
    },
    "qa_oracle.jsonl": {
     "bytes": 42352105,
@@ -90,9 +90,8 @@
  },
  "notes": [
   "arkitscenes/distance_surface: skipped (21 labelled rows, 2 scenes)",
-  "smartspaces/closest_instance: skipped (60 labelled rows, 2 scenes)",
-  "2530 numeric test rows calibrated on the question type pooled over depth sources (too few same-source calibration scores): [('arkitscenes', 'laser', '42444966'), ('arkitscenes', 'laser', '42446100'), ('arkitscenes', 'lidar', '42444966'), ('arkitscenes', 'lidar', '42446100'), ('arkitscenes', 'moge', '42444966'), ('arkitscenes', 'moge', '42446100'), ('smartspaces', 'gt_depth', 'MTMC_Tracking_2026/train/Warehouse_018')]"
+  "3510 numeric test rows calibrated on the question type pooled over depth sources (too few same-source calibration scores): [('arkitscenes', 'laser', '42444966'), ('arkitscenes', 'laser', '42446100'), ('arkitscenes', 'lidar', '42444966'), ('arkitscenes', 'lidar', '42446100'), ('arkitscenes', 'moge', '42444966'), ('arkitscenes', 'moge', '42446100'), ('smartspaces', 'gt_depth', 'MTMC_Tracking_2026/train/Warehouse_018')]"
  ],
- "git_commit": "5b8556bf3e6f36868fdcfb6cbf1d51aa44dab24b+dirty",
- "seconds": 166.7
+ "git_commit": "bc41d42e997ec19166224d708625b28013763ac2+dirty",
+ "seconds": 198.7
 }

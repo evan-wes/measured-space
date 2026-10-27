@@ -1,6 +1,6 @@
 """Produce paired oracle and automatic spatial labels for ARKitScenes and Smart Spaces views.
 
-Every selected view goes through :func:`measured_space.pipeline.run_view` (SAM 3, MoGe-2, lifting, matching,
+Every selected view goes through :func:`measured_space.pipeline.run_view` (SAM 3, MoGe-2, lifting, association,
 questions, answers). Each finished view is written at once to its own shard,
 ``<labels>/<dataset>/shards/<view>.json``, so an interrupted run resumes by skipping views whose shard exists.
 After the views are processed (or with ``--assemble-only``) the shards are assembled into, per dataset:
@@ -12,11 +12,24 @@ After the views are processed (or with ``--assemble-only``) the shards are assem
   box, lift features, match);
 - ``qa_oracle.jsonl`` and ``qa_auto_<depth>.jsonl``, written with :func:`measured_space.qa_schema.write_jsonl`;
   items of the same question share an ``id`` across files;
-- ``summary.json``: counts per question type and source, match rates per class and depth source, automatic
-  coverage and agreement with the oracle, runtimes, and the GPU monitor's summary line if given.
+- ``summary.json``: counts per question type and source, match rates per class and depth source (with class
+  confusions and 2D overlap under the 2D association), automatic coverage and agreement with the oracle,
+  runtimes, and the GPU monitor's summary line if given.
 
-``<labels>`` is ``<data_root>/outputs/labels`` (or a sub-folder of it, ``--out-subdir``). A combined
-``summary.json`` and a ``runs.jsonl`` log of invocations are written there too.
+``<labels>`` is ``<data_root>/outputs/labels`` (or a sub-folder of it, ``--out-subdir``, or any folder given with
+``--out-dir``). A combined ``summary.json`` and a ``runs.jsonl`` log of invocations are written there too.
+
+**Association.** ``--association 2d`` (default) pairs detections with ground-truth objects by 2D overlap,
+class-agnostic, with no 3D gate (:func:`measured_space.matching.match_detections_2d`, ``--min-iou``);
+``--association 3d`` uses the gated, label-compatible 3D centre distance kept for comparison.
+
+**Re-association without models** (``--rematch-from <labels root>``). Reads every shard of the given label
+folder, redoes the association with :func:`measured_space.pipeline.rematch_view` (CPU only; detections, lifted
+boxes, features and the oracle's visible 2D boxes are all stored), recomputes the automatic answers, writes new
+shards under ``--out-dir`` (which must differ from the source) and assembles them. The oracle answers are
+recomputed as a check of the reconstruction and copied verbatim; after assembly each dataset's
+``qa_oracle.jsonl`` must be byte-identical to the source's (SHA-256 compared, recorded in ``runs.jsonl``), else
+the exit status is 1. Shards keep the source's GPU timings and add a ``rematch`` record.
 
 Default sampling: all posed views of the six ARKitScenes laser videos (148); Smart Spaces ``Warehouse_018``
 cameras 0000 and 0002 every 60th frame, i.e. every 2 s (300 views; oracle visibility and an automatic source from
@@ -28,17 +41,23 @@ Run from the repository root (GPU)::
 
     python scripts/run_labels.py
     python scripts/run_labels.py --assemble-only --gpu-watch-summary "GPU_WATCH SUMMARY ..."
+
+Re-associate stored labels (CPU, no models)::
+
+    python scripts/run_labels.py --rematch-from <data_root>/outputs/labels --association 2d \\
+        --out-dir <data_root>/outputs/labels_2d
 """
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
 import sys
 import time
-from collections import Counter, defaultdict
+from collections import Counter
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -51,10 +70,13 @@ import yaml
 
 from measured_space.config import REPO_ROOT, data_root
 from measured_space.datasets import arkitscenes, smartspaces
+from measured_space.matching import Match2DConfig
 from measured_space.pipeline import (
+    ASSOCIATIONS,
     DEPTH_SOURCES,
     GT_BOX2D,
     PipelineConfig,
+    rematch_view,
     run_view,
     scene_kind,
     to_json_line,
@@ -132,7 +154,15 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     p.add_argument("--lift-stride-min-pixels", type=int, default=50000,
                    help="masks with at least this many pixels are lifted with --lift-stride")
     p.add_argument("--qa-seed", type=int, default=0, help="seed of the per-type question cap")
+    p.add_argument("--association", choices=list(ASSOCIATIONS), default="2d",
+                   help="2d: image overlap, class-agnostic (primary); 3d: gated centre distance (comparison)")
+    p.add_argument("--min-iou", type=float, default=Match2DConfig.min_iou,
+                   help="smallest 2D IoU of a pair under the 2D association")
     p.add_argument("--out-subdir", default="", help="write under <data_root>/outputs/labels/<this>")
+    p.add_argument("--out-dir", type=Path, default=None,
+                   help="write to this folder instead of <data_root>/outputs/labels[/<out-subdir>]")
+    p.add_argument("--rematch-from", type=Path, default=None,
+                   help="re-associate the shards of this label folder without models (needs --out-dir)")
     p.add_argument("--assemble-only", action="store_true", help="only assemble existing shards")
     p.add_argument("--no-assemble", action="store_true", help="do not assemble after processing")
     p.add_argument("--gpu-watch-summary", default=None, help="GPU_WATCH SUMMARY line to store in summary.json")
@@ -141,28 +171,33 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     return p.parse_args(argv)
 
 
-def labels_root(subdir: str) -> Path:
+def labels_root(subdir: str, out_dir: Path | None = None) -> Path:
     """The output folder for labels.
 
     Parameters
     ----------
     subdir : str
-        Optional sub-folder below ``<data_root>/outputs/labels``; empty for none.
+        Optional sub-folder below ``<data_root>/outputs/labels``; empty for none. Ignored with ``out_dir``.
+    out_dir : pathlib.Path, optional
+        An explicit output folder.
 
     Returns
     -------
     pathlib.Path
-        The folder (created if needed).
+        The folder, resolved (created if needed).
 
     Raises
     ------
     ValueError
         If ``subdir`` would leave ``outputs/labels``.
     """
-    base = (data_root() / "outputs" / "labels").resolve()
-    root = (base / subdir).resolve() if subdir else base
-    if root != base and base not in root.parents:
-        raise ValueError(f"--out-subdir {subdir!r} leaves {base}")
+    if out_dir is not None:
+        root = Path(out_dir).resolve()
+    else:
+        base = (data_root() / "outputs" / "labels").resolve()
+        root = (base / subdir).resolve() if subdir else base
+        if root != base and base not in root.parents:
+            raise ValueError(f"--out-subdir {subdir!r} leaves {base}")
     root.mkdir(parents=True, exist_ok=True)
     return root
 
@@ -436,6 +471,111 @@ def process(jobs: Iterator[Job], root: Path, config: PipelineConfig) -> dict[str
     return dict(counts)
 
 
+def rematch(source_root: Path, root: Path, datasets: Sequence[str], association: str,
+            match_2d: Match2DConfig) -> dict[str, int]:
+    """Re-associate every stored shard of a label folder and write the results as new shards (no models).
+
+    Parameters
+    ----------
+    source_root : pathlib.Path
+        Label folder whose ``<dataset>/shards/*.json`` are read (never written).
+    root : pathlib.Path
+        Output label folder; must differ from ``source_root``. Shards that already exist there are skipped.
+    datasets : sequence of str
+        Dataset folders to process (missing ones are skipped).
+    association : str
+        ``"2d"`` or ``"3d"`` (see :data:`measured_space.pipeline.ASSOCIATIONS`).
+    match_2d : Match2DConfig
+        Overlap threshold of the 2D association.
+
+    Returns
+    -------
+    dict of str to int
+        ``processed`` and ``skipped`` view counts.
+
+    Raises
+    ------
+    ValueError
+        If ``root`` is ``source_root``, or a stored view fails the reconstruction checks of
+        :func:`measured_space.pipeline.rematch_view`.
+    """
+    if Path(source_root).resolve() == Path(root).resolve():
+        raise ValueError(f"--out-dir must differ from --rematch-from ({root}); the source is never overwritten")
+    counts: Counter = Counter()
+    for dataset in datasets:
+        paths = sorted((Path(source_root) / dataset / "shards").glob("*.json"))
+        t0 = time.perf_counter()
+        for path in paths:
+            out = root / dataset / "shards" / path.name
+            if out.exists():
+                counts["skipped"] += 1
+                continue
+            stored = json.loads(path.read_text())
+            t = time.perf_counter()
+            result = rematch_view(stored["records"], association=association, match_2d=match_2d)
+            records = result.records()
+            seconds = time.perf_counter() - t
+            write_shard(out, {"records": records, "wall_seconds": stored["wall_seconds"],
+                              "started": stored["started"], "finished": stored["finished"],
+                              "rematch": {"from": str(path), "association": association,
+                                          "match_2d": {"min_iou": match_2d.min_iou}, "seconds": seconds,
+                                          "time": datetime.now(timezone.utc).isoformat()}})
+            counts["processed"] += 1
+        print(f"{dataset}: re-associated {len(paths)} views ({association}) in {time.perf_counter() - t0:.1f} s",
+              flush=True)
+    return dict(counts)
+
+
+def sha256(path: Path) -> str | None:
+    """Checksum of a file.
+
+    Parameters
+    ----------
+    path : pathlib.Path
+        The file.
+
+    Returns
+    -------
+    str or None
+        Hex SHA-256 digest, or ``None`` if the file does not exist.
+    """
+    if not path.exists():
+        return None
+    digest = hashlib.sha256()
+    with path.open("rb") as f:
+        for block in iter(lambda: f.read(1 << 20), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def oracle_identical(source_root: Path, root: Path, datasets: Sequence[str]) -> dict[str, dict[str, Any]]:
+    """Compare each dataset's assembled ``qa_oracle.jsonl`` with the source folder's.
+
+    Parameters
+    ----------
+    source_root : pathlib.Path
+        The label folder that was re-associated.
+    root : pathlib.Path
+        The output label folder.
+    datasets : sequence of str
+        Datasets to compare (those without an output file are skipped).
+
+    Returns
+    -------
+    dict of str to dict
+        Dataset -> ``{"source_sha256", "sha256", "bytes", "identical"}``.
+    """
+    out: dict[str, dict[str, Any]] = {}
+    for dataset in datasets:
+        new = root / dataset / "qa_oracle.jsonl"
+        if not new.exists():
+            continue
+        a, b = sha256(Path(source_root) / dataset / "qa_oracle.jsonl"), sha256(new)
+        out[dataset] = {"source_sha256": a, "sha256": b, "bytes": new.stat().st_size,
+                        "identical": a is not None and a == b}
+    return out
+
+
 # --------------------------------------------------------------------------------------------------------
 # Assembly and summary
 # --------------------------------------------------------------------------------------------------------
@@ -578,6 +718,7 @@ def summarize(dataset: str, shards: Sequence[dict[str, Any]], gpu_watch: str | N
             hits = [r["match"][src] for r in p if r["match"][src] is not None]
             per_class[label] = {
                 "n_present": len(p), "n_matched": len(hits), "recall": _rate(len(hits), len(p)),
+                "n_matched_label_correct": sum(bool(h.get("label_correct", True)) for h in hits),
                 "n_clearly_visible": len(c),
                 "recall_clearly_visible": _rate(sum(r["match"][src] is not None for r in c), len(c)),
                 "median_distance_m": _stats([h["distance"] for h in hits])["median"],
@@ -586,9 +727,12 @@ def summarize(dataset: str, shards: Sequence[dict[str, Any]], gpu_watch: str | N
         for phrase in sorted({r["phrase"] for r in dets}):
             d = [r for r in dets if r["phrase"] == phrase]
             lf = [r for r in d if r["box"] is not None]
+            correct = sum(r["match"] is not None and bool(r["match"].get("label_correct", True)) for r in lf)
             per_phrase[phrase] = {"n_detections": len(d), "n_lifted": len(lf),
                                   "n_matched": sum(r["match"] is not None for r in lf),
-                                  "precision": _rate(sum(r["match"] is not None for r in lf), len(lf))}
+                                  "precision": _rate(sum(r["match"] is not None for r in lf), len(lf)),
+                                  "n_matched_label_correct": correct,
+                                  "precision_label_correct": _rate(correct, len(lf))}
         per_visibility = {}
         for method in sorted({v["visibility"] for v in views if src in v["depth_sources"]}):
             mv = {v["view_key"] for v in views if v["visibility"] == method and src in v["depth_sources"]}
@@ -599,14 +743,22 @@ def summarize(dataset: str, shards: Sequence[dict[str, Any]], gpu_watch: str | N
                 "n_views": len(mv), "recall": _rate(sum(r["match"][src] is not None for r in p), len(p)),
                 "recall_clearly_visible": _rate(sum(r["match"][src] is not None for r in c), len(c)),
                 "precision": _rate(sum(r["match"] is not None for r in lf), len(lf))}
+        n_correct = sum(bool(r["match"].get("label_correct", True)) for r in matched)
+        confusions = Counter(f"{r['phrase']} -> {r['match']['label']}" for r in matched
+                             if not r["match"].get("label_correct", True))
         matching[src] = {
             "n_present": len(pres), "n_clearly_visible": len(clear), "n_detections": len(dets),
             "n_lifted": len(lifted), "n_lift_failed": len(dets) - len(lifted), "n_matched": len(matched),
             "recall": _rate(len(matched), len(pres)),
             "recall_clearly_visible": _rate(sum(r["match"][src] is not None for r in clear), len(clear)),
             "precision": _rate(len(matched), len(lifted)),
+            "n_matched_label_correct": n_correct, "confusion_rate": _rate(len(matched) - n_correct, len(matched)),
+            "confusions": dict(confusions.most_common()),
+            "n_ambiguous": sum(bool(r["match"].get("ambiguous")) for r in matched),
             "median_distance_m": _stats([r["match"]["distance"] for r in matched])["median"],
             "median_iou": _stats([r["match"]["iou"] for r in matched])["median"],
+            "median_iou2d": _stats([r["match"]["iou2d"] for r in matched
+                                    if r["match"].get("iou2d") is not None])["median"],
             "by_class": per_class, "by_phrase": per_phrase, "by_visibility": per_visibility}
 
     # Questions: specs, items, coverage and agreement with the oracle.
@@ -633,8 +785,14 @@ def summarize(dataset: str, shards: Sequence[dict[str, Any]], gpu_watch: str | N
     starts = [s["started"] for s in shards]
     ends = [s["finished"] for s in shards]
     stage_names = sorted({k for v in views for k in v["timings"]})
+    rematched = [s["rematch"] for s in shards if "rematch" in s]
     return {
         "dataset": dataset,
+        "association": views[0]["config"].get("association", "3d") if views else None,
+        "rematch": None if not rematched else {
+            "n_views": len(rematched), "from_folders": sorted({str(Path(r["from"]).parents[2]) for r in rematched}),
+            "seconds_total": round(sum(r["seconds"] for r in rematched), 1),
+            "note": "views re-associated from stored shards without models; runtime below is the source run's"},
         "n_views": len(views),
         "n_views_by_scene": dict(sorted(Counter(v["scene"] for v in views).items())),
         "n_views_by_visibility": dict(sorted(Counter(v["visibility"] for v in views).items())),
@@ -721,17 +879,30 @@ def main(argv: Sequence[str] | None = None) -> int:
     Returns
     -------
     int
-        Exit status: 0 on success, 2 if the GPU is busy, 1 if a view failed.
+        Exit status: 0 on success, 2 if the GPU is busy, 1 if a view failed or a re-associated dataset's oracle
+        file differs from its source.
+
+    Raises
+    ------
+    SystemExit
+        If ``--rematch-from`` is given without ``--out-dir`` (from the argument parser).
     """
     args = parse_args(argv)
-    root = labels_root(args.out_subdir)
+    if args.rematch_from is not None and args.out_dir is None:
+        raise SystemExit("--rematch-from needs --out-dir (a new folder; the source is never written)")
+    root = labels_root(args.out_subdir, args.out_dir)
+    match_2d = Match2DConfig(min_iou=args.min_iou)
     config = PipelineConfig(qa_seed=args.qa_seed, lift_stride=args.lift_stride,
-                            lift_stride_min_pixels=args.lift_stride_min_pixels)
+                            lift_stride_min_pixels=args.lift_stride_min_pixels, association=args.association,
+                            match_2d=match_2d)
     run: dict[str, Any] = {"argv": list(sys.argv[1:] if argv is None else argv),
                            "started": datetime.now(timezone.utc).isoformat()}
     counts: dict[str, int] = {}
     t0 = time.perf_counter()
-    if not args.assemble_only:
+    if args.rematch_from is not None:
+        run["rematch_from"] = str(Path(args.rematch_from).resolve())
+        counts = rematch(args.rematch_from, root, args.datasets, args.association, match_2d)
+    elif not args.assemble_only:
         used = gpu_memory_used_mib()
         if used is not None and used > args.max_gpu_used_mib:
             print(f"GPU busy: {used} MiB in use (limit {args.max_gpu_used_mib}); not starting", flush=True)
@@ -757,11 +928,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         t = time.perf_counter()
         assemble(root, args.datasets, args.gpu_watch_summary)
         run["assemble_seconds"] = round(time.perf_counter() - t, 1)
+    failed = bool(counts.get("failed"))
+    if args.rematch_from is not None and not args.no_assemble:
+        run["oracle_identical"] = oracle_identical(args.rematch_from, root, args.datasets)
+        failed |= not all(v["identical"] for v in run["oracle_identical"].values())
     run["finished"] = datetime.now(timezone.utc).isoformat()
     with (root / "runs.jsonl").open("a") as f:
         f.write(json.dumps(run) + "\n")
     print(json.dumps(run), flush=True)
-    return 1 if counts.get("failed") else 0
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":
