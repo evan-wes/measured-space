@@ -7,7 +7,11 @@ name = "measured-space"
 dynamic = ["version"]
 description = "Calibrated, physically validated uncertainty for metric 3D grounding labels"
 requires-python = ">=3.12"
-dependencies = ["numpy", "scipy", "pillow", "pyyaml"]
+dependencies = ["numpy", "scipy", "pandas", "pillow", "pyyaml", "h5py", "opencv-python-headless"]
+
+[project.optional-dependencies]
+vlm = ["torch", "transformers>=5"]
+dev = ["pytest"]
 
 [tool.setuptools.dynamic]
 version = { file = "VERSION" }
