@@ -1,0 +1,98 @@
+{
+ "config": {
+  "levels": [
+   0.5,
+   0.8,
+   0.9,
+   0.95
+  ],
+  "ridge_grid": [
+   1.0,
+   10.0,
+   100.0,
+   1000.0,
+   10000.0,
+   100000.0
+  ],
+  "n_jobs": 4,
+  "gross": true,
+  "s0": 0.005,
+  "mondrian": [
+   "qtype",
+   "depth_source"
+  ],
+  "min_cal": 20,
+  "gate_level": 0.9,
+  "epsilon": 0.1,
+  "delta": 0.1,
+  "kappa": 3.0,
+  "min_accept": 30,
+  "min_accept_frac": 0.05,
+  "tau_scales": [
+   1.0,
+   2.0
+  ],
+  "n_bins": 10,
+  "min_scenes": 3,
+  "min_rows": 20,
+  "seed": 0,
+  "n_boot": 2000
+ },
+ "gate_z": 1.6448536269514722,
+ "datasets": [
+  "arkitscenes",
+  "smartspaces"
+ ],
+ "n_rows": 34446,
+ "n_labelled": 14054,
+ "inputs": {
+  "arkitscenes": {
+   "qa_auto_laser.jsonl": {
+    "bytes": 549744,
+    "sha256": "7df3b547d36e590b47a4064b59d768d3c35bc819b978b20ea728af2b3e09d0ee"
+   },
+   "qa_auto_lidar.jsonl": {
+    "bytes": 544144,
+    "sha256": "0f053bd278b4ff4fc32d7de473328b4e9923eca5142ae4f7712261de5c7e581a"
+   },
+   "qa_auto_moge.jsonl": {
+    "bytes": 543593,
+    "sha256": "e60f6b6f824e1c1c0fa8e30be2650b9f2182f0706fb4c0ab5371654d7cd68a10"
+   },
+   "qa_oracle.jsonl": {
+    "bytes": 327510,
+    "sha256": "67bb5f43ad5ce391dcfe1b01b7024efe4483eead0616ba9bfc5cdb84bda3b086"
+   },
+   "n_auto_only": {
+    "laser": 0,
+    "lidar": 0,
+    "moge": 0
+   }
+  },
+  "smartspaces": {
+   "qa_auto_gt_depth.jsonl": {
+    "bytes": 8933826,
+    "sha256": "f44ef7485121b2ba7283f54c254a4f0ab40ad5b51d794557dde0557b79ece0ce"
+   },
+   "qa_auto_moge.jsonl": {
+    "bytes": 20240658,
+    "sha256": "d1c8458a7d5833e94496bc6e69a3dc2d168f78beafff07d8f16a0acbed5d3155"
+   },
+   "qa_oracle.jsonl": {
+    "bytes": 42352105,
+    "sha256": "e1ae9765e943c51484a6d4f7da1afca8c2012746278c92a3eec42e265a2515b1"
+   },
+   "n_auto_only": {
+    "gt_depth": 0,
+    "moge": 0
+   }
+  }
+ },
+ "notes": [
+  "arkitscenes/distance_surface: skipped (21 labelled rows, 2 scenes)",
+  "smartspaces/closest_instance: skipped (60 labelled rows, 2 scenes)",
+  "2530 numeric test rows calibrated on the question type pooled over depth sources (too few same-source calibration scores): [('arkitscenes', 'laser', '42444966'), ('arkitscenes', 'laser', '42446100'), ('arkitscenes', 'lidar', '42444966'), ('arkitscenes', 'lidar', '42446100'), ('arkitscenes', 'moge', '42444966'), ('arkitscenes', 'moge', '42446100'), ('smartspaces', 'gt_depth', 'MTMC_Tracking_2026/train/Warehouse_018')]"
+ ],
+ "git_commit": "5b8556bf3e6f36868fdcfb6cbf1d51aa44dab24b+dirty",
+ "seconds": 166.7
+}
