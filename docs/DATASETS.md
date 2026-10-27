@@ -68,6 +68,16 @@ inertial poses, and fixed, calibrated multi-camera installations.
     sampled frames.
   - Result in `configs/smartspaces_cameras.yaml`: 3.3–24.9 shared objects per frame; joint forklift+person
     presence 0.61–1.00.
+- **Further scenes (2026-10-26, second expansion).** 8 more independent 2026 scenes (train 008/009/012/013/014/015/016,
+  val 022; only 016 has forklifts) plus the 5 Cosmos-Transfer re-renders (001/003/005/007/021). The re-renders
+  share geometry, GT and **identical calibration** with their sources (000/002/004/006/020; checked). They use
+  the same two cameras as their sources, so they form a paired **appearance-shift** test, not independent scenes.
+  - Cameras for the independent scenes were chosen by the same script. Scenes without forklifts fall back to
+    the most co-visible pair, 2.6–30.3 shared objects per frame.
+  - Downloads: 1.0 GB of calibration + GT for these 13 scenes (Warehouse_012's was already local) and 3.60 GB
+    of video (26 videos).
+  - The warehouse side is now 18 independent scenes (Warehouse_018 with depth + 17 depth-less) plus 5
+    appearance variants.
 - **Question-type mapping:** all planned types are supported for the 7 agent classes. These are centre and closest-surface distance, size, egocentric distance, relative depth, left/right, closest same-class instance, and count in view (from `2d_bounding_box_visible`).
 - **Risks:**
   - An open-vocabulary detector will find racks and pallets that have no GT; those detections cannot be audited and must be excluded from scoring.
@@ -101,6 +111,12 @@ inertial poses, and fixed, calibrated multi-camera installations.
       laser points lie a median 3.8 cm from the box surface (90th percentile 16.4 cm; objects are not boxes).
       The rejected conventions explain 0.00–0.54.
   - **Object ids:** `objectId` repeats within a file; the loader uses `uid`.
+- **Expansion (2026-10-26).** Six videos left the per-label error model with too little data, so 101 more
+  validation videos with laser depth and 3D boxes were added: one per venue, from the 285 validation videos
+  that have both, excluding the 6 used venues, in a seeded random order.
+  - Same files per video: upsampling zip, 3DOD annotation, wide intrinsics, `lowres_wide.traj`.
+  - All 107 zips pass a CRC check, 5.4 GB in total.
+  - Across all folds, 2,233 videos (837 venues) have both laser depth and 3D boxes (Apple `raw/metadata.csv`).
   - **Image orientation:** the rotation to upright is derived from gravity (pose), not the `sky_direction`
     text. It agrees with the metadata on all 6 videos ("Left" = turn 90° clockwise, "Down" = 180°).
   - **Laser vs LiDAR:** laser depth reads a median 2.1 cm deeper than iPad LiDAR at confidence-2 pixels (+1.7
