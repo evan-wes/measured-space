@@ -31,7 +31,8 @@ python claims.py --report claims.md  # also write a markdown report
 `claims.py` lists each claim once, grouped by the aims in `docs/LEARNINGS.md` (A1–A7), with the value as stated,
 the tables it is read from (under `results/`), the script that wrote those tables, and the lines that recompute
 it. A value passes when it rounds to the stated one (half a unit of the last written digit). The decision-level
-claims (`DEC.*`) are a separate block: their certificate is approximate (see `results/decisions/summary.json`).
+claims (`DEC.*`) are a separate block, read from `results/decisions_exact/` (the exact certificate, from the
+audits' saved calibration predictions; `results/decisions/` holds the earlier approximate run).
 
 ### What is committed under `results/`
 
@@ -47,7 +48,7 @@ Aggregate tables only (per-item tables of ARKitScenes are not redistributed; see
 | `references/<run>/` | Per-site reference recalibration | `scripts/run_reference_experiment.py` |
 | `fusion/fusion_ark106_{2d,cutr_sam3}/` | NIS / NEES of single-frame and fused estimates | `scripts/run_fusion_eval.py` |
 | `vlm_results/<labeller>/` | VLM evaluation re-scored per labeller | `scripts/run_vlm_eval.py score` |
-| `sparse4d_eval/` | Sparse4D tracking scores (stage 1, scene 022; stage 2, 12 scenes) | Sparse4D evaluation (Tier 2, step 5) |
+| `sparse4d_eval/` | Sparse4D tracking scores (stage 1, scene 022; stage 2, 12 scenes) | `scripts/eval_sparse4d.py aggregate` (stage 2) and `hota --no-raw-arrays` (stage 1); Tier 2, step 5 |
 | `decisions/` | Decision-level gates, threshold sweep, margins | `scripts/run_decision_analysis.py` |
 | `review_effort/` | Review needed for a stated quality; operating points; miss-flag review cost | `scripts/run_review_effort.py` |
 | `spotcheck/` | The author's manual pairing spot check | `scripts/make_viewer.py` |
@@ -82,10 +83,16 @@ and `rn101_trainable_v1.1` (NVIDIA Open Model License), Qwen3-VL-8B and Cosmos-R
   (CUDA 13.0 build), torchvision 0.29.1, timm 1.0.30, numpy, scipy, Pillow; `apple/ml-cubifyanything` at commit
   `00e9cb1` on `PYTHONPATH`. `measured_space` is not installed there (see `scripts/run_cubify.py`).
 - **Sparse4D** (`mga-sparse4d`): Python 3.12, numpy 1.26.4, torch 2.14.1 / torchvision 0.29.1 (CUDA 13.0 builds),
-  timm 1.0.30, opencv-python-headless 4.11, and pytorch3d built from source for the CPU with its C++ standard raised
-  from C++17 to C++20 in `setup.py` (needed with this toolchain); SparseQID's pure-PyTorch runtime at commit
-  `7aea61d`. **The inference runner and its tracking-score scripts are not part of this repository**; only the
-  converter from their output (`src/measured_space/sparse4d.py`) is. Their protocol is summarised in step 5.
+  timm 1.0.30, opencv-python-headless 4.11, and pytorch3d 0.7.9 (commit `33824be`) built from source for the CPU
+  with its C++ standard raised from C++17 to C++20 (`envs/sparse4d/pytorch3d_cxx20.patch`; needed with this
+  toolchain); two source checkouts that are not installed: SparseQID's pure-PyTorch runtime at commit `7aea61d`
+  and NVIDIA's `spatialai_data_utils` evaluator (video-search-and-summarization at commit `82a5011`, on
+  `PYTHONPATH` for scoring). Build steps: `envs/sparse4d/README.md`; pinned packages:
+  `envs/sparse4d/requirements.txt`. `measured_space` is not installed there and the Sparse4D scripts
+  (`scripts/extract_smartspaces_frames.py`, `scripts/run_sparse4d.py`, `scripts/eval_sparse4d.py`) do not import
+  it; their output is converted in the main environment by `src/measured_space/sparse4d.py`. Weights:
+  `bash scripts/download_sparse4d_weights.sh <listing-dir> <models>/sparse4d <log>` (size and SHA-256 checked
+  against NGC's listing).
 
 ### 4. Handheld labels (106 ARKitScenes videos)
 
@@ -101,10 +108,31 @@ and `rn101_trainable_v1.1` (NVIDIA Open Model License), Qwen3-VL-8B and Cosmos-R
 ### 5. Fixed-camera labels (12 warehouses)
 
 1. `python scripts/run_labels.py` with the Smart Spaces options (`--ss-*`; MoGe-2 depth) builds `labels_ss12_2d`.
-2. Sparse4D, frozen, both checkpoints, every camera of a scene at once (runner outside this repository): world frame
-   re-centred on the mean camera centre (xy), RGB input, the decoder's own scores and instance-bank track ids,
-   class indices remapped to the 2026 challenge ids, decoder threshold 0, boxes with score ≥ 0.2 kept. Scored with
-   the challenge's HOTA (footprint IoU) and NVIDIA's official 3D-IoU evaluator (`results/sparse4d_eval/`).
+2. Sparse4D, frozen, both checkpoints, every camera of a scene at once, in `mga-sparse4d` (details in each
+   script's docstring; `<s>` = 000, 002, 004, 006, 010–016, 020; split `val` for 020, `train` otherwise):
+   1. Frame cache (CPU): `python -I scripts/extract_smartspaces_frames.py --data-root <data>/MTMC_Tracking_2026
+      --split <split> --scene Warehouse_<s> --cache-root <out>/frame_cache --start 0 --end 9000 --step 6`.
+   2. Inference (GPU): `python -I scripts/run_sparse4d.py --sparseqid-src <SparseQID>/src --model-dir
+      <models>/sparse4d/rn50_trainable_v2.2 --ckpt sparse4d_warehouse_v2.2_r50.pth --tag rn50_trainable_v2.2
+      --data-root <data>/MTMC_Tracking_2026 --cache-root <out>/frame_cache --split <split> --scene Warehouse_<s>
+      --scene-id <s as integer> --out-dir <out> --num-workers 6`; for the second checkpoint `--model-dir
+      <models>/sparse4d/rn101_trainable_v1.1 --ckpt sparse4d_tracking_aic25v0.5_warehousev3_classes_iter_17400_v1.1.pth
+      --backbone-if-missing resnet_101 --tag rn101_trainable_v1.1`. The defaults are the protocol: world frame
+      re-centred on the mean camera centre (xy) and shifted back, RGB input, the decoder's own scores and
+      instance-bank track ids, class indices remapped to the 2026 challenge ids, decoder threshold 0, 11-column rows
+      with score ≥ 0.2, JSONL boxes with score ≥ 0.05.
+   3. Scores (CPU, `PYTHONPATH=<video-search-and-summarization>/libs/analytics/spatialai-data-utils`): per scene
+      `python scripts/eval_sparse4d.py gt --scene-dir <data>/MTMC_Tracking_2026/<split>/Warehouse_<s> --scene-id <s>
+      --start 0 --end 9000 --step 6 --out <out>/gt/Warehouse_<s>_f0-9000s6.txt`; per scene and tag `hota --sim bev
+      --gt ... --pred <out>/<tag>/Warehouse_<s>.txt --out <out>/eval/<tag>/Warehouse_<s>.bev/hota_bev.json` (the
+      challenge's footprint-IoU HOTA, as the EVA/GaugeAlign team computes it) and `score --gt ... --pred ...
+      --scene-ids <json> --out-dir <out>/eval/<tag>/Warehouse_<s>` (NVIDIA's official 3D-IoU evaluator; the JSON maps
+      all 12 ids in scene order, `{"0": "Warehouse_000", "2": "Warehouse_002", …, "20": "Warehouse_020"}`); then
+      `aggregate --out-root <out> --tags rn50_trainable_v2.2 rn101_trainable_v1.1 --summary
+      <out>/eval/summary_stage2.json`, which is `results/sparse4d_eval/summary_stage2.json`.
+      `results/sparse4d_eval/stage1_w022_rn50_v2.2_rgb_hota_bev.json` is `hota --sim bev --no-raw-arrays` on scene
+      022 (val), frames 0–894 at step 6 (`gt` and the cache with `--end 900 --step 6`), of a CPU run of the rn50
+      checkpoint (`--device cpu`, tag `cpu_rn50_trainable_v2.2_rgb`).
 3. `python scripts/run_box_source.py --variant external_named --source-name sparse4d --min-score 0.2
    --labels-from <data>/outputs/labels_ss12_2d --predictions <sparse4d output>/<tag> --out-dir ...` per checkpoint
    builds `labels_ss12_sparse4d_{v22,v11}`.
