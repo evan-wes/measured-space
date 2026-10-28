@@ -1,0 +1,13 @@
+dataset,qtype,baseline,n,n_scenes,d_nll,d_lo,d_hi
+arkitscenes,distance_center,const,177,48,0.0489947,-0.0491823,0.149625
+arkitscenes,distance_center,prop,177,48,0.0167082,-0.123649,0.141414
+arkitscenes,distance_surface,const,57,25,-0.00257567,-0.00780509,0.00249526
+arkitscenes,distance_surface,prop,57,25,0.0716919,-0.0298215,0.178947
+arkitscenes,ego_distance,const,653,98,0.0024733,-0.0359356,0.0425982
+arkitscenes,ego_distance,prop,653,98,0.0200141,-0.0253354,0.0644412
+arkitscenes,size_height,const,651,98,0.0522804,0.0161905,0.0872029
+arkitscenes,size_height,prop,651,98,0.0753095,0.0142252,0.137827
+arkitscenes,size_longest,const,652,98,0.0386735,-0.00656759,0.0838335
+arkitscenes,size_longest,prop,652,98,0.0492902,0.00600939,0.0922606
+arkitscenes,all,const,2190,98,0.0316849,0.00551342,0.0593858
+arkitscenes,all,prop,2190,98,0.0462451,0.0195707,0.0732707

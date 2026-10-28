@@ -43,6 +43,8 @@ Aggregate tables only (per-item tables of ARKitScenes are not redistributed; see
 |---|---|---|
 | `audit_ark106_{2d,cutr_sam3,cutr_clip}[_noamb]/` | Handheld audits (106 videos): errors, coverage, gates, rankings; `_noamb` without ambiguous pairs | `scripts/run_audit.py` |
 | `audit_ss12_{2d,sparse4d_v22,sparse4d_v11}[_noamb]/` | Fixed-camera audits (12 synthetic warehouses) | `scripts/run_audit.py` |
+| `audit_ark106_2d_lidar/` | The v0 baseline audited on its iPad LiDAR answers only | `scripts/run_audit.py --depth-sources lidar` |
+| `audit_ss12_{2d,sparse4d_v22,sparse4d_v11}_bylayout/` | Fixed-camera audits cross-fitted with one fold per building layout | `scripts/run_audit.py --fold-groups configs/smartspaces_layout_groups.json` |
 | `misses/<run>/` | Recall, miss causes, effects on answers, miss flags | `scripts/run_miss_audit.py` |
 | `recall_control/<run>/` | Conformal risk control of the miss rate | `scripts/run_recall_control.py` |
 | `references/<run>/` | Per-site reference recalibration | `scripts/run_reference_experiment.py` |
@@ -142,6 +144,8 @@ and `rn101_trainable_v1.1` (NVIDIA Open Model License), Qwen3-VL-8B and Cosmos-R
 | Step | Command (see each script's docstring and `--help`) | Writes |
 |---|---|---|
 | Audit | `python scripts/run_audit.py --labels <labels> --results <...>` (and `--exclude-ambiguous`) | `audit_*` |
+| Audit, one depth source | the same with `--depth-sources lidar` (v0 handheld labels) | `audit_ark106_2d_lidar` |
+| Audit, layout held out | `python scripts/group_smartspaces_layouts.py` (writes `configs/smartspaces_layout_groups.json`), then the same with `--fold-groups configs/smartspaces_layout_groups.json` | `audit_ss12_*_bylayout` |
 | Misses and flags | `python scripts/run_miss_audit.py --labels NAME=<labels> ... --results <...>` | `misses/` |
 | Recall control | `python scripts/run_recall_control.py --labels <labels> --predictions <...> --results <...>` | `recall_control/` |
 | References | `python scripts/run_reference_experiment.py --labels <labels> --results <...>` | `references/` |

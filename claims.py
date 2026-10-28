@@ -659,12 +659,13 @@ def _a4_width(r: Path) -> Values:
 
 
 def _a4_table_gates(r: Path) -> Values:
-    """Table gate columns: accepted share and wrong among accepted, at the tolerance and twice it (percent)."""
+    """Table gate columns: accepted share and wrong among accepted, at the tolerance and twice it (percent).
+
+    The baseline's cells come from its iPad-LiDAR-only audit, certified on LiDAR answers alone.
+    """
     out: Values = {}
-    for t in (1, 2):
-        p = operating_point(r, "ark106_2d", "numeric", t)
-        out[f"baseline_t{t}_acc"], out[f"baseline_t{t}_err"] = pct(p["accepted_share"]), pct(p["wrong_among_accepted"])
-    rows = {"cubify_sam3_t1": ("audit_ark106_cutr_sam3", "const", 1),
+    rows = {"baseline_t1": ("audit_ark106_2d_lidar", "sigma", 1), "baseline_t2": ("audit_ark106_2d_lidar", "sigma", 2),
+            "cubify_sam3_t1": ("audit_ark106_cutr_sam3", "const", 1),
             "cubify_sam3_t2": ("audit_ark106_cutr_sam3", "sigma", 2),
             "cubify_sam3_feature_t1": ("audit_ark106_cutr_sam3", "sigma", 1),
             "cubify_clip_t1": ("audit_ark106_cutr_clip", "sigma", 1),
@@ -683,12 +684,16 @@ def _a4_table_gates(r: Path) -> Values:
 
 
 def _a4_handheld_gates(r: Path) -> Values:
-    """Handheld gates as summarised in the text: acceptance range at the tolerance and twice it, and worst error."""
-    t1 = [operating_point(r, "ark106_2d", "numeric", 1), gate(r, "audit_ark106_cutr_sam3", "numeric", "const", 1),
+    """Handheld gates as summarised in the text: acceptance range at the tolerance and twice it, and worst error.
+
+    The baseline is its iPad-LiDAR-only audit.
+    """
+    t1 = [gate(r, "audit_ark106_2d_lidar", "numeric", "sigma", 1),
+          gate(r, "audit_ark106_cutr_sam3", "numeric", "const", 1),
           gate(r, "audit_ark106_cutr_clip", "numeric", "sigma", 1)]
-    acc1 = [pct(t1[0]["accepted_share"])] + [pct(g["accept_yield"]) for g in t1[1:]]
-    err1 = [pct(t1[0]["wrong_among_accepted"])] + [pct(g["accept_err"]) for g in t1[1:]]
-    acc2 = [pct(operating_point(r, "ark106_2d", "numeric", 2)["accepted_share"]),
+    acc1 = [pct(g["accept_yield"]) for g in t1]
+    err1 = [pct(g["accept_err"]) for g in t1]
+    acc2 = [pct(gate(r, "audit_ark106_2d_lidar", "numeric", "sigma", 2)["accept_yield"]),
             pct(gate(r, "audit_ark106_cutr_sam3", "numeric", "sigma", 2)["accept_yield"]),
             pct(gate(r, "audit_ark106_cutr_clip", "numeric", "sigma", 2)["accept_yield"])]
     return {"t1_lo": min(acc1), "t1_hi": max(acc1), "t1_worst_err": max(err1), "t2_lo": min(acc2), "t2_hi": max(acc2)}
@@ -779,8 +784,9 @@ def _a4_violations(r: Path) -> Values:
     """Gates (all model kinds, both tolerances, non-empty) whose accepted labels exceed epsilon on held-out scenes.
 
     Counts over the six audits; the two largest violations by number of labels accepted (their counts and errors),
-    with whether they are on the warehouse scenes; the handheld range of error among accepted for Table 2's cells; the scene-bootstrap upper
-    bound of Cubify + SAM 3's constant-sigma gate at the tolerance (percent).
+    with whether they are on the warehouse scenes; the range of error among accepted over Table 2's handheld cells
+    (baseline: its LiDAR-only audit); the scene-bootstrap upper bound of Cubify + SAM 3's constant-sigma gate at the
+    tolerance (percent).
     """
     rows = []
     for a in HANDHELD_AUDITS + WAREHOUSE_AUDITS:
@@ -791,20 +797,48 @@ def _a4_violations(r: Path) -> Values:
     g = pd.concat(rows, ignore_index=True)
     bad = g[g["accept_err"].astype(float) > g["epsilon"].astype(float)].sort_values("accept_n", ascending=False)
     top = bad.head(2)
-    cells = [gate(r, "audit_ark106_cutr_sam3", "numeric", "const", 1), gate(r, "audit_ark106_cutr_sam3", "numeric", "sigma", 2),
-             gate(r, "audit_ark106_cutr_clip", "numeric", "sigma", 1), gate(r, "audit_ark106_cutr_clip", "numeric", "sigma", 2)]
+    cells = [gate(r, a, "numeric", k, t) for a, k, t in (
+        ("audit_ark106_cutr_sam3", "const", 1), ("audit_ark106_cutr_sam3", "sigma", 2),
+        ("audit_ark106_cutr_clip", "sigma", 1), ("audit_ark106_cutr_clip", "sigma", 2),
+        ("audit_ark106_2d_lidar", "sigma", 1), ("audit_ark106_2d_lidar", "sigma", 2))]
     return {"violated": float(len(bad)), "gates": float(len(g)),
             "largest_n": float(top["accept_n"].iloc[0]), "largest_err": pct(float(top["accept_err"].iloc[0])),
             "second_n": float(top["accept_n"].iloc[1]), "second_err": pct(float(top["accept_err"].iloc[1])),
             "largest_two_warehouse": float(all(a in WAREHOUSE_AUDITS for a in top["audit"])),
-            "cubify_handheld_lo": pct(min(float(c["accept_err"]) for c in cells)),
-            "cubify_handheld_hi": pct(max(float(c["accept_err"]) for c in cells)),
+            "handheld_lo": pct(min(float(c["accept_err"]) for c in cells)),
+            "handheld_hi": pct(max(float(c["accept_err"]) for c in cells)),
             "boot_hi_sam3_tau": pct(float(cells[0]["accept_boot_hi"]))}
+
+
+def _a4_layouts(r: Path) -> Values:
+    """Warehouse audits cross-fitted with one fold per building layout (leave one layout out).
+
+    Sparse4D v2.2: numeric coverage of the 90% intervals and the feature gate at the tolerance. Monocular baseline:
+    the feature gate at twice the tolerance (labels accepted, wrong among them). Pre-2026 Sparse4D: the
+    constant-sigma gate at the tolerance. Per audit, non-empty gates (all model kinds, both tolerances) whose
+    accepted labels exceed epsilon.
+    """
+    def violated(audit: str) -> float:
+        g = _csv(r, f"{audit}/gate.csv")
+        g = g[(g["dataset"] != "all") & ~g["kind"].astype(str).str.contains("conformal")
+              & (g["accept_n"].astype(float) > 0)]
+        return float((g["accept_err"].astype(float) > g["epsilon"].astype(float)).sum())
+    v22 = gate(r, "audit_ss12_sparse4d_v22_bylayout", "numeric", "sigma", 1)
+    mono = gate(r, "audit_ss12_2d_bylayout", "numeric", "sigma", 2)
+    old = gate(r, "audit_ss12_sparse4d_v11_bylayout", "numeric", "const", 1)
+    return {"v22_coverage": float(coverage(r, "audit_ss12_sparse4d_v22_bylayout")["coverage"].iloc[0]),
+            "v22_acc": pct(v22["accept_yield"]), "v22_err": pct(v22["accept_err"]),
+            "mono_n": float(mono["accept_n"]), "mono_err": pct(mono["accept_err"]),
+            "old_n": float(old["accept_n"]), "old_err": pct(old["accept_err"]),
+            "violated_v22": violated("audit_ss12_sparse4d_v22_bylayout"),
+            "violated_mono": violated("audit_ss12_2d_bylayout"),
+            "violated_old": violated("audit_ss12_sparse4d_v11_bylayout")}
 
 
 def _a4_effort(r: Path) -> Values:
     """Review needed for a stated quality, risk order against random (percent), and reviewer-minutes at 30 s."""
-    ours, rnd = review_target(r, "ss12_sparse4d_v22", 0.01, "ours"), review_target(r, "ss12_sparse4d_v22", 0.01, "random")
+    ours = review_target(r, "ss12_sparse4d_v22", 0.01, "ours")
+    rnd = review_target(r, "ss12_sparse4d_v22", 0.01, "random")
     by_type = review_target(r, "ss12_sparse4d_v22", 0.01, "const")
     hand_ours = [review_target(r, n, 0.02, "ours")["review_fraction"] for n in
                  ("ark106_2d", "ark106_cutr_sam3", "ark106_cutr_clip")]
@@ -994,26 +1028,32 @@ CLAIMS: tuple[Claim, ...] = (
     Claim("A4.4", "A4", "Median interval half-widths are 2-3 tolerances on handheld scans and 0.1 for Sparse4D.",
           {"lo": "2", "hi": "3", "sparse4d": "0.1"}, ("audit_*/coverage.csv",), AUDIT, _a4_width),
     Claim("A4.5", "A4", "Results table, gate columns: accepted share / wrong among accepted (percent).",
-          {"baseline_t1_acc": "30", "baseline_t1_err": "7.0", "baseline_t2_acc": "52", "baseline_t2_err": "9.2",
+          {"baseline_t1_acc": "11", "baseline_t1_err": "6.9", "baseline_t2_acc": "48", "baseline_t2_err": "7.4",
            "cubify_sam3_t1_acc": "11", "cubify_sam3_t1_err": "7.5", "cubify_sam3_t2_acc": "79",
            "cubify_sam3_t2_err": "8.9", "cubify_sam3_feature_t1_acc": "14", "cubify_sam3_feature_t1_err": "10.3",
            "cubify_clip_t1_acc": "20", "cubify_clip_t1_err": "6.0", "cubify_clip_t2_acc": "63",
            "cubify_clip_t2_err": "8.8", "monocular_t1_acc": "0", "monocular_t2_acc": "9", "monocular_t2_err": "22",
            "sparse4d_t1_acc": "91", "sparse4d_t1_err": "1.5", "sparse4d_t2_acc": "91", "sparse4d_t2_err": "0.7",
            "pre2026_t1_acc": "92", "pre2026_t1_err": "2.7", "pre2026_t2_acc": "92", "pre2026_t2_err": "1.1"},
-          ("review_effort/operating_points.csv", "audit_*/gate.csv"), f"{EFFORT}, {AUDIT}", _a4_table_gates),
-    Claim("A4.6", "A4", "On handheld scans a certified gate accepts 11-30% at the tolerance with at most 7.5% wrong, "
-          "and 52-79% at twice it.", {"t1_lo": "11", "t1_hi": "30", "t1_worst_err": "7.5", "t2_lo": "52",
-                                      "t2_hi": "79"},
-          ("review_effort/operating_points.csv", "audit_ark106_cutr_*/gate.csv"), f"{EFFORT}, {AUDIT}",
-          _a4_handheld_gates),
+          ("audit_*/gate.csv",), AUDIT, _a4_table_gates),
+    Claim("A4.6", "A4", "On handheld scans a certified gate accepts 11-20% at the tolerance with at most 7.5% wrong, "
+          "and 48-79% at twice it (baseline certified on its LiDAR answers alone).",
+          {"t1_lo": "11", "t1_hi": "20", "t1_worst_err": "7.5", "t2_lo": "48", "t2_hi": "79"},
+          ("audit_ark106_2d_lidar/gate.csv", "audit_ark106_cutr_*/gate.csv"), AUDIT, _a4_handheld_gates),
     Claim("A4.8", "A4", "The item-level certificate on held-out scenes: 6 of 45 non-empty gates exceed epsilon; the two "
-          "largest by labels accepted (1,921 at 15% and 1,047 at 22% wrong) are on the warehouse scenes. Cubify's "
-          "Table 2 gates hold (6.0-8.9% wrong), though the scene-bootstrap upper bound reaches 13%.",
+          "largest by labels accepted (1,921 at 15% and 1,047 at 22% wrong) are on the warehouse scenes. The "
+          "handheld Table 2 gates hold (6.0-8.9% wrong; baseline: its LiDAR-only audit), though the scene-bootstrap "
+          "upper bound reaches 13%.",
           {"violated": "6", "gates": "45", "largest_n": "1921", "largest_err": "15", "second_n": "1047",
            "second_err": "22", "largest_two_warehouse": "True",
-           "cubify_handheld_lo": "6.0", "cubify_handheld_hi": "8.9", "boot_hi_sam3_tau": "13"},
+           "handheld_lo": "6.0", "handheld_hi": "8.9", "boot_hi_sam3_tau": "13"},
           ("audit_*/gate.csv",), AUDIT, _a4_violations),
+    Claim("A4.9", "A4", "Leaving out a whole warehouse layout, Sparse4D v2.2 keeps 0.91 coverage and its gate (91% at "
+          "1.7% wrong); the monocular baseline's gate at twice the tolerance accepts 1,011 labels at 36% wrong and the "
+          "pre-2026 checkpoint's constant gate 2,167 at 16% (gates exceeding epsilon: 0, 2 and 2).",
+          {"v22_coverage": "0.91", "v22_acc": "91", "v22_err": "1.7", "mono_n": "1011", "mono_err": "36",
+           "old_n": "2167", "old_err": "16", "violated_v22": "0", "violated_mono": "2", "violated_old": "2"},
+          ("audit_ss12_*_bylayout/gate.csv", "audit_ss12_sparse4d_v22_bylayout/coverage.csv"), AUDIT, _a4_layouts),
     Claim("A4.7", "A4", "Checking labels in risk order, Sparse4D's labels reach at most 1% wrong after 9% are checked, "
           "against 18% ordered by question type alone and 59% at random (a sixth): assuming 30 s per check, 46 instead "
           "of 91 or 297 reviewer-minutes per 1,000 labels (500 to check all). Handheld labels reach 2% after 69-74% "

@@ -1,0 +1,124 @@
+{
+ "config": {
+  "levels": [
+   0.5,
+   0.8,
+   0.9,
+   0.95
+  ],
+  "ridge_grid": [
+   1.0,
+   10.0,
+   100.0,
+   1000.0,
+   10000.0,
+   100000.0
+  ],
+  "n_jobs": 6,
+  "gross": true,
+  "s0": 0.005,
+  "mondrian": [
+   "qtype",
+   "depth_source"
+  ],
+  "min_cal": 20,
+  "gate_level": 0.9,
+  "epsilon": 0.1,
+  "delta": 0.1,
+  "kappa": 3.0,
+  "min_accept": 30,
+  "min_accept_frac": 0.05,
+  "tau_scales": [
+   1.0,
+   2.0
+  ],
+  "n_bins": 10,
+  "min_scenes": 3,
+  "min_rows": 20,
+  "max_folds": 20,
+  "seed": 0,
+  "n_boot": 2000
+ },
+ "gate_z": 1.6448536269514722,
+ "datasets": [
+  "arkitscenes"
+ ],
+ "n_rows": 3505,
+ "n_labelled": 3135,
+ "inputs": {
+  "arkitscenes": {
+   "qa_auto_lidar.jsonl": {
+    "bytes": 6606917,
+    "sha256": "09f16ae0ca8e91bbc0595b5da41331b59699dfba5578a126d8858ad5be11b7de"
+   },
+   "qa_oracle.jsonl": {
+    "bytes": 4086905,
+    "sha256": "f308e4346c7627a3b93af0e3897d5a4badde6d7b08aff9f674e64bbde673c6b3"
+   },
+   "n_auto_only": {
+    "lidar": 0
+   }
+  }
+ },
+ "exclude_ambiguous": {
+  "enabled": false
+ },
+ "cross_fit": {
+  "max_folds": 20,
+  "seed": 0,
+  "rule": "a dataset and question type with at most max_folds scenes is cross-fitted leave one scene out (calibration: leave two out); with more, its scenes are grouped into max_folds folds balanced by row count and the same scheme runs on folds (calibration scores for a test scene come from scenes outside its fold, predicted without both folds)",
+  "grouped": {
+   "arkitscenes/count": {
+    "n_scenes": 101,
+    "n_folds": 20
+   },
+   "arkitscenes/distance_center": {
+    "n_scenes": 48,
+    "n_folds": 20
+   },
+   "arkitscenes/distance_surface": {
+    "n_scenes": 25,
+    "n_folds": 20
+   },
+   "arkitscenes/ego_distance": {
+    "n_scenes": 98,
+    "n_folds": 20
+   },
+   "arkitscenes/left_right": {
+    "n_scenes": 35,
+    "n_folds": 20
+   },
+   "arkitscenes/relative_depth": {
+    "n_scenes": 35,
+    "n_folds": 20
+   },
+   "arkitscenes/size_height": {
+    "n_scenes": 98,
+    "n_folds": 20
+   },
+   "arkitscenes/size_longest": {
+    "n_scenes": 98,
+    "n_folds": 20
+   }
+  }
+ },
+ "notes": [
+  "arkitscenes/closest_instance: skipped (2 labelled rows, 2 scenes)",
+  "arkitscenes/count: 101 scenes cross-fitted in 20 folds of 4-6 scenes and 38-39 rows (table folds)",
+  "arkitscenes/distance_center: 48 scenes cross-fitted in 20 folds of 1-4 scenes and 7-16 rows (table folds)",
+  "arkitscenes/distance_surface: 25 scenes cross-fitted in 20 folds of 1-2 scenes and 1-8 rows (table folds)",
+  "arkitscenes/ego_distance: 98 scenes cross-fitted in 20 folds of 1-6 scenes and 32-36 rows (table folds)",
+  "arkitscenes/left_right: 35 scenes cross-fitted in 20 folds of 1-3 scenes and 3-8 rows (table folds)",
+  "arkitscenes/relative_depth: 35 scenes cross-fitted in 20 folds of 1-3 scenes and 3-11 rows (table folds)",
+  "arkitscenes/size_height: 98 scenes cross-fitted in 20 folds of 1-6 scenes and 32-36 rows (table folds)",
+  "arkitscenes/size_longest: 98 scenes cross-fitted in 20 folds of 1-6 scenes and 32-36 rows (table folds)"
+ ],
+ "git_commit": "a3ce538390f6a18547e5abd1be5ec89f540aecab+dirty",
+ "seconds": 486.0,
+ "depth_sources": {
+  "selected": [
+   "lidar"
+  ],
+  "rule": "only qa_oracle.jsonl and these sources' qa_auto_<source>.jsonl were read (measured_space.audit.load_labels), so every fit, conformal cell and gate certificate uses these sources' (question, depth source) rows only"
+ }
+}
