@@ -1,0 +1,11 @@
+dataset,qtype,kind,ridge,n_models
+arkitscenes,count,const,1,96
+arkitscenes,count,logistic,1,96
+arkitscenes,count,margin,1,28
+arkitscenes,count,margin,10,68
+arkitscenes,distance_center,sigma,100000,21
+arkitscenes,ego_distance,sigma,1,13
+arkitscenes,ego_distance,sigma,10,56
+arkitscenes,ego_distance,sigma,100,12
+arkitscenes,size_height,sigma,10,81
+arkitscenes,size_longest,sigma,10,81

@@ -1,0 +1,5 @@
+labeller,source,dataset,population,n_present,n_missed,n_no_detection,n_unboxed,n_assignment,share_no_detection,share_unboxed,share_assignment
+sparse4d,sparse4d,smartspaces,present,34808,14085,13833,0,252,0.982109,0,0.0178914
+sparse4d,sparse4d,smartspaces,clearly_visible,24200,6382,6185,0,197,0.969132,0,0.0308681
+v0,moge,smartspaces,present,34808,12980,12146,2,832,0.935747,0.000154083,0.0640986
+v0,moge,smartspaces,clearly_visible,24200,6316,5671,0,645,0.897878,0,0.102122

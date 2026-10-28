@@ -1,0 +1,75 @@
+{
+ "config": {
+  "levels": [
+   0.5,
+   0.8,
+   0.9,
+   0.95
+  ],
+  "ridge_grid": [
+   1.0,
+   10.0,
+   100.0,
+   1000.0,
+   10000.0,
+   100000.0
+  ],
+  "n_jobs": 6,
+  "gross": true,
+  "s0": 0.005,
+  "mondrian": [
+   "qtype",
+   "depth_source"
+  ],
+  "min_cal": 20,
+  "gate_level": 0.9,
+  "epsilon": 0.1,
+  "delta": 0.1,
+  "kappa": 3.0,
+  "min_accept": 30,
+  "min_accept_frac": 0.05,
+  "tau_scales": [
+   1.0,
+   2.0
+  ],
+  "n_bins": 10,
+  "min_scenes": 3,
+  "min_rows": 20,
+  "max_folds": 20,
+  "seed": 0,
+  "n_boot": 2000
+ },
+ "gate_z": 1.6448536269514722,
+ "datasets": [
+  "smartspaces"
+ ],
+ "n_rows": 30872,
+ "n_labelled": 16763,
+ "inputs": {
+  "smartspaces": {
+   "qa_auto_moge.jsonl": {
+    "bytes": 43306241,
+    "sha256": "7f16f3357a86ede20bb893851c59663c11c3488ea1d9af3324347af69abd01c2"
+   },
+   "qa_oracle.jsonl": {
+    "bytes": 48988442,
+    "sha256": "237dc056e69c0cdc5e2ee4e621c938de963830a25e064131332938c55cdacb4b"
+   },
+   "n_auto_only": {
+    "moge": 0
+   }
+  }
+ },
+ "exclude_ambiguous": {
+  "enabled": false
+ },
+ "cross_fit": {
+  "max_folds": 20,
+  "seed": 0,
+  "rule": "a dataset and question type with at most max_folds scenes is cross-fitted leave one scene out (calibration: leave two out); with more, its scenes are grouped into max_folds folds balanced by row count and the same scheme runs on folds (calibration scores for a test scene come from scenes outside its fold, predicted without both folds)",
+  "grouped": {}
+ },
+ "notes": [],
+ "git_commit": "736e56bf38762ee6e630db3ecae05ec2b4cd51af+dirty",
+ "seconds": 169.6
+}

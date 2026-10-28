@@ -1,0 +1,11 @@
+dataset,answer_kind,ranking,n,aurc,auroc,d_aurc,d_lo,d_hi
+smartspaces,numeric,const,11585,0.0201293,0.737859,0.0145865,0.00396268,0.030759
+smartspaces,numeric,prop,11585,0.020455,0.70023,0.0149123,0.00491229,0.0355076
+smartspaces,numeric,sigma,11585,0.00554267,0.89697,,,
+smartspaces,numeric,random,11585,0.0367717,0.5,,,
+smartspaces,numeric,ideal,11585,0.000686108,1,,,
+smartspaces,categorical,const,4924,0.0137549,0.8951,9.32371e-05,-0.0011771,0.000491376
+smartspaces,categorical,logistic,4924,0.0136145,0.895827,,,
+smartspaces,categorical,margin,4924,0.0136012,0.895929,-1.33147e-05,-0.000940417,0.000188689
+smartspaces,categorical,random,4924,0.0897644,0.5,,,
+smartspaces,categorical,ideal,4924,0.00416421,1,,,

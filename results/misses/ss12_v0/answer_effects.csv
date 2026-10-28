@@ -1,0 +1,11 @@
+labeller,source,dataset,qtype,n_questions,n_answered,coverage,coverage_lo,coverage_hi,n_unanswered_miss,n_wrong,wrong_rate,wrong_lo,wrong_hi,n_exact,n_under,n_over,n_with_missed_instance,n_under_miss_only,n_under_miss_and_other,n_under_other,n_masked_miss,n_over_despite_miss,missed_instances,n_open_answered,n_open_only,n_open_wrong,n_answer_object_missed,n_silent_miss,silent_miss_share_of_wrong,silent_lo,silent_hi
+v0,moge,smartspaces,closest_instance,1012,44,0.0434783,0.0325457,0.0578635,968,0,0,0,0.0802956,,,,,,,,,,,93,49,17,580,13,0.764706,0.527382,0.90445
+v0,moge,smartspaces,count,1300,1300,1,0.997054,1,0,995,0.765385,0.741588,0.787617,305,973,22,970,620,292,61,55,3,1814,,,,,915,0.919598,0.901044,0.934924
+v0,moge,smartspaces,distance_center,4097,1862,0.454479,0.439282,0.469761,2235,781,0.419441,0.397216,0.441999,,,,,,,,,,,,,,,0,,,
+v0,moge,smartspaces,distance_surface,4096,1881,0.459229,0.444013,0.474521,2215,951,0.505582,0.483,0.528142,,,,,,,,,,,,,,,0,,,
+v0,moge,smartspaces,ego_distance,4187,2692,0.642942,0.628305,0.657318,1495,1170,0.434621,0.416002,0.453427,,,,,,,,,,,,,,,0,,,
+v0,moge,smartspaces,left_right,3810,1798,0.471916,0.456101,0.487788,2012,1,0.000556174,9.8185e-05,0.00314375,,,,,,,,,,,,,,,0,,,
+v0,moge,smartspaces,relative_depth,3996,1849,0.462713,0.447296,0.478201,2147,13,0.00703083,0.00411347,0.0119923,,,,,,,,,,,,,,,0,,,
+v0,moge,smartspaces,size_height,4187,2681,0.640315,0.625656,0.654717,1506,1541,0.574786,0.555978,0.593379,,,,,,,,,,,,,,,0,,,
+v0,moge,smartspaces,size_longest,4187,2656,0.634344,0.619639,0.648803,1531,2075,0.78125,0.765128,0.79656,,,,,,,,,,,,,,,0,,,
+v0,moge,smartspaces,all,30872,16763,0.542984,0.537422,0.548535,14109,7527,0.449025,0.441508,0.456565,,,,,,,,,,,,,,,928,,,

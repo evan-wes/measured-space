@@ -1,0 +1,640 @@
+{
+ "analysis": "certify decisions, not measurements (measured_space.decisions)",
+ "inputs": {
+  "2d_lidar": {
+   "folder": "<data>/outputs/audit_ark106_2d",
+   "source": "lidar",
+   "dataset": "arkitscenes",
+   "setting": "handheld",
+   "files": {
+    "pairs.csv": {
+     "bytes": 2026978,
+     "sha256": "e1aa09821f2d2c1c0acd04bfd81bea2c4742af67bc9ce9b7ea92e107f5c04754"
+    },
+    "numeric.csv": {
+     "bytes": 4637960,
+     "sha256": "dfa9c4403c8fb578f6088dae9a41e60928b628d804e79b8a88dc3aba8a74ae6f"
+    },
+    "gate.csv": {
+     "bytes": 11807290,
+     "sha256": "8040f3b2756b80b5eaeacf1a6c4fe7001c190efa06d35640f0ef62224a014511"
+    },
+    "summary.json": {
+     "bytes": 3414,
+     "sha256": "55da1345a2b376dc43b913eb7c3a94462192674ed1b072dbc8f79d0e430ab61f"
+    },
+    "tables/folds.csv": {
+     "bytes": 23232,
+     "sha256": "690f5410adf8170db116184eccfb0840d22ad43b7410201f39eaf4e56e8b2c68"
+    }
+   },
+   "audit_git_commit": "736e56bf38762ee6e630db3ecae05ec2b4cd51af+dirty",
+   "audit_config": {
+    "max_folds": 20,
+    "seed": 0,
+    "epsilon": 0.1,
+    "delta": 0.1,
+    "min_accept": 30,
+    "min_accept_frac": 0.05
+   },
+   "folds": {
+    "recorded": true,
+    "checked_against_record": [
+     "arkitscenes/distance_center",
+     "arkitscenes/distance_surface",
+     "arkitscenes/ego_distance",
+     "arkitscenes/size_height",
+     "arkitscenes/size_longest"
+    ],
+    "rule": "recomputed with measured_space.audit.scene_folds over the audit's modelled rows of every depth source; groups listed were checked against folds.csv, the others have at most max_folds scenes (one scene per fold)"
+   },
+   "n_answers": {
+    "distance_center": 177,
+    "distance_surface": 57,
+    "ego_distance": 653,
+    "size_height": 651,
+    "size_longest": 652
+   },
+   "n_scenes": 98,
+   "n_decisions": {
+    "threshold": 4380,
+    "sweep": 21900,
+    "safety": 468
+   },
+   "part_b": {
+    "skipped": false,
+    "label_folder": "<data>/outputs/labels_ark106_2d/arkitscenes",
+    "check": "4 files match the audit's recorded sha256: ['qa_auto_laser.jsonl', 'qa_auto_lidar.jsonl', 'qa_auto_moge.jsonl', 'qa_oracle.jsonl']",
+    "counts": {
+     "n_answers": 1956,
+     "n_no_referents": 0,
+     "n_multi_referent": 0,
+     "n_same_object": 0,
+     "n_pairs": 534
+    },
+    "referent_file": "<data>/outputs/labels_ark106_2d/arkitscenes/qa_oracle.jsonl",
+    "n_ids_found": 1956
+   },
+   "notes": [],
+   "seconds": 2.7
+  },
+  "cutr_sam3": {
+   "folder": "<data>/outputs/audit_ark106_cutr_sam3",
+   "source": "cutr_sam3",
+   "dataset": "arkitscenes",
+   "setting": "handheld",
+   "files": {
+    "pairs.csv": {
+     "bytes": 604111,
+     "sha256": "796f224ffeb0eb4abbd3cad20cdb421720122900f82675bf0f049360c9830b62"
+    },
+    "numeric.csv": {
+     "bytes": 1443643,
+     "sha256": "c0a8aed492b3da604d45b44e4003c6adc17448cf48f4f6dd1d9c3f43ae2c75f8"
+    },
+    "gate.csv": {
+     "bytes": 3673047,
+     "sha256": "31ec905ed125b692d94204d041f8b30144805b46963b8b71ad2837464bbdd6a5"
+    },
+    "summary.json": {
+     "bytes": 3037,
+     "sha256": "2946080184b42ed0d47d2d1d3ee3ccfa171cea0cbd52b3175d0fb341ba8bd1fa"
+    },
+    "tables/folds.csv": {
+     "bytes": 22316,
+     "sha256": "150a72b13c44bbac84289b883b6b54ed9afca158c2a601d646839c76a2624655"
+    }
+   },
+   "audit_git_commit": "736e56bf38762ee6e630db3ecae05ec2b4cd51af+dirty",
+   "audit_config": {
+    "max_folds": 20,
+    "seed": 0,
+    "epsilon": 0.1,
+    "delta": 0.1,
+    "min_accept": 30,
+    "min_accept_frac": 0.05
+   },
+   "folds": {
+    "recorded": true,
+    "checked_against_record": [
+     "arkitscenes/distance_center",
+     "arkitscenes/distance_surface",
+     "arkitscenes/ego_distance",
+     "arkitscenes/size_height",
+     "arkitscenes/size_longest"
+    ],
+    "rule": "recomputed with measured_space.audit.scene_folds over the audit's modelled rows of every depth source; groups listed were checked against folds.csv, the others have at most max_folds scenes (one scene per fold)"
+   },
+   "n_answers": {
+    "distance_center": 137,
+    "distance_surface": 40,
+    "ego_distance": 610,
+    "size_height": 609,
+    "size_longest": 611
+   },
+   "n_scenes": 98,
+   "n_decisions": {
+    "threshold": 4014,
+    "sweep": 20070,
+    "safety": 354
+   },
+   "part_b": {
+    "skipped": false,
+    "label_folder": "<data>/outputs/labels_ark106_cutr_sam3/arkitscenes",
+    "check": "2 files match the audit's recorded sha256: ['qa_auto_cutr_sam3.jsonl', 'qa_oracle.jsonl']",
+    "counts": {
+     "n_answers": 1830,
+     "n_no_referents": 0,
+     "n_multi_referent": 0,
+     "n_same_object": 0,
+     "n_pairs": 408
+    },
+    "referent_file": "<data>/outputs/labels_ark106_cutr_sam3/arkitscenes/qa_oracle.jsonl",
+    "n_ids_found": 1830
+   },
+   "notes": [],
+   "seconds": 2.5
+  },
+  "cutr_clip": {
+   "folder": "<data>/outputs/audit_ark106_cutr_clip",
+   "source": "cutr_clip",
+   "dataset": "arkitscenes",
+   "setting": "handheld",
+   "files": {
+    "pairs.csv": {
+     "bytes": 573221,
+     "sha256": "6b2287d8a2fe33eada2d354a3c072b5888abcee144df1f55ad019990a7cb27d7"
+    },
+    "numeric.csv": {
+     "bytes": 1411473,
+     "sha256": "76e4b3070d6028eddbaf137567fae12d204424c020a00ffd748a90b1149e6e2f"
+    },
+    "gate.csv": {
+     "bytes": 3587356,
+     "sha256": "0f1626075de4ba0fc5a317d5d455d979ae15a75ce67b03a540794c2250a120ba"
+    },
+    "summary.json": {
+     "bytes": 2917,
+     "sha256": "c168ec75bd895c00d59d7ccdf918829311e72847e69cb9f87a4805954c08b116"
+    },
+    "tables/folds.csv": {
+     "bytes": 20956,
+     "sha256": "be66d7fbcfdb6aeb9d9e6ab9667b041467e440c216a1f2489023eaa90c850370"
+    }
+   },
+   "audit_git_commit": "736e56bf38762ee6e630db3ecae05ec2b4cd51af+dirty",
+   "audit_config": {
+    "max_folds": 20,
+    "seed": 0,
+    "epsilon": 0.1,
+    "delta": 0.1,
+    "min_accept": 30,
+    "min_accept_frac": 0.05
+   },
+   "folds": {
+    "recorded": true,
+    "checked_against_record": [
+     "arkitscenes/distance_center",
+     "arkitscenes/ego_distance",
+     "arkitscenes/size_height",
+     "arkitscenes/size_longest"
+    ],
+    "rule": "recomputed with measured_space.audit.scene_folds over the audit's modelled rows of every depth source; groups listed were checked against folds.csv, the others have at most max_folds scenes (one scene per fold)"
+   },
+   "n_answers": {
+    "distance_center": 126,
+    "distance_surface": 31,
+    "ego_distance": 602,
+    "size_height": 604,
+    "size_longest": 604
+   },
+   "n_scenes": 99,
+   "n_decisions": {
+    "threshold": 3934,
+    "sweep": 19670,
+    "safety": 314
+   },
+   "part_b": {
+    "skipped": false,
+    "label_folder": "<data>/outputs/labels_ark106_cutr_clip/arkitscenes",
+    "check": "2 files match the audit's recorded sha256: ['qa_auto_cutr_clip.jsonl', 'qa_oracle.jsonl']",
+    "counts": {
+     "n_answers": 1810,
+     "n_no_referents": 0,
+     "n_multi_referent": 0,
+     "n_same_object": 0,
+     "n_pairs": 378
+    },
+    "referent_file": "<data>/outputs/labels_ark106_cutr_clip/arkitscenes/qa_oracle.jsonl",
+    "n_ids_found": 1810
+   },
+   "notes": [],
+   "seconds": 2.5
+  },
+  "2d_moge": {
+   "folder": "<data>/outputs/audit_ss12_2d",
+   "source": "moge",
+   "dataset": "smartspaces",
+   "setting": "warehouse",
+   "files": {
+    "pairs.csv": {
+     "bytes": 5954612,
+     "sha256": "b1f92d66233fa089f3e0c169e182208799f34d5fa451fdb588066442574e2c5f"
+    },
+    "numeric.csv": {
+     "bytes": 9190295,
+     "sha256": "07908a9c63699e20d217f0ff5b6543f24d00110219846a0bbf34a7b6e62926ec"
+    },
+    "gate.csv": {
+     "bytes": 23310015,
+     "sha256": "68c8a3f3827f97d28d32b6734f0141ae998e40e90e0b7399e7045bd057da6d31"
+    },
+    "summary.json": {
+     "bytes": 1547,
+     "sha256": "07e578089901cb9f253e5fb6a4a0cf32e696a7d93aabc3d8b77b915692629373"
+    }
+   },
+   "audit_git_commit": "736e56bf38762ee6e630db3ecae05ec2b4cd51af+dirty",
+   "audit_config": {
+    "max_folds": 20,
+    "seed": 0,
+    "epsilon": 0.1,
+    "delta": 0.1,
+    "min_accept": 30,
+    "min_accept_frac": 0.05
+   },
+   "folds": {
+    "recorded": false,
+    "checked_against_record": [],
+    "rule": "recomputed with measured_space.audit.scene_folds over the audit's modelled rows of every depth source; groups listed were checked against folds.csv, the others have at most max_folds scenes (one scene per fold)"
+   },
+   "n_answers": {
+    "distance_center": 1862,
+    "distance_surface": 1881,
+    "ego_distance": 2692,
+    "size_height": 2681,
+    "size_longest": 2656
+   },
+   "n_scenes": 12,
+   "n_decisions": {
+    "threshold": 27287,
+    "sweep": 117720,
+    "safety": 11229
+   },
+   "part_b": {
+    "skipped": false,
+    "label_folder": "<data>/outputs/labels_ss12_2d/smartspaces",
+    "check": "2 files match the audit's recorded sha256: ['qa_auto_moge.jsonl', 'qa_oracle.jsonl']",
+    "counts": {
+     "n_answers": 8029,
+     "n_no_referents": 0,
+     "n_multi_referent": 0,
+     "n_same_object": 0,
+     "n_pairs": 5623
+    },
+    "referent_file": "<data>/outputs/labels_ss12_2d/smartspaces/qa_oracle.jsonl",
+    "n_ids_found": 8029
+   },
+   "notes": [],
+   "seconds": 1.7
+  },
+  "sparse4d_v22": {
+   "folder": "<data>/outputs/audit_ss12_sparse4d_v22",
+   "source": "sparse4d",
+   "dataset": "smartspaces",
+   "setting": "warehouse",
+   "files": {
+    "pairs.csv": {
+     "bytes": 6389104,
+     "sha256": "0281a6f059262cd0722858ae6afea455433a1bd66ee4a49155e9f8112ea5bd60"
+    },
+    "numeric.csv": {
+     "bytes": 16191630,
+     "sha256": "e6bdde2c1b13e143234760749c2ccc89f7f7e7451082ebb35aec475bc9167e19"
+    },
+    "gate.csv": {
+     "bytes": 42129290,
+     "sha256": "8acd211db29a4002cbff6d906cb01fb10d10093ab92c6d1e5b1b8d5aa57463d1"
+    },
+    "summary.json": {
+     "bytes": 1555,
+     "sha256": "666ff28d4581cf71ee0fcb66edcfccd45b35682ee6ee3f323cb691b3ded04ee0"
+    }
+   },
+   "audit_git_commit": "bb539a8ae77f2a2af9395e3daf1629cdd869e31e+dirty",
+   "audit_config": {
+    "max_folds": 20,
+    "seed": 0,
+    "epsilon": 0.1,
+    "delta": 0.1,
+    "min_accept": 30,
+    "min_accept_frac": 0.05
+   },
+   "folds": {
+    "recorded": false,
+    "checked_against_record": [],
+    "rule": "recomputed with measured_space.audit.scene_folds over the audit's modelled rows of every depth source; groups listed were checked against folds.csv, the others have at most max_folds scenes (one scene per fold)"
+   },
+   "n_answers": {
+    "distance_center": 3803,
+    "distance_surface": 3820,
+    "ego_distance": 4049,
+    "size_height": 4034,
+    "size_longest": 4050
+   },
+   "n_scenes": 12,
+   "n_decisions": {
+    "threshold": 47135,
+    "sweep": 197560,
+    "safety": 22869
+   },
+   "part_b": {
+    "skipped": false,
+    "label_folder": "<data>/outputs/labels_ss12_sparse4d_v22/smartspaces",
+    "check": "2 files match the audit's recorded sha256: ['qa_auto_sparse4d.jsonl', 'qa_oracle.jsonl']",
+    "counts": {
+     "n_answers": 12133,
+     "n_no_referents": 0,
+     "n_multi_referent": 0,
+     "n_same_object": 0,
+     "n_pairs": 11480
+    },
+    "referent_file": "<data>/outputs/labels_ss12_sparse4d_v22/smartspaces/qa_oracle.jsonl",
+    "n_ids_found": 12133
+   },
+   "notes": [],
+   "seconds": 2.8
+  },
+  "sparse4d_v11": {
+   "folder": "<data>/outputs/audit_ss12_sparse4d_v11",
+   "source": "sparse4d",
+   "dataset": "smartspaces",
+   "setting": "warehouse",
+   "files": {
+    "pairs.csv": {
+     "bytes": 5832443,
+     "sha256": "99b28d3ddf7055455554fe58e55bdb1967a3a21748a63768193fc048164ce801"
+    },
+    "numeric.csv": {
+     "bytes": 11498014,
+     "sha256": "03762646f33e75f4da8ac243065148434041d4cae2114bf98f99b831f5fe753a"
+    },
+    "gate.csv": {
+     "bytes": 29679346,
+     "sha256": "389830f46039d89c321af80fb109a07847c9e84fe84ed7dc20525988403e9d90"
+    },
+    "summary.json": {
+     "bytes": 1555,
+     "sha256": "724c8911b6f15498d092907e33466dfe4842331cbd2d16563ae87910b86c43b2"
+    }
+   },
+   "audit_git_commit": "bb539a8ae77f2a2af9395e3daf1629cdd869e31e+dirty",
+   "audit_config": {
+    "max_folds": 20,
+    "seed": 0,
+    "epsilon": 0.1,
+    "delta": 0.1,
+    "min_accept": 30,
+    "min_accept_frac": 0.05
+   },
+   "folds": {
+    "recorded": false,
+    "checked_against_record": [],
+    "rule": "recomputed with measured_space.audit.scene_folds over the audit's modelled rows of every depth source; groups listed were checked against folds.csv, the others have at most max_folds scenes (one scene per fold)"
+   },
+   "n_answers": {
+    "distance_center": 2523,
+    "distance_surface": 2558,
+    "ego_distance": 2989,
+    "size_height": 3006,
+    "size_longest": 2989
+   },
+   "n_scenes": 12,
+   "n_decisions": {
+    "threshold": 33211,
+    "sweep": 140650,
+    "safety": 15243
+   },
+   "part_b": {
+    "skipped": false,
+    "label_folder": "<data>/outputs/labels_ss12_sparse4d_v11/smartspaces",
+    "check": "2 files match the audit's recorded sha256: ['qa_auto_sparse4d.jsonl', 'qa_oracle.jsonl']",
+    "counts": {
+     "n_answers": 8984,
+     "n_no_referents": 0,
+     "n_multi_referent": 0,
+     "n_same_object": 0,
+     "n_pairs": 7612
+    },
+    "referent_file": "<data>/outputs/labels_ss12_sparse4d_v11/smartspaces/qa_oracle.jsonl",
+    "n_ids_found": 8984
+   },
+   "notes": [],
+   "seconds": 2.2
+  }
+ },
+ "thresholds": {
+  "arkitscenes": {
+   "distance_center": [
+    0.5,
+    1.0
+   ],
+   "distance_surface": [
+    0.5,
+    1.0
+   ],
+   "ego_distance": [
+    0.75,
+    1.5
+   ],
+   "size_height": [
+    0.5,
+    1.0
+   ],
+   "size_longest": [
+    0.6,
+    1.0
+   ]
+  },
+  "smartspaces": {
+   "distance_center": [
+    2.0,
+    5.0,
+    10.0
+   ],
+   "distance_surface": [
+    2.0,
+    5.0,
+    10.0
+   ],
+   "ego_distance": [
+    10.0,
+    30.0
+   ],
+   "size_height": [
+    1.0,
+    2.0
+   ],
+   "size_longest": [
+    1.0,
+    2.0
+   ]
+  }
+ },
+ "sweep_u": [
+  -0.5,
+  -0.3,
+  -0.2,
+  -0.1,
+  -0.05,
+  0.05,
+  0.1,
+  0.2,
+  0.3,
+  0.5
+ ],
+ "safety_qtypes": [
+  "distance_center",
+  "distance_surface"
+ ],
+ "margin_qtypes": [
+  "size_height",
+  "size_longest",
+  "ego_distance"
+ ],
+ "fit_qtypes": [
+  "size_height",
+  "size_longest"
+ ],
+ "config": {
+  "epsilons": [
+   0.1,
+   0.05
+  ],
+  "delta": 0.1,
+  "level": 0.9,
+  "min_accept": 30,
+  "min_accept_frac": 0.05,
+  "pool": "labeller",
+  "fit_margin": 0.1,
+  "n_boot": 2000,
+  "seed": 0
+ },
+ "ltt_growth": 1.25,
+ "primary_epsilon": 0.1,
+ "skip_margins": false,
+ "assumptions": [
+  "Answers and error bars are the audit's out-of-scene predictions of the feature model (numeric.csv, kind sigma): mu is the predicted bias of e = value - reference, half90 the half-width of the split-conformal 90 % interval [mu - half90, mu + half90] for e, so the interval for the reference is [c - half90, c + half90] with c = value - mu. Nothing is refitted.",
+  "Truth is the reference value value - e. A decision with c exactly at the threshold (infinite score) is never accepted.",
+  "Calibration decisions for a test scene come from scenes outside its fold (per question type, the audit's folds, recomputed and checked against folds.csv where recorded). They are those scenes' own out-of-scene test predictions: the audit did not save its leave-two-out calibration predictions, so a calibration decision's mu and sigma come from a model whose training data included the test scene's fold, and its half90 from a conformal quantile whose calibration scores included that fold. The test scene's own answers never calibrate it, but the Learn-then-Test certificate is approximate in this respect.",
+  "Learn-then-Test is the audit's procedure and settings (fixed-sequence binomial tests on a geometric grid; min_accept 30, min_accept_frac 0.05). Items are treated as independent and scenes as exchangeable, as in the audit; Wilson intervals and binomial bounds are optimistic for items that share a scene, so the scene-cluster bootstrap interval is reported too.",
+  "Calibration pool 'labeller' (default) pools all of a labeller's decisions of one analysis (question types and thresholds; sweep: per |u|, both signs; margins: per decision), as the audit's gate pools question types: the certificate is on the pooled wrong-decision rate, and a per-type or per-threshold row may exceed epsilon. Pool 'family' calibrates each question type and threshold separately.",
+  "The fixed-tolerance gate is taken from gate.csv as the audit ran it (kind sigma, tau_scale 1, decision accept); in an audit with several depth sources its threshold was certified on all sources together.",
+  "The sweep places t = ref (1 + u) relative to the reference: an analysis device (t depends on the unknown reference), not a deployable decision. Its truth is u < 0; answers with ref <= 0 are left out.",
+  "Safety decisions are one-sided: only outside calls (c > t) can be accepted, with score half90 / (c - t); an accepted call is wrong when ref <= t. The no-check baseline accepts every outside call.",
+  "Margins: unordered pairs of answers of one question type in one view (dataset, scene, camera, frame) about two different single-referent objects (referents from the label folder's qa_oracle.jsonl, found by the audit's recorded checksums), oriented by question id (hashes: unrelated to the values). Direct calibration is split conformal on |e_m - (mu_A - mu_B)| / sqrt(sigma_A^2 + sigma_B^2) over pairs of the same question type outside the test scene's fold, with the same calibration caveat as above."
+ ],
+ "headline": [
+  {
+   "labeller": "2d_lidar",
+   "setting": "handheld",
+   "n_decisions": 4380,
+   "certified_eps0.1_accept_share": 0.9997716894977169,
+   "certified_eps0.1_wrong_rate": 0.06554007764329756,
+   "certified_eps0.05_accept_share": 0.9116438356164384,
+   "certified_eps0.05_wrong_rate": 0.04282494365138993,
+   "interval_accept_share": 0.6461187214611872,
+   "interval_wrong_rate": 0.01696113074204947,
+   "accept_all_accept_share": 1.0,
+   "accept_all_wrong_rate": 0.06575342465753424,
+   "fixed_tau_gate_accept_share": 0.30182648401826484,
+   "fixed_tau_gate_wrong_rate": 0.02118003025718608
+  },
+  {
+   "labeller": "cutr_sam3",
+   "setting": "handheld",
+   "n_decisions": 4014,
+   "certified_eps0.1_accept_share": 0.9997508719481814,
+   "certified_eps0.1_wrong_rate": 0.06105158235733865,
+   "certified_eps0.05_accept_share": 0.911310413552566,
+   "certified_eps0.05_wrong_rate": 0.036358665937670856,
+   "interval_accept_share": 0.7027902341803687,
+   "interval_wrong_rate": 0.01772421127259837,
+   "accept_all_accept_share": 1.0,
+   "accept_all_wrong_rate": 0.06103637269556552,
+   "fixed_tau_gate_accept_share": 0.14499252615844543,
+   "fixed_tau_gate_wrong_rate": 0.02577319587628866
+  },
+  {
+   "labeller": "cutr_clip",
+   "setting": "handheld",
+   "n_decisions": 3934,
+   "certified_eps0.1_accept_share": 0.9997458057956279,
+   "certified_eps0.1_wrong_rate": 0.06585303839308417,
+   "certified_eps0.05_accept_share": 0.9117946110828673,
+   "certified_eps0.05_wrong_rate": 0.039029829941455256,
+   "interval_accept_share": 0.6474326385358414,
+   "interval_wrong_rate": 0.0176678445229682,
+   "accept_all_accept_share": 1.0,
+   "accept_all_wrong_rate": 0.06583629893238434,
+   "fixed_tau_gate_accept_share": 0.19522114895780376,
+   "fixed_tau_gate_wrong_rate": 0.01953125
+  },
+  {
+   "labeller": "2d_moge",
+   "setting": "warehouse",
+   "n_decisions": 27287,
+   "certified_eps0.1_accept_share": 0.94623813537582,
+   "certified_eps0.1_wrong_rate": 0.07606506584043377,
+   "certified_eps0.05_accept_share": 0.7288452376589585,
+   "certified_eps0.05_wrong_rate": 0.01598954143201931,
+   "interval_accept_share": 0.6515556858577345,
+   "interval_wrong_rate": 0.006862028235558805,
+   "accept_all_accept_share": 1.0,
+   "accept_all_wrong_rate": 0.09788543995309122,
+   "fixed_tau_gate_accept_share": 0.0,
+   "fixed_tau_gate_wrong_rate": null
+  },
+  {
+   "labeller": "sparse4d_v22",
+   "setting": "warehouse",
+   "n_decisions": 47135,
+   "certified_eps0.1_accept_share": 0.999978784342845,
+   "certified_eps0.1_wrong_rate": 0.0036067382356685194,
+   "certified_eps0.05_accept_share": 0.999978784342845,
+   "certified_eps0.05_wrong_rate": 0.0036067382356685194,
+   "interval_accept_share": 0.9879282910788162,
+   "interval_wrong_rate": 0.0017609414594339217,
+   "accept_all_accept_share": 1.0,
+   "accept_all_wrong_rate": 0.003606661716346664,
+   "fixed_tau_gate_accept_share": 0.9200806194971889,
+   "fixed_tau_gate_wrong_rate": 0.003389596015495296
+  },
+  {
+   "labeller": "sparse4d_v11",
+   "setting": "warehouse",
+   "n_decisions": 33211,
+   "certified_eps0.1_accept_share": 0.9999698894944447,
+   "certified_eps0.1_wrong_rate": 0.006835290575127974,
+   "certified_eps0.05_accept_share": 0.9999698894944447,
+   "certified_eps0.05_wrong_rate": 0.006835290575127974,
+   "interval_accept_share": 0.9689560687723947,
+   "interval_wrong_rate": 0.0028278433809819765,
+   "accept_all_accept_share": 1.0,
+   "accept_all_wrong_rate": 0.0068350847610731385,
+   "fixed_tau_gate_accept_share": 0.9246936256059739,
+   "fixed_tau_gate_wrong_rate": 0.005079778573754477
+  }
+ ],
+ "outputs": [
+  "decision_gate.csv",
+  "sweep.csv",
+  "safety.csv",
+  "margin_intervals.csv",
+  "margin_gate.csv",
+  "decision_sweep.pdf",
+  "decision_sweep.png"
+ ],
+ "git_commit": "47262bd7d261ca59541bb68bdfdaa6d6ddc470d7+dirty",
+ "seconds": 14.8
+}

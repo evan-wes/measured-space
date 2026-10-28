@@ -1,0 +1,134 @@
+{
+ "tag": "ss12_2d",
+ "config": {
+  "n_refs": [
+   0,
+   5,
+   10,
+   20,
+   40
+  ],
+  "n_draws": 50,
+  "variants": [
+   {
+    "name": "abc_uniform",
+    "scale": true,
+    "bias": true,
+    "quantile": "max",
+    "calibration": "referenced",
+    "sampling": "uniform"
+   },
+   {
+    "name": "abc_stratified",
+    "scale": true,
+    "bias": true,
+    "quantile": "max",
+    "calibration": "referenced",
+    "sampling": "stratified"
+   },
+   {
+    "name": "a_uniform",
+    "scale": true,
+    "bias": false,
+    "quantile": "none",
+    "calibration": "referenced",
+    "sampling": "uniform"
+   },
+   {
+    "name": "ab_uniform",
+    "scale": true,
+    "bias": true,
+    "quantile": "none",
+    "calibration": "referenced",
+    "sampling": "uniform"
+   },
+   {
+    "name": "abc_mix_uniform",
+    "scale": true,
+    "bias": true,
+    "quantile": "mix",
+    "calibration": "referenced",
+    "sampling": "uniform"
+   },
+   {
+    "name": "abc_globalcal_uniform",
+    "scale": true,
+    "bias": true,
+    "quantile": "max",
+    "calibration": "global",
+    "sampling": "uniform"
+   }
+  ],
+  "min_scale_items": 3,
+  "min_bias_items": 5,
+  "mix_prior": 20.0,
+  "max_ref_frac": 0.5,
+  "level": 0.9,
+  "seed": 0
+ },
+ "audit_config": {
+  "levels": [
+   0.5,
+   0.8,
+   0.9,
+   0.95
+  ],
+  "ridge_grid": [
+   1.0,
+   10.0,
+   100.0,
+   1000.0,
+   10000.0,
+   100000.0
+  ],
+  "n_jobs": 6,
+  "gross": true,
+  "s0": 0.005,
+  "mondrian": [
+   "qtype",
+   "depth_source"
+  ],
+  "min_cal": 20,
+  "gate_level": 0.9,
+  "epsilon": 0.1,
+  "delta": 0.1,
+  "kappa": 3.0,
+  "min_accept": 30,
+  "min_accept_frac": 0.05,
+  "tau_scales": [
+   1.0,
+   2.0
+  ],
+  "n_bins": 10,
+  "min_scenes": 3,
+  "min_rows": 20,
+  "max_folds": 20,
+  "seed": 0,
+  "n_boot": 2000
+ },
+ "gate_z": 1.6448536269514722,
+ "datasets": [
+  "smartspaces"
+ ],
+ "n_rows": 30872,
+ "inputs": {
+  "smartspaces": {
+   "qa_auto_moge.jsonl": {
+    "bytes": 43306241,
+    "sha256": "7f16f3357a86ede20bb893851c59663c11c3488ea1d9af3324347af69abd01c2"
+   },
+   "qa_oracle.jsonl": {
+    "bytes": 48988442,
+    "sha256": "237dc056e69c0cdc5e2ee4e621c938de963830a25e064131332938c55cdacb4b"
+   }
+  }
+ },
+ "exclude_ambiguous": {
+  "enabled": false
+ },
+ "notes": [],
+ "git_commit": "bb539a8ae77f2a2af9395e3daf1629cdd869e31e+dirty",
+ "predictions": "fitted",
+ "seconds_fit": 130.7,
+ "seconds_experiment": 166.4
+}

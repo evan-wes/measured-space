@@ -1,0 +1,911 @@
+{
+ "sample_id": "4e824803ceb4",
+ "seed": 0,
+ "source": "cutr_sam3",
+ "population": {
+  "ambiguous": 537,
+  "clear": 1833
+ },
+ "answers": [
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42897541/wide/275395.011:PfBGyoSzVkAYXVVr:1",
+   "view_key": "arkitscenes/42897541/wide/275395.011",
+   "object_id": "PfBGyoSzVkAYXVVr",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42446100/wide/78002.043:RztHWTwttv7nfoLI:4",
+   "view_key": "arkitscenes/42446100/wide/78002.043",
+   "object_id": "RztHWTwttv7nfoLI",
+   "detection": 4,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": "white box is whole cabinet, 3d box is one section of the cabinet"
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/48018730/wide/1764.719:p9zuJJYF4vrCs40a:0",
+   "view_key": "arkitscenes/48018730/wide/1764.719",
+   "object_id": "p9zuJJYF4vrCs40a",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47430023/wide/18866.421:wlbGKxE91qhD8pW1:0",
+   "view_key": "arkitscenes/47430023/wide/18866.421",
+   "object_id": "wlbGKxE91qhD8pW1",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47430023/wide/18895.609:4yW7zn3p4EYfTBqW:0",
+   "view_key": "arkitscenes/47430023/wide/18895.609",
+   "object_id": "4yW7zn3p4EYfTBqW",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47331068/wide/131129.827:BhcF7kto7PNjnnYy:3",
+   "view_key": "arkitscenes/47331068/wide/131129.827",
+   "object_id": "BhcF7kto7PNjnnYy",
+   "detection": 3,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42897521/wide/273967.375:cBPAI2mOpfvbl8eQ:0",
+   "view_key": "arkitscenes/42897521/wide/273967.375",
+   "object_id": "cBPAI2mOpfvbl8eQ",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47332915/wide/13476.653:tSCpNJFcP9rUC2U3:3",
+   "view_key": "arkitscenes/47332915/wide/13476.653",
+   "object_id": "tSCpNJFcP9rUC2U3",
+   "detection": 3,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/45260854/wide/568.571:fPU1jYV7nlPcYZHR:1",
+   "view_key": "arkitscenes/45260854/wide/568.571",
+   "object_id": "fPU1jYV7nlPcYZHR",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42446156/wide/79217.574:wZfj7ypAHfDnEFnq:0",
+   "view_key": "arkitscenes/42446156/wide/79217.574",
+   "object_id": "wZfj7ypAHfDnEFnq",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42898849/wide/196574.951:DqP7s8ZbeZORkKGP:1",
+   "view_key": "arkitscenes/42898849/wide/196574.951",
+   "object_id": "DqP7s8ZbeZORkKGP",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42445021/wide/48895.054:nJyYeKypwO7nLAEe:0",
+   "view_key": "arkitscenes/42445021/wide/48895.054",
+   "object_id": "nJyYeKypwO7nLAEe",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47333898/wide/81368.340:wW7FYhrarbWM6Qxr:2",
+   "view_key": "arkitscenes/47333898/wide/81368.340",
+   "object_id": "wW7FYhrarbWM6Qxr",
+   "detection": 2,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": "white box is part of the cabinet, 3d box is the whole cabinet"
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/44358442/wide/42931.467:AIMSDC2rtjGQgmvs:0",
+   "view_key": "arkitscenes/44358442/wide/42931.467",
+   "object_id": "AIMSDC2rtjGQgmvs",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47895779/wide/386987.540:bSAGnIoYPpY6OxPE:0",
+   "view_key": "arkitscenes/47895779/wide/386987.540",
+   "object_id": "bSAGnIoYPpY6OxPE",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/45261133/wide/4050.447:oXcd99K8o85GvCqw:0",
+   "view_key": "arkitscenes/45261133/wide/4050.447",
+   "object_id": "oXcd99K8o85GvCqw",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47115452/wide/13104.032:DEPzBzImFmf4Uptk:1",
+   "view_key": "arkitscenes/47115452/wide/13104.032",
+   "object_id": "DEPzBzImFmf4Uptk",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47204552/wide/3460.833:MZ1YdeG2sV5KPXcP:0",
+   "view_key": "arkitscenes/47204552/wide/3460.833",
+   "object_id": "MZ1YdeG2sV5KPXcP",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47333440/wide/53829.199:sojldJGP3nPmF4kv:1",
+   "view_key": "arkitscenes/47333440/wide/53829.199",
+   "object_id": "sojldJGP3nPmF4kv",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": "white box is covering one door of the cabinet, 3d box is the whole cabinet"
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47115469/wide/14037.566:YjUlzvn0nSUPAAb9:0",
+   "view_key": "arkitscenes/47115469/wide/14037.566",
+   "object_id": "YjUlzvn0nSUPAAb9",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/45260854/wide/590.162:DqNZuxqKUdX7dRd7:1",
+   "view_key": "arkitscenes/45260854/wide/590.162",
+   "object_id": "DqNZuxqKUdX7dRd7",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47430003/wide/17592.746:kkWyyJPE8lzfXZyA:0",
+   "view_key": "arkitscenes/47430003/wide/17592.746",
+   "object_id": "kkWyyJPE8lzfXZyA",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/41069048/wide/5013.297:Hl6BUuzCMdBRbiFf:0",
+   "view_key": "arkitscenes/41069048/wide/5013.297",
+   "object_id": "Hl6BUuzCMdBRbiFf",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/48018559/wide/3374.420:y1uZFntii6YYhgZl:2",
+   "view_key": "arkitscenes/48018559/wide/3374.420",
+   "object_id": "y1uZFntii6YYhgZl",
+   "detection": 2,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": "might be the metal material, but the dashed box is only the top part of the stove and misses the visible front face"
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42446038/wide/347956.122:3fYXskUpz4Kj3m8e:2",
+   "view_key": "arkitscenes/42446038/wide/347956.122",
+   "object_id": "3fYXskUpz4Kj3m8e",
+   "detection": 2,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47333452/wide/54970.599:3146Fkuh5MkTGiEo:1",
+   "view_key": "arkitscenes/47333452/wide/54970.599",
+   "object_id": "3146Fkuh5MkTGiEo",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/45662921/wide/21855.266:5qXWGw9fxj9pL7Mp:1",
+   "view_key": "arkitscenes/45662921/wide/21855.266",
+   "object_id": "5qXWGw9fxj9pL7Mp",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47332885/wide/7525.332:cpMTTk49MCz81fpj:4",
+   "view_key": "arkitscenes/47332885/wide/7525.332",
+   "object_id": "cpMTTk49MCz81fpj",
+   "detection": 4,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42445991/wide/75311.202:ac8iLoidxa6a2JEi:1",
+   "view_key": "arkitscenes/42445991/wide/75311.202",
+   "object_id": "ac8iLoidxa6a2JEi",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42897688/wide/479227.247:S0588KQ0PVKZ0tNr:1",
+   "view_key": "arkitscenes/42897688/wide/479227.247",
+   "object_id": "S0588KQ0PVKZ0tNr",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42897545/wide/276450.058:ojgMzuSNB98T6hrl:0",
+   "view_key": "arkitscenes/42897545/wide/276450.058",
+   "object_id": "ojgMzuSNB98T6hrl",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/48018730/wide/1725.834:eQOLLywHJtQbaeRV:7",
+   "view_key": "arkitscenes/48018730/wide/1725.834",
+   "object_id": "eQOLLywHJtQbaeRV",
+   "detection": 7,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/45663164/wide/65983.697:qCqTDUjdXECSnHDI:2",
+   "view_key": "arkitscenes/45663164/wide/65983.697",
+   "object_id": "qCqTDUjdXECSnHDI",
+   "detection": 2,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/48458481/wide/111509.690:rksNisTEbkClVwPv:2",
+   "view_key": "arkitscenes/48458481/wide/111509.690",
+   "object_id": "rksNisTEbkClVwPv",
+   "detection": 2,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/41069021/wide/394.907:WVmShO3aRJN76BVc:0",
+   "view_key": "arkitscenes/41069021/wide/394.907",
+   "object_id": "WVmShO3aRJN76BVc",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/45663113/wide/55325.138:Ftm3vOGS9xZ6t41m:0",
+   "view_key": "arkitscenes/45663113/wide/55325.138",
+   "object_id": "Ftm3vOGS9xZ6t41m",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/41069021/wide/480.772:mPJvI0Pxiil86iIa:1",
+   "view_key": "arkitscenes/41069021/wide/480.772",
+   "object_id": "mPJvI0Pxiil86iIa",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/45261121/wide/3474.918:kv1BDbGcTQ4JvYkg:0",
+   "view_key": "arkitscenes/45261121/wide/3474.918",
+   "object_id": "kv1BDbGcTQ4JvYkg",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47430038/wide/20562.573:hK2W7L2142y03g11:3",
+   "view_key": "arkitscenes/47430038/wide/20562.573",
+   "object_id": "hK2W7L2142y03g11",
+   "detection": 3,
+   "ambiguous": false,
+   "verdict": "cant_tell",
+   "note": "the boxes align but I am not sure what this item is"
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47334256/wide/112059.751:1R8Cf8hogLtKp5Ht:3",
+   "view_key": "arkitscenes/47334256/wide/112059.751",
+   "object_id": "1R8Cf8hogLtKp5Ht",
+   "detection": 3,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/45663149/wide/63326.584:mw2ywWC6zE2EjxJ4:3",
+   "view_key": "arkitscenes/45663149/wide/63326.584",
+   "object_id": "mw2ywWC6zE2EjxJ4",
+   "detection": 3,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42446038/wide/347933.331:QR2EjNPzAsjO9Prr:3",
+   "view_key": "arkitscenes/42446038/wide/347933.331",
+   "object_id": "QR2EjNPzAsjO9Prr",
+   "detection": 3,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47331651/wide/22936.484:qtHqofcaFAd1N0kx:0",
+   "view_key": "arkitscenes/47331651/wide/22936.484",
+   "object_id": "qtHqofcaFAd1N0kx",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42446540/wide/201482.023:gaI8MMzmSlrMWYyn:2",
+   "view_key": "arkitscenes/42446540/wide/201482.023",
+   "object_id": "gaI8MMzmSlrMWYyn",
+   "detection": 2,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42898818/wide/168182.152:ZDZ1KYPQZU4bvhaE:0",
+   "view_key": "arkitscenes/42898818/wide/168182.152",
+   "object_id": "ZDZ1KYPQZU4bvhaE",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47895779/wide/386987.540:VfBniEbbkMNjJsSV:1",
+   "view_key": "arkitscenes/47895779/wide/386987.540",
+   "object_id": "VfBniEbbkMNjJsSV",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42446163/wide/79580.501:9ZU3ni5kH1uRl7WM:1",
+   "view_key": "arkitscenes/42446163/wide/79580.501",
+   "object_id": "9ZU3ni5kH1uRl7WM",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47429992/wide/16812.353:UpkvEwVhCzkpSivF:0",
+   "view_key": "arkitscenes/47429992/wide/16812.353",
+   "object_id": "UpkvEwVhCzkpSivF",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/45662942/wide/22897.252:uFJrv703I2upjTi3:2",
+   "view_key": "arkitscenes/45662942/wide/22897.252",
+   "object_id": "uFJrv703I2upjTi3",
+   "detection": 2,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42898818/wide/168176.354:DZ83aYHKQV30BOsW:2",
+   "view_key": "arkitscenes/42898818/wide/168176.354",
+   "object_id": "DZ83aYHKQV30BOsW",
+   "detection": 2,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47333934/wide/85652.016:ZYhJT08jHkNRuxdh:1",
+   "view_key": "arkitscenes/47333934/wide/85652.016",
+   "object_id": "ZYhJT08jHkNRuxdh",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42446100/wide/77927.672:yUvvHipm8g0TB7nd:3",
+   "view_key": "arkitscenes/42446100/wide/77927.672",
+   "object_id": "yUvvHipm8g0TB7nd",
+   "detection": 3,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47204552/wide/3476.026:XmNH10ByvaAIM0Eo:6",
+   "view_key": "arkitscenes/47204552/wide/3476.026",
+   "object_id": "XmNH10ByvaAIM0Eo",
+   "detection": 6,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47429992/wide/16800.658:lOCqO288S2RemcaK:0",
+   "view_key": "arkitscenes/47429992/wide/16800.658",
+   "object_id": "lOCqO288S2RemcaK",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47332915/wide/13549.423:WPEyDSOELEIWRoME:2",
+   "view_key": "arkitscenes/47332915/wide/13549.423",
+   "object_id": "WPEyDSOELEIWRoME",
+   "detection": 2,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47332885/wide/7523.233:tYAGcvxX1ZyTRV3o:1",
+   "view_key": "arkitscenes/47332885/wide/7523.233",
+   "object_id": "tYAGcvxX1ZyTRV3o",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/48458656/wide/7639.782:dFyIbJh6IE4FGDuG:0",
+   "view_key": "arkitscenes/48458656/wide/7639.782",
+   "object_id": "dFyIbJh6IE4FGDuG",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42897647/wide/478210.941:3iICI0UdlYcCEl4l:0",
+   "view_key": "arkitscenes/42897647/wide/478210.941",
+   "object_id": "3iICI0UdlYcCEl4l",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47332901/wide/11039.874:aYdzWbYtH8WPVs7Z:0",
+   "view_key": "arkitscenes/47332901/wide/11039.874",
+   "object_id": "aYdzWbYtH8WPVs7Z",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": "white box misses the top surface of the cabinet"
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42898849/wide/196554.959:6saNOPzpTg8c6aXk:0",
+   "view_key": "arkitscenes/42898849/wide/196554.959",
+   "object_id": "6saNOPzpTg8c6aXk",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42899611/wide/228398.384:HsIC6sUbcJ2EZ7g6:3",
+   "view_key": "arkitscenes/42899611/wide/228398.384",
+   "object_id": "HsIC6sUbcJ2EZ7g6",
+   "detection": 3,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47333898/wide/81344.050:LxkllX6D5tr7EOAm:0",
+   "view_key": "arkitscenes/47333898/wide/81344.050",
+   "object_id": "LxkllX6D5tr7EOAm",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47331319/wide/179051.623:TWPTfmc5L2QNYWvS:3",
+   "view_key": "arkitscenes/47331319/wide/179051.623",
+   "object_id": "TWPTfmc5L2QNYWvS",
+   "detection": 3,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": "white box misses the top surface of the cabinet"
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47332893/wide/9247.365:KZxR6ELw8LJGVSTa:2",
+   "view_key": "arkitscenes/47332893/wide/9247.365",
+   "object_id": "KZxR6ELw8LJGVSTa",
+   "detection": 2,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42897552/wide/277362.496:9hJCkOHxdeKTGG4S:0",
+   "view_key": "arkitscenes/42897552/wide/277362.496",
+   "object_id": "9hJCkOHxdeKTGG4S",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/45261133/wide/4110.022:82PlOKXN3IxbA4xo:0",
+   "view_key": "arkitscenes/45261133/wide/4110.022",
+   "object_id": "82PlOKXN3IxbA4xo",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42899461/wide/195848.692:HIdIz9agUFjC4n64:0",
+   "view_key": "arkitscenes/42899461/wide/195848.692",
+   "object_id": "HIdIz9agUFjC4n64",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/45662970/wide/26126.011:TAGr0SB4YD4TppXA:3",
+   "view_key": "arkitscenes/45662970/wide/26126.011",
+   "object_id": "TAGr0SB4YD4TppXA",
+   "detection": 3,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/48458660/wide/8255.134:BsqucpwpuW9oCj6Y:0",
+   "view_key": "arkitscenes/48458660/wide/8255.134",
+   "object_id": "BsqucpwpuW9oCj6Y",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42445429/wide/50388.644:wfZ7YScFmYgoHsQR:2",
+   "view_key": "arkitscenes/42445429/wide/50388.644",
+   "object_id": "wfZ7YScFmYgoHsQR",
+   "detection": 2,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42898811/wide/167508.271:4hgd4yTAYc4WxXPj:0",
+   "view_key": "arkitscenes/42898811/wide/167508.271",
+   "object_id": "4hgd4yTAYc4WxXPj",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42897561/wide/278918.205:j4qT0LSFMtpapdc2:0",
+   "view_key": "arkitscenes/42897561/wide/278918.205",
+   "object_id": "j4qT0LSFMtpapdc2",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42897541/wide/275413.103:DoqSNyhAS48FEEuz:1",
+   "view_key": "arkitscenes/42897541/wide/275413.103",
+   "object_id": "DoqSNyhAS48FEEuz",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42446540/wide/201519.608:N328GTOvCHJGd4ia:0",
+   "view_key": "arkitscenes/42446540/wide/201519.608",
+   "object_id": "N328GTOvCHJGd4ia",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": "dashed box covers only part of the visible top surface"
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47331651/wide/22922.889:SsEX7RJ4qwCEHvFL:0",
+   "view_key": "arkitscenes/47331651/wide/22922.889",
+   "object_id": "SsEX7RJ4qwCEHvFL",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": "white box covers one door of the cabinet, 3d box covers the whole cabinet"
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42446156/wide/79208.677:F8M0jASY7I7PdUoH:7",
+   "view_key": "arkitscenes/42446156/wide/79208.677",
+   "object_id": "F8M0jASY7I7PdUoH",
+   "detection": 7,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47895341/wide/96405.607:x7bTqI7XZ7Tg9leD:0",
+   "view_key": "arkitscenes/47895341/wide/96405.607",
+   "object_id": "x7bTqI7XZ7Tg9leD",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47333927/wide/84005.478:XZon8rU9iDPWwd5D:1",
+   "view_key": "arkitscenes/47333927/wide/84005.478",
+   "object_id": "XZon8rU9iDPWwd5D",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47204573/wide/5047.253:6eLkCkRj7u1plODn:0",
+   "view_key": "arkitscenes/47204573/wide/5047.253",
+   "object_id": "6eLkCkRj7u1plODn",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": "3d box and the dashed box both miss the end of the sofa but the white box contains it. might be an annotation error"
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47895364/wide/100289.980:IXq1OYWr8CeQAHt0:0",
+   "view_key": "arkitscenes/47895364/wide/100289.980",
+   "object_id": "IXq1OYWr8CeQAHt0",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/41069048/wide/5019.794:zZpRhwaNlucziQPZ:0",
+   "view_key": "arkitscenes/41069048/wide/5019.794",
+   "object_id": "zZpRhwaNlucziQPZ",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/48018367/wide/389485.844:roOQePgcEz17aVWt:0",
+   "view_key": "arkitscenes/48018367/wide/389485.844",
+   "object_id": "roOQePgcEz17aVWt",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/48018379/wide/390026.508:Ddx1gHgvhdOafdly:1",
+   "view_key": "arkitscenes/48018379/wide/390026.508",
+   "object_id": "Ddx1gHgvhdOafdly",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42897599/wide/476343.778:R5OlnfOmaKdXYK6L:0",
+   "view_key": "arkitscenes/42897599/wide/476343.778",
+   "object_id": "R5OlnfOmaKdXYK6L",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "cant_tell",
+   "note": "the white box covers the red chair but I can't tell if the 3d box is the same chair or part of the other chairs"
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42897501/wide/270072.243:uRWRYl1ABnUgY6YB:5",
+   "view_key": "arkitscenes/42897501/wide/270072.243",
+   "object_id": "uRWRYl1ABnUgY6YB",
+   "detection": 5,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": "white box covers half of the cabinet, 3d box covers the whole cabinet"
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47331988/wide/170746.879:PYch9gGeq30jB6ID:3",
+   "view_key": "arkitscenes/47331988/wide/170746.879",
+   "object_id": "PYch9gGeq30jB6ID",
+   "detection": 3,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/45260920/wide/2484.812:uGTgxZyMHKsJQQfc:2",
+   "view_key": "arkitscenes/45260920/wide/2484.812",
+   "object_id": "uGTgxZyMHKsJQQfc",
+   "detection": 2,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42899461/wide/195848.692:gbOoi6JJDTyHktMM:2",
+   "view_key": "arkitscenes/42899461/wide/195848.692",
+   "object_id": "gbOoi6JJDTyHktMM",
+   "detection": 2,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": "white box covers one door of the cabinet, 3d box covers the whole cabinet"
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42897501/wide/270058.449:eaVU8XFwHq3s9DKp:4",
+   "view_key": "arkitscenes/42897501/wide/270058.449",
+   "object_id": "eaVU8XFwHq3s9DKp",
+   "detection": 4,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47115469/wide/14029.469:tBfwlmGIIrdXrghe:3",
+   "view_key": "arkitscenes/47115469/wide/14029.469",
+   "object_id": "tBfwlmGIIrdXrghe",
+   "detection": 3,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/44358451/wide/43632.864:bOGMIi6xlCaEl1hI:0",
+   "view_key": "arkitscenes/44358451/wide/43632.864",
+   "object_id": "bOGMIi6xlCaEl1hI",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47331336/wide/183452.512:2UDPexIxsva0Vsjr:4",
+   "view_key": "arkitscenes/47331336/wide/183452.512",
+   "object_id": "2UDPexIxsva0Vsjr",
+   "detection": 4,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47333440/wide/53813.705:bcSeG5JxJgZkRCUK:0",
+   "view_key": "arkitscenes/47333440/wide/53813.705",
+   "object_id": "bcSeG5JxJgZkRCUK",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/48018379/wide/390017.112:IIeHPEa7UcahtW8d:3",
+   "view_key": "arkitscenes/48018379/wide/390017.112",
+   "object_id": "IIeHPEa7UcahtW8d",
+   "detection": 3,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47429998/wide/17258.639:lVNNlUgkfJ8wMuqT:0",
+   "view_key": "arkitscenes/47429998/wide/17258.639",
+   "object_id": "lVNNlUgkfJ8wMuqT",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/41142278/wide/4008.062:4TLvD6FqkiWi9TC4:1",
+   "view_key": "arkitscenes/41142278/wide/4008.062",
+   "object_id": "4TLvD6FqkiWi9TC4",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42444966/wide/40423.943:La7thAh0KcHCCIln:2",
+   "view_key": "arkitscenes/42444966/wide/40423.943",
+   "object_id": "La7thAh0KcHCCIln",
+   "detection": 2,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": "white box covers the whole cabinet, 3d box covers part of the cabinet"
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/42897521/wide/273959.878:y3KYw5dSu0ynx2UH:1",
+   "view_key": "arkitscenes/42897521/wide/273959.878",
+   "object_id": "y3KYw5dSu0ynx2UH",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/41142278/wide/4037.450:aUs8l9MJ95aecbdr:0",
+   "view_key": "arkitscenes/41142278/wide/4037.450",
+   "object_id": "aUs8l9MJ95aecbdr",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "cutr_sam3:arkitscenes/47333927/wide/84003.379:A44gV4hRvFuWYriJ:1",
+   "view_key": "arkitscenes/47333927/wide/84003.379",
+   "object_id": "A44gV4hRvFuWYriJ",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  }
+ ]
+}

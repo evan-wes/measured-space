@@ -1,7 +1,7 @@
 # Conda environment for the prototype. Python from conda-forge only (no Anaconda `defaults` channel);
-# PyTorch from PyPI, whose default Linux wheel for 2.14.1 is built against CUDA 13.0 (needs driver >= 580).
-# Further pinned dependencies are added here as pipeline stages land.
-name: metric-grounding-audit
+# everything else from PyPI, pinned to the versions the results were produced with. PyTorch's default
+# Linux wheel for 2.14.1 is built against CUDA 13.0 (needs driver >= 580).
+name: measured-space
 channels:
   - conda-forge
 dependencies:
@@ -9,3 +9,14 @@ dependencies:
   - pip
   - pip:
       - torch==2.14.1
+      - numpy==2.5.4
+      - scipy==1.18.1
+      - pandas==3.1.0
+      - pillow==13.0.0
+      - pyyaml==6.0.3
+      - h5py==3.16.0
+      - opencv-python-headless==5.0.0.93
+      - matplotlib==3.11.2
+      - transformers==5.21.0
+      - pytest==9.1.1
+      - -e .

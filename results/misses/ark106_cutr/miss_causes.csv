@@ -1,0 +1,5 @@
+labeller,source,dataset,population,n_present,n_missed,n_no_detection,n_unboxed,n_assignment,share_no_detection,share_unboxed,share_assignment
+cutr_clip,cutr_clip,arkitscenes,present,4088,2238,989,1151,98,0.441912,0.514298,0.0437891
+cutr_clip,cutr_clip,arkitscenes,clearly_visible,796,163,31,116,16,0.190184,0.711656,0.0981595
+cutr_sam3,cutr_sam3,arkitscenes,present,4088,1718,1238,317,163,0.720605,0.184517,0.0948778
+cutr_sam3,cutr_sam3,arkitscenes,clearly_visible,796,157,84,46,27,0.535032,0.292994,0.171975

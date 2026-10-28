@@ -13,15 +13,36 @@ Selection (decided 2026-10-26): the prototype shows the *feasibility* of the aud
 dataset stands in for a capture setup common in deployed perception systems: handheld/egocentric RGB-D with
 inertial poses, and fixed, calibrated multi-camera installations.
 
-| Dataset | Role here | Real / synthetic | License | Derived-data redistribution | Planned download |
+| Dataset | Use here | Real / synthetic | License | Derived-data redistribution | Downloaded |
 |---|---|---|---|---|---|
-| ARKitScenes (3DOD + upsampling) | **Headline real-sensor result.** Handheld RGB + LiDAR depth + VIO poses (the egocentric RGB-D + IMU capture setup); homes | Real (iPad LiDAR + Faro laser) | Apple custom license (2024) | Unclear — commit aggregates only | 0.43 GB (6 laser scenes, self-contained) |
-| NVIDIA Physical AI Smart Spaces (2026 split) | **Fixed multi-camera setting** (calibrated ceiling cameras, as in video-analytics deployments); exact synthetic GT, plus 2 real scenes with no GT | Synthetic (+2 real, no GT) | CC-BY-4.0 | Allowed with attribution | ~4.35 GB |
-| Q-Spatial++ | Real photos with **physically measured** distances; VLM scoring only | Real | Apache-2.0 | Allowed | 0.13 GB |
-| LOCO | Real logistics images, 2D boxes: tests the detector stage on real warehouse imagery | Real | CC0-1.0 | Allowed | 0.77 GB |
-| NVIDIA SDG-Warehouse | Not used; 6-month candidate (eye-level views, maybe racks/pallets) | Synthetic | OpenMDW-1.1 | Allowed | None |
-| NVIDIA PhysicalAI-Spatial-Intelligence-Warehouse | Closest prior work; cite | Synthetic | CC-BY-4.0 (+ Llama 3.1 terms for its rephrased text) | Allowed with attribution | None |
-| MMPTRACK | Reviewed, **not used** (§5) | Real (staged lab sets) | Microsoft research-only agreement | No (no derived datasets) | None |
+| ARKitScenes (3DOD + upsampling) | **Handheld results:** 106 validation videos; iPad RGB + LiDAR depth + ARKit poses, laser depth for visibility, the human-annotated 3D boxes as references (§2) | Real (iPad LiDAR + Faro laser) | Apple custom license (2024) | Unclear — aggregates only | 5.76 GB (107 videos) + 4.28 GB dense-frame test batch |
+| NVIDIA Physical AI Smart Spaces (2026 split) | **Fixed multi-camera results:** 12 synthetic warehouse scenes with exact ground truth (§1) | Synthetic (+2 real, no GT) | CC-BY-4.0 | Allowed with attribution | 26.0 GB of video + 2.55 GB of GT and calibration for the 12 scenes |
+| Q-Spatial++ | Downloaded, **not used** in the results (§5) | Real | Apache-2.0 | Allowed | 0.13 GB |
+| LOCO | Downloaded, **not used** in the results (§6) | Real | CC0-1.0 | Allowed | 0.77 GB |
+| NVIDIA SDG-Warehouse | Surveyed, not used (§3) | Synthetic | OpenMDW-1.1 | Allowed | None |
+| NVIDIA PhysicalAI-Spatial-Intelligence-Warehouse | Related work, not used (§4) | Synthetic | CC-BY-4.0 (+ Llama 3.1 terms for its rephrased text) | Allowed with attribution | None |
+| MMPTRACK | Reviewed, **not used** (§7) | Real (staged lab sets) | Microsoft research-only agreement | No (no derived datasets) | None |
+
+## Data folder layout
+
+Datasets live outside the repository, under the data root set in `configs/paths.local.yaml` (or the
+`MEASURED_SPACE_DATA` environment variable; see `src/measured_space/config.py`):
+
+```text
+<data root>/
+  data/arkitscenes/
+    annotations/<video>_3dod_annotation.json
+    traj/<video>_lowres_wide.traj
+    upsampling/<video>.zip                  # wide, highres_depth, lowres_depth, confidence; read in place
+    wide_intrinsics/<video>_wide_intrinsics.zip
+    raw/<video>/{wide,lowres_depth,confidence,highres_depth}.zip   # dense-frame test batch only
+  data/smartspaces/MTMC_Tracking_2026/{train,val}/Warehouse_<s>/
+    calibration.json  ground_truth.json  videos/Camera_<n>.mp4
+  hf_cache/                                 # Hugging Face weights: SAM 3, MoGe-2, CLIP, the VLMs
+  models/                                   # Cubify Anything and Sparse4D weights
+  third_party/                              # source checkouts: ml-cubifyanything, SparseQID, the NVIDIA evaluator
+  outputs/                                  # every run's per-item output; scripts refuse to overwrite
+```
 
 ## 1. NVIDIA Physical AI Smart Spaces (`nvidia/PhysicalAI-SmartSpaces`)
 
@@ -34,44 +55,131 @@ inertial poses, and fixed, calibrated multi-camera installations.
 - **Classes [V]:** Person, Forklift, NovaCarter, Transporter, FourierGR1T2, AgilityDigit, plus PalletTruck in 2026. **Racks, shelves, pallets and boxes have no ground truth.**
 - **Video [V]:** 1080p, 30 FPS, GT per frame.
 - **Calibration [V]**, read from one 7 KB `calibration.json`: per camera `intrinsicMatrix` (example: fx = fy = 916.25, cx = 960, cy = 540, no distortion), `extrinsicMatrix` 3×4 (world→camera, metres, z-up world), `cameraMatrix`, `homography`. Camera centres computed as −Rᵀt match the listed coordinates. The cameras are ceiling CCTV about 3.3 m up.
-- **3D boxes [V card; U conventions]:** object centre in world coordinates, `scale [w, l, h]`, `rotation [pitch, roll, yaw]`, plus `2d_bounding_box_visible {camera_id: [xmin, ymin, xmax, ymax]}`, which gives per-camera visibility directly. NVIDIA's loader converts rotations with `np.radians` (so the file stores degrees) and uses keys with spaces rather than underscores. The challenge page says radians. **Check value ranges when loading.**
-- **Depth [V format; U encoding]:** one HDF5 file per camera holding PNG-compressed frames. Third-party code reads keys `distance_to_image_plane_{frame:05d}.png` in millimetres (planar z-depth). The files are served with HTTP range support, so reading single frames remotely may be possible [U, untested].
+- **3D boxes [V card; U conventions]:** object centre in world coordinates, `scale [w, l, h]`, `rotation [pitch, roll, yaw]`, plus `2d_bounding_box_visible {camera_id: [xmin, ymin, xmax, ymax]}`, which gives per-camera visibility directly. NVIDIA's loader converts rotations with `np.radians` (so the file stores degrees) and uses keys with spaces rather than underscores. The challenge page says radians. **Superseded: measured as radians; see "Conventions measured" below.**
+- **Depth [V format; U encoding]:** one HDF5 file per camera (superseded: frames are raw gzip uint16 arrays, not PNG; see "Conventions measured" below). Third-party code reads keys `distance_to_image_plane_{frame:05d}.png` in millimetres (planar z-depth). The files are served with HTTP range support, so reading single frames remotely may be possible [U, untested].
 - **Size [V, tree API]:** 2026 split 2.478 TB (49.4 GB without depth). The card says 2.94 TB. Per-scene depth ranges from 16 to 310 GB.
 - **Minimal subset [V sizes, re-checked 2026-10-26]:** `MTMC_Tracking_2026/train/Warehouse_012` (8 cameras, not a Cosmos re-render), full scene 30.377 GB:
   - Stage 1, 0.152 GB: `calibration.json`, `ground_truth.json` (151.8 MB), `map.png`. Use it to choose cameras by visible-object counts.
   - Stage 2, about 4.1 GB: 2 chosen cameras' `videos/*.mp4` (94–160 MB each) and `depth_maps/*.h5` (1.4–6.8 GB each). Cameras 0004 and 0006 are the smallest pair (4.06 GB including stage 1), but cameras should be chosen by content.
   - Real scenes `MTMC_Tracking_2026/test/Warehouse_026` (4 cameras) and `Warehouse_027` (7 cameras): `calibration.json`, `vggt_reprojection_error.txt` and 60 s MP4s per camera; **no GT, no depth**; 0.290 GB together [V, tree API, survey of 2026-10-26]. Used only for a qualitative sim→real check of the auto-labeller and gate.
+- **Conventions measured on `Warehouse_018` (2026-10-26; `scripts/check_smartspaces_oracle.py`):**
+  - **Extrinsic:** world→camera. −Rᵀt reproduces each sensor's `coordinates` in all 4 local scenes; read the
+    other way, projected-box IoU is 0.
+  - **Rotation:** **radians**, `[pitch, roll, yaw]`, yaw counter-clockwise about +z (yaw spans ±π; pitch and
+    roll ≈ 0). Reading it as degrees scores worse on both reprojection IoU and depth containment.
+  - **Scale:** `(width, length, height)` along the box's local x, y, z. Forklifts travel along local −y.
+  - **Depth:** planar z in millimetres, stored as raw gzip-compressed uint16 arrays (1080×1920) despite the
+    `.png` key names. Back-projected as planar depth, the floor lands at z = 0.002 m (median).
+  - **2D boxes:** visible boxes are inclusive pixel indices.
+  - **Video:** OpenCV frame seeking matches sequential decoding.
+  - **Principal point:** the intrinsics put it at exactly (W/2, H/2), suggesting a corner-origin pixel
+    convention (a 0.5 px offset from this package's centre-origin convention; not corrected).
+- **`Warehouse_018` contents:** 4 objects, Forklift_3 (parked), Forklift_4 (moving), PalletTruck_2 (parked) and
+  Person_0; 9,000 frames. Ceiling cameras 0000/0002 are 3.26/3.21 m above the floor. Every GT visible 2D box lies
+  inside its projected 3D box (median covered share 1.000 for every class and camera). Open: Forklift_4's box
+  bottom sits 0.14–0.16 m above the floor, unlike the others.
+- **Additional scenes for diversity (2026-10-26).** Warehouse_018 alone is one scene with 4 objects. Nine
+  more 2026 scenes containing forklifts, pallet trucks and people were added **without depth**: train
+  000/002/004/006/010/011/017/019 and val 020. Their questions use the GT's per-camera visible boxes for
+  visibility, and their automatic labels use monocular depth or the calibrated ground plane.
+  - Per scene: `calibration.json` + `ground_truth.json` (1.7 GB for all 9), then two cameras' videos (3.31 GB
+    for the 18 videos).
+  - The two cameras per scene were chosen from the GT alone by `scripts/select_smartspaces_cameras.py`: the pair
+    seeing the most objects in common, among pairs that see a forklift and a person together in ≥50% of
+    sampled frames.
+  - Result in `configs/smartspaces_cameras.yaml`: 3.3–24.9 shared objects per frame; joint forklift+person
+    presence 0.61–1.00.
+- **Further scenes (2026-10-26, second expansion).** 8 more independent 2026 scenes (train 008/009/012/013/014/015/016,
+  val 022; only 016 has forklifts) plus the 5 Cosmos-Transfer re-renders (001/003/005/007/021). The re-renders
+  share geometry, GT and **identical calibration** with their sources (000/002/004/006/020; checked). They use
+  the same two cameras as their sources, so they form a paired **appearance-shift** test, not independent scenes.
+  - Cameras for the independent scenes were chosen by the same script. Scenes without forklifts fall back to
+    the most co-visible pair, 2.6–30.3 shared objects per frame.
+  - Downloads: 2.28 GB of GT (+ small calibration files) for 12 of these scenes (Warehouse_012's was already local) and 3.60 GB
+    of video (26 videos).
+  - That made 18 independent scenes (Warehouse_018 with depth + 17 depth-less) plus 5 appearance variants.
+- **Scenes in the reported results (2026-10-27): 12**, train 000, 002, 004, 006, 010–016 and val 020, none with
+  depth. 008 and 009 are left out because their layout matches a 2025 scene; the other downloaded scenes are not
+  in the results. Sparse4D reads every camera of a scene, so all 163 camera videos of the 12 scenes were
+  downloaded: 25.97 GB, plus 2.55 GB of GT and calibration (sizes of the downloaded files). The 12 scenes are
+  three building layouts (`configs/smartspaces_layout_groups.json`).
 - **Question-type mapping:** all planned types are supported for the 7 agent classes. These are centre and closest-surface distance, size, egocentric distance, relative depth, left/right, closest same-class instance, and count in view (from `2d_bounding_box_visible`).
 - **Risks:**
   - An open-vocabulary detector will find racks and pallets that have no GT; those detections cannot be audited and must be excluded from scoring.
   - Robot class names are hard text prompts.
   - Views are high CCTV only, so people are small in frame.
-  - GT key spelling and degrees vs radians are unconfirmed.
+  - GT key spelling and degrees vs radians were unconfirmed at the survey (since measured: radians; the loader
+    accepts keys with spaces or underscores; see "Conventions measured").
   - Sim-to-real gap.
 
 ## 2. ARKitScenes (Apple)
 
 - Repo: https://github.com/apple/ARKitScenes. Paper: arXiv:2111.08897.
-- **License [V]: the brief's "CC BY-NC-SA 4.0" is out of date.** In 2024 the README dropped the CC statement and pointed to `LICENSE`, now an Apple software license. It grants (a) a personal, non-commercial license and (b) commercial terms for licensees under 700M monthly active users. Both cover use, reproduction, modification and redistribution "with or without modifications", on condition that the notice is kept and Apple marks are not used. Because it is written for "Apple Software", it is **unclear** how it applies to derived data (contact: ARKitScenes-license@group.apple.com). **Plan: commit only aggregate statistics and figures for ARKitScenes, not per-item QA files, unless you decide otherwise.** Omni3D still bundles the old CC BY-NC-SA text.
+- **License [V]: the often-cited "CC BY-NC-SA 4.0" is out of date.** In 2024 the README dropped the CC statement and pointed to `LICENSE`, now an Apple software license. It grants (a) a personal, non-commercial license and (b) commercial terms for licensees under 700M monthly active users. Both cover use, reproduction, modification and redistribution "with or without modifications", on condition that the notice is kept and Apple marks are not used. Because it is written for "Apple Software", it is **unclear** how it applies to derived data (contact: ARKitScenes-license@group.apple.com). **This repository commits only aggregate statistics and figures for ARKitScenes, not per-item QA files.** **Exception (the author's decision, 2026-10-27):** `results/spotcheck/` holds the export of the manual pairing spot check: pair identifiers (video id, frame timestamp, object id, detection index), the author's verdicts and notes. It holds no ARKitScenes geometry, depth or images. Omni3D still bundles the old CC BY-NC-SA text.
 - **Domain [V]:** real homes; iPad Pro LiDAR plus a Faro laser scanner.
-- **Self-contained copy (decided 2026-10-26):** this project uses only its own downloads, not a raw-subset copy
-  elsewhere on the machine. For the 6 validation videos with laser depth, each `upsampling/Validation/<id>.zip`
-  holds about 31 filtered frames, each with `wide` (1920×1440 RGB), `highres_depth` (Faro laser), `lowres_depth`
+- **First download (2026-10-26):** the project uses only its own downloads of the files below. For the 6 validation videos with laser depth, each `upsampling/Validation/<id>.zip`
+  holds 31/19/14/23/31/31 filtered frames (149 in total, 148 with an interpolable pose), each with `wide` (1920×1440 RGB), `highres_depth` (Faro laser), `lowres_depth`
   (iPad LiDAR) and `confidence`. Checked on 42444946: 31 files per folder. Alongside the zips we downloaded
   `wide_intrinsics.zip` (per-frame `.pincam`), `<id>_3dod_annotation.json` and `lowres_wide.traj` (ARKit poses,
   10 Hz; 539,358 B for all 6, fetched 2026-10-26). Poses must be interpolated to each `wide` frame's timestamp.
   The 4 videos without laser depth are not used.
 - **Those 10 videos [V, Apple `raw/metadata.csv`]:** all 10 have `is_in_threedod=True` and laser point clouds. **Six have laser `highres_depth`** (`is_in_upsampling=True`): 42444946, 42444966, 42445021, 42445028, 42445429, 42446100. `sky_direction` is Left ×6, Down ×3, Up ×1, so frames must be rotated upright before VLM use, with left/right defined in the upright image.
 - **Boxes [V]:** 17 furniture classes, oriented (`obbAligned` centroid, axesLengths (full size), normalizedAxes). Human-labelled; no published accuracy.
-  - Gravity-aligned / yaw-only [U]: implied by the official code's reduction to 7-DoF, but not documented.
-  - Coordinate frame [U]: the 3DOD README says labels share the "world coordinate" of the camera poses, so they are very probably in the same frame as raw `lowres_wide.traj`. **Check by projecting box corners into a few frames.**
+  - Gravity-aligned / yaw-only [V, measured]: the world is z-up and every box is yaw-only except two in 42444946
+    (tilted 9.47°) and one in 42445028 (2.21°).
+  - Coordinate frame [V, measured with `scripts/check_arkitscenes_oracle.py`]: boxes share the frame of
+    `lowres_wide.traj`.
+    - Trajectory rows are world→camera and are inverted, with OpenCV camera axes (no ARKit axis flip).
+    - Box rotation = `reshape(normalizedAxes, (3,3)).T` (the stored rows are the box axes).
+    - No time offset is needed: the fit peaks at 0 s within ±0.02 s.
+    - Over all 148 posed frames, the boxes explain a median 0.75 of the laser points in their ray region. In-box
+      laser points lie a median 3.8 cm from the box surface (90th percentile 16.4 cm; objects are not boxes).
+      The rejected conventions explain 0.00–0.54.
+  - **Object ids:** `objectId` repeats within a file; the loader uses `uid`.
+- **Expansion (2026-10-26).** Six videos left the per-label error model with too little data, so 101 more
+  validation videos with laser depth and 3D boxes were added: one per venue, from the 285 validation videos
+  that have both, excluding the 6 used venues, in a seeded random order.
+  - Same files per video: upsampling zip, 3DOD annotation, wide intrinsics, `lowres_wide.traj`.
+  - All 107 zips pass a CRC check, 5.75 GB in total (5.76 GB with the annotations, poses and intrinsics).
+  - Across all folds, 2,233 videos (837 venues) have both laser depth and 3D boxes (Apple `raw/metadata.csv`).
+  - **Image orientation:** the rotation to upright is derived from gravity (pose), not the `sky_direction`
+    text. It agrees with the metadata on all 6 videos ("Left" = turn 90° clockwise, "Down" = 180°).
+  - **Laser vs LiDAR:** laser depth reads a median 2.1 cm deeper than iPad LiDAR at confidence-2 pixels (+1.7
+    to +2.3 cm per video; 6.15 M pixels). This is a small systematic offset for the error model.
+  - **Coverage:** 10 of the 78 boxes are never visible in a laser frame (6 never in frustum, 4 behind nearer
+    surfaces).
 - **Incremental download [V, HEAD sizes]:**
   - 10 × `<id>_3dod_annotation.json`: 156,558 bytes in total.
   - 6 × `upsampling/Validation/<id>.zip`: 422.7 MB (1920×1440 colour, laser `highres_depth`, lowres depth, confidence). Laser depth is aligned to the `wide` timestamps, not to `vga_wide`.
   - Optional: 10 × `<id>_3dod_mesh.ply`, 355.5 MB.
+- **Video 48458647 is excluded (2026-10-27)**, for every labeller, so all are compared on the same 106
+  videos.
+  - Its upsampling PNGs are stored 1440×1920 (portrait), while its `.pincam` intrinsics say 1920×1440, so the
+    image loader's size check rejects all 5 of its frames.
+  - The other 106 validation videos are consistent: 2,112 posed views.
+  - This video also names one frame `7031.8` against the intrinsics' `7031.800`. The loader now matches by
+    timestamp value, which fixes the lookup but not the orientation.
+- **Dense-frame test batch (2026-10-27).** It tests whether full-rate frames help a multi-view labeller
+  before the whole raw subset is requested.
+  - **Videos:** 5 Training-fold videos: 43828402, 42446031, 42898070, 47333565, 43828460.
+  - **How they were chosen:**
+    - candidates are Training videos in both upsampling and 3DOD whose video and venue are both absent
+      from CA-1M train (205 videos, 80 venues, from Apple `raw/metadata.csv` and CA-1M's `data/train.txt`);
+    - venues are shuffled with numpy seed 0, and the lowest video id is taken per venue;
+    - these are the first 5 of a 24-video development split, for tuning only; the other 19 were not downloaded.
+  - **Files:** the same files as the validation videos (upsampling zip, 3DOD annotation, `lowres_wide.traj`,
+    `wide_intrinsics.zip`), plus `raw/<id>/{wide,lowres_depth,confidence,highres_depth}.zip`.
+    - 4.28 GB in total (HEAD sizes, all matched after download); 2.60 GB of it is `wide`.
+    - URLs: `.../arkitscenes/v1/{upsampling,raw}/Training/...`.
+  - **Frame counts:** 1,112 raw `wide` frames against 117 upsampling frames (counted from the zip listings).
+  - **Provenance:**
+    - `lowres_depth` is iPad LiDAR at 60 FPS, a deployable input.
+    - `highres_depth` is laser-derived and is reference only.
+  - **License:** the same Apple license as the rest of ARKitScenes (above).
+  - **Not used in the reported results:** the improved multi-view labeller it was for was not built.
 - **Question-type mapping:** distance, size, egocentric distance, relative depth, left/right and same-class closest are all supported. Count in view is **partial**: boxes are per scene, so visibility needs a frustum test plus depth or mesh occlusion.
 
-## 3. NVIDIA SDG-Warehouse (`nvidia/PhysicalAI-WorldModel-Synthetic-Warehouse-Operations-Scenes`) — contender, not yet probed
+## 3. NVIDIA SDG-Warehouse (`nvidia/PhysicalAI-WorldModel-Synthetic-Warehouse-Operations-Scenes`) — surveyed, not used
 
 - **License [V]:** OpenMDW-1.1. Redistribution is unrestricted if notices are kept, and outputs carry no obligations. Not gated.
 - **Data [V card]:**
@@ -96,7 +204,7 @@ inertial poses, and fixed, calibrated multi-camera installations.
 - **License [V, HF API]:** Apache-2.0, not gated. Derived data may be redistributed.
 - **Content [V]:** 101 questions on 87 real photos with distances "physically measured" (the measuring tool is not stated). No calibration or 3D boxes [U].
 - **Size [V, tree API]:** 129.4 MB in total; `data/QSpatial_plus-00000-of-00001.parquet` is 129,408,418 bytes, and the ScanNet split's parquet is 12 KB.
-- **Use here:** real, measured ground truth for the VLM-scoring step only. It is not an oracle source for the pipeline.
+- **Not used.** Downloaded as real, measured ground truth for scoring VLMs; the reported results do not use it.
 
 ## 6. LOCO (tum-fml/loco)
 
@@ -104,7 +212,7 @@ inertial poses, and fixed, calibrated multi-camera installations.
 - **License [V, `LICENSE`]:** CC0-1.0.
 - **Content [V, survey]:** real logistics and warehouse images (37,988 images, 5,593 annotated), with COCO-format 2D boxes for pallet, small load carrier, stillage, forklift and pallet truck. No depth, no 3D.
 - **Size [V, HEAD]:** one archive, `dataset.zip`, 769,055,500 bytes, covering all subsets (no per-split download), via https://go.mytum.de/239870 → an anonymous TUM webdisk download.
-- **Use here:** measure the open-vocabulary detector's per-class recall and precision on real warehouse imagery. That is the perception stage where the vocabulary gap ("pallet" vs LVIS "palette", no rack class) shows up.
+- **Not used.** Downloaded to measure an open-vocabulary detector's per-class recall on real warehouse imagery, where the vocabulary gap ("pallet" vs LVIS "palette", no rack class) shows up; the reported results do not use it.
 
 ## 7. MMPTRACK — reviewed, not used
 
@@ -115,18 +223,17 @@ inertial poses, and fixed, calibrated multi-camera installations.
   - Use is limited to "non-commercial, research, or academic purposes" for "multi-camera multiple people tracking tasks".
   - Incorporating the dataset into "any other program, dataset, or product" is prohibited.
   - Derived techniques "can only be used for academic purposes".
-- **Decision (user, 2026-10-26):** not used. The intended use (spatial QA, VLM scoring) is a grey area under the purpose clause, and a reply to a 2021 challenge inbox is unlikely within the deadline. It is still useful as evidence that real fixed-camera metric GT is scarce and research-only.
+- **Decision (author, 2026-10-26):** not used. The intended use (spatial QA, VLM scoring) is a grey area under the purpose clause, and access depends on a reply from a 2021 challenge inbox. It is still useful as evidence that real fixed-camera metric GT is scarce and research-only.
 
 ## 8. Other candidates (listed, not used)
 
 | Dataset | License | What it has | Why not used now |
 |---|---|---|---|
-| Argoverse 2 Sensor | CC BY-NC-SA 4.0 [V] | Real driving, 30-class cuboids, lidar; 1 val log = 1.141 GB, public S3 [V] | A whole outdoor pipeline; 6-month candidate |
+| Argoverse 2 Sensor | CC BY-NC-SA 4.0 [V] | Real driving, 30-class cuboids, lidar; 1 val log = 1.141 GB, public S3 [V] | Outdoor driving; a different pipeline |
 | nuScenes v1.0-mini | CC BY-NC-SA 4.0 + terms (account) [V] | Real driving, oriented boxes, lidar; 4.17 GB [V] | Same as above |
-| CA-1M / CA-VQA (Apple) | CC BY-NC-ND 4.0 [V] | Real handheld homes, laser-registered GT, exhaustive boxes; CA-VQA is auto-generated spatial QA [V] | No-derivatives license; val is 63.9 GB. CA-VQA is the academic auto-QA to audit in the 6-month plan |
+| CA-1M / CA-VQA (Apple) | CC BY-NC-ND 4.0 [V] | Real handheld homes, laser-registered GT, exhaustive boxes; CA-VQA is auto-generated spatial QA [V] | No-derivatives license; val is 63.9 GB. CA-VQA is a natural auto-generated QA set to audit next |
 | Aria Digital Twin | Non-commercial; no derived works [V] | Egocentric real recordings; depth and segmentation rendered from a digital twin [V] | Sign-up; internal evaluation only |
 | 4D-OR (hospital) | Access form, terms unseen [U] | 6 ceiling RGB-D Kinects, auto-annotated 3D object boxes [V] | Only real fixed multi-camera set with 3D object boxes found; access unknown |
-| LOCO (tum-fml/loco) | CC0-1.0 [V] | Real logistics images, 2D boxes: pallet, small load carrier, stillage, forklift, pallet truck [V] | No depth or 3D; useful only to sanity-check detector prompts on real warehouses |
 | Hypersim (apple/ml-hypersim) | CC BY-SA 3.0 [V] | Synthetic indoor, oriented boxes, depth (distance from camera centre) [V] | Not industrial; ShareAlike |
 | Omni3D | CC BY-NC 4.0 [V] | Annotations only, unified camera-frame boxes [V] | Cite |
 | ScanNet++ | Terms of use by application [V] | Laser scans, DSLR, iPhone RGB-D, instance labels; no 3D boxes [V] | Access delay; not industrial |
@@ -135,7 +242,7 @@ inertial poses, and fixed, calibrated multi-camera installations.
 | BMW SORDI | Not stated [U] | Synthetic industrial, 2D [U] | No metric 3D |
 | NVIDIA SimReady-Warehouse-01 | CC-BY-4.0 [V] | USD assets (racks, pallets) | Would require rendering our own scenes |
 
-## Corrections to the original brief
+## Corrections to commonly cited details
 
 1. ARKitScenes is no longer CC BY-NC-SA 4.0 (see §2) [V].
 2. Smart Spaces "depth in 2025/2026 parts" is only partly true: 2026 test scenes have no depth, and 2025 test scenes have no GT [V].
