@@ -537,16 +537,23 @@ def _a1_incomplete(r: Path) -> Values:
 
 
 def _a2_consistency(r: Path) -> Values:
-    """Mean NIS (naive fusion) and median single-frame NEES against laser references, baseline and Cubify."""
+    """Mean NIS and share of objects above the chi-square 95% point (naive fusion), and median single-frame NEES,
+    against the annotated boxes, baseline (iPad LiDAR) and Cubify."""
     v0 = json.loads((r / "fusion/fusion_ark106_2d/summary.json").read_text())["by_source"]["lidar"]
     cu = json.loads((r / "fusion/fusion_ark106_cutr_sam3/summary.json").read_text())["by_source"]["cutr_sam3"]
     s0 = _one(_csv(r, "fusion/fusion_ark106_2d/summary.csv").query("source == 'lidar' and estimator == 'single'"),
               "fusion lidar single")
     s1 = _one(_csv(r, "fusion/fusion_ark106_cutr_sam3/summary.csv").query("estimator == 'single'"),
               "fusion cutr single")
+    f0 = _one(_csv(r, "fusion/fusion_ark106_2d/summary.csv").query("source == 'lidar' and estimator == 'naive'"),
+              "fusion lidar naive")
+    f1 = _one(_csv(r, "fusion/fusion_ark106_cutr_sam3/summary.csv").query("estimator == 'naive'"),
+              "fusion cutr naive")
+    outside = (float(f0["frac_nees_above_chi2_95"]), float(f1["frac_nees_above_chi2_95"]))
     return {"nis_baseline": float(v0["nis_mean"]["naive"]), "nis_cubify": float(cu["nis_mean"]["naive"]),
             "nees_baseline": float(s0["nees_median"]), "nees_cubify": float(s1["nees_median"]),
-            "band_lo": float(s0["nees_lower"]), "band_hi": float(s0["nees_upper"])}
+            "band_lo": float(s0["nees_lower"]), "band_hi": float(s0["nees_upper"]),
+            "outside_lo": pct(min(outside)), "outside_hi": pct(max(outside))}
 
 
 SPOTCHECK_BASELINE = "0e8b5473ce53"
@@ -764,17 +771,47 @@ def _a7_flags(r: Path) -> Values:
     hand = flags(r, "ark106_v0", "v0", "lidar", "cutr_t025", "cross_labeller")
     ware = flags(r, "ss12_sparse4d_v11", "s4d", "boxes", "v0/moge", "cross_labeller")
     return {"handheld_clear": pct(hand["flag_recall_clear"]), "warehouse_clear": pct(ware["flag_recall_clear"]),
-            "warehouse_precision": pct(ware["precision"])}
+            "warehouse_precision": pct(ware["precision"]), "handheld_flags_per_image": float(hand["flags_per_view"]),
+            "handheld_unannotated": pct(hand["unannotated_share"])}
+
+
+def _a4_violations(r: Path) -> Values:
+    """Gates (all model kinds, both tolerances, non-empty) whose accepted labels exceed epsilon on held-out scenes.
+
+    Counts over the six audits; the two largest violations by number of labels accepted (their counts and errors),
+    with whether they are on the warehouse scenes; the handheld range of error among accepted for Table 2's cells; the scene-bootstrap upper
+    bound of Cubify + SAM 3's constant-sigma gate at the tolerance (percent).
+    """
+    rows = []
+    for a in HANDHELD_AUDITS + WAREHOUSE_AUDITS:
+        g = _csv(r, f"{a}/gate.csv")
+        g = g[(g["dataset"] != "all") & ~g["kind"].astype(str).str.contains("conformal")
+              & (g["accept_n"].astype(float) > 0)]
+        rows.append(g.assign(audit=a))
+    g = pd.concat(rows, ignore_index=True)
+    bad = g[g["accept_err"].astype(float) > g["epsilon"].astype(float)].sort_values("accept_n", ascending=False)
+    top = bad.head(2)
+    cells = [gate(r, "audit_ark106_cutr_sam3", "numeric", "const", 1), gate(r, "audit_ark106_cutr_sam3", "numeric", "sigma", 2),
+             gate(r, "audit_ark106_cutr_clip", "numeric", "sigma", 1), gate(r, "audit_ark106_cutr_clip", "numeric", "sigma", 2)]
+    return {"violated": float(len(bad)), "gates": float(len(g)),
+            "largest_n": float(top["accept_n"].iloc[0]), "largest_err": pct(float(top["accept_err"].iloc[0])),
+            "second_n": float(top["accept_n"].iloc[1]), "second_err": pct(float(top["accept_err"].iloc[1])),
+            "largest_two_warehouse": float(all(a in WAREHOUSE_AUDITS for a in top["audit"])),
+            "cubify_handheld_lo": pct(min(float(c["accept_err"]) for c in cells)),
+            "cubify_handheld_hi": pct(max(float(c["accept_err"]) for c in cells)),
+            "boot_hi_sam3_tau": pct(float(cells[0]["accept_boot_hi"]))}
 
 
 def _a4_effort(r: Path) -> Values:
     """Review needed for a stated quality, risk order against random (percent), and reviewer-minutes at 30 s."""
     ours, rnd = review_target(r, "ss12_sparse4d_v22", 0.01, "ours"), review_target(r, "ss12_sparse4d_v22", 0.01, "random")
+    by_type = review_target(r, "ss12_sparse4d_v22", 0.01, "const")
     hand_ours = [review_target(r, n, 0.02, "ours")["review_fraction"] for n in
                  ("ark106_2d", "ark106_cutr_sam3", "ark106_cutr_clip")]
     hand_rnd = [review_target(r, n, 0.02, "random")["review_fraction"] for n in
                 ("ark106_2d", "ark106_cutr_sam3", "ark106_cutr_clip")]
     return {"sparse4d_ours": pct(ours["review_fraction"]), "sparse4d_random": pct(rnd["review_fraction"]),
+            "sparse4d_by_type": pct(by_type["review_fraction"]), "minutes_by_type": float(by_type["minutes_30s"]),
             "minutes_ours": float(ours["minutes_30s"]), "minutes_random": float(rnd["minutes_30s"]),
             "minutes_all": float(ours["minutes_all_30s"]),
             "ratio": float(ours["review_fraction"]) / float(rnd["review_fraction"]),
@@ -924,10 +961,11 @@ CLAIMS: tuple[Claim, ...] = (
     Claim("A1.7", "A1", "The pre-2026 checkpoint misses 40% of present objects, and 78% beyond 45 m.",
           {"missed": "40", "missed_beyond_45m": "78"}, ("misses/ss12_sparse4d_v11/recall.csv",), MISSES,
           _a1_incomplete),
-    Claim("A2.1", "A2", "Fused estimates pass the ground-truth-free check (mean NIS 7.08 and 7.34 for 7 dof) while "
-          "their errors against laser references are far larger (median NEES 27 and 45; band about 6.9-7.1).",
+    Claim("A2.1", "A2", "Fused estimates pass the ground-truth-free check (mean NIS 7.08 and 7.34 for 7 dof), yet "
+          "76-79% of them fall outside their 95% error ellipse against the annotated boxes (5% expected); single-frame "
+          "median NEES 27 and 45 (95% band of the mean about 6.9-7.1).",
           {"nis_baseline": "7.08", "nis_cubify": "7.34", "nees_baseline": "27", "nees_cubify": "45",
-           "band_lo": "6.9", "band_hi": "7.1"},
+           "band_lo": "6.9", "band_hi": "7.1", "outside_lo": "76", "outside_hi": "79"},
           ("fusion/fusion_ark106_2d/summary.json", "fusion/fusion_ark106_cutr_sam3/summary.json"),
           "scripts/run_fusion_eval.py", _a2_consistency),
     Claim("A3.1", "A3", "28% of the baseline's pairs are ambiguous (a second object also overlaps).",
@@ -969,10 +1007,19 @@ CLAIMS: tuple[Claim, ...] = (
                                       "t2_hi": "79"},
           ("review_effort/operating_points.csv", "audit_ark106_cutr_*/gate.csv"), f"{EFFORT}, {AUDIT}",
           _a4_handheld_gates),
+    Claim("A4.8", "A4", "The item-level certificate on held-out scenes: 6 of 45 non-empty gates exceed epsilon; the two "
+          "largest by labels accepted (1,921 at 15% and 1,047 at 22% wrong) are on the warehouse scenes. Cubify's "
+          "Table 2 gates hold (6.0-8.9% wrong), though the scene-bootstrap upper bound reaches 13%.",
+          {"violated": "6", "gates": "45", "largest_n": "1921", "largest_err": "15", "second_n": "1047",
+           "second_err": "22", "largest_two_warehouse": "True",
+           "cubify_handheld_lo": "6.0", "cubify_handheld_hi": "8.9", "boot_hi_sam3_tau": "13"},
+          ("audit_*/gate.csv",), AUDIT, _a4_violations),
     Claim("A4.7", "A4", "Checking labels in risk order, Sparse4D's labels reach at most 1% wrong after 9% are checked, "
-          "against 59% at random (a sixth): 46 instead of 297 reviewer-minutes per 1,000 labels at 30 s per check "
-          "(500 to check all). Handheld labels reach 2% after 69-74% (random: 92-95%).",
-          {"sparse4d_ours": "9", "sparse4d_random": "59", "minutes_ours": "46", "minutes_random": "297",
+          "against 18% ordered by question type alone and 59% at random (a sixth): assuming 30 s per check, 46 instead "
+          "of 91 or 297 reviewer-minutes per 1,000 labels (500 to check all). Handheld labels reach 2% after 69-74% "
+          "(random: 92-95%).",
+          {"sparse4d_ours": "9", "sparse4d_by_type": "18", "sparse4d_random": "59", "minutes_ours": "46",
+           "minutes_by_type": "91", "minutes_random": "297",
            "minutes_all": "500", "ratio": "1/6", "handheld_ours_lo": "69", "handheld_ours_hi": "74",
            "handheld_random_lo": "92", "handheld_random_hi": "95"},
           ("review_effort/effort_targets.csv",), EFFORT, _a4_effort),
@@ -1014,8 +1061,10 @@ CLAIMS: tuple[Claim, ...] = (
           {"lo": "37", "hi": "41"}, ("recall_control/ark106_t005_*_mark/by_alpha.csv",),
           "scripts/run_recall_control.py", _a7_average),
     Claim("A7.6", "A7", "Disagreement flags catch 46-76% of clearly visible misses (warehouse / handheld); in the fully "
-          "annotated warehouses the baseline flags the pre-2026 detector's misses with 69% precision.",
-          {"warehouse_clear": "46", "handheld_clear": "76", "warehouse_precision": "69"},
+          "annotated warehouses the baseline flags the pre-2026 detector's misses with 69% precision. The handheld "
+          "flags cost about 10 per image, 95% of them on objects the reference does not annotate.",
+          {"warehouse_clear": "46", "handheld_clear": "76", "warehouse_precision": "69",
+           "handheld_flags_per_image": "10", "handheld_unannotated": "95"},
           ("misses/ark106_v0/flag_metrics.csv", "misses/ss12_sparse4d_v11/flag_metrics.csv"), MISSES, _a7_flags),
     Claim("A7.7", "A7", "In the fully annotated warehouses, checking 2.0-3.3 flagged boxes per image recovers 1.0-2.3 "
           "missed objects per image.", {"flags_lo": "2.0", "flags_hi": "3.3", "recovered_lo": "1.0",
