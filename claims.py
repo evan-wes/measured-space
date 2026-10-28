@@ -2,7 +2,7 @@
 
 Every claim of the write-up that carries a number is listed here once, with:
 
-- an id and the project aim it supports (A1-A7, as in ``docs/LEARNINGS.md``);
+- an id and the project aim it supports (A1-A7, listed in :data:`AIMS`);
 - a plain statement and the value(s) as stated (the number of decimals written sets the rounding tolerance:
   ``"33"`` passes for 32.5-33.5, ``"7.0"`` for 6.95-7.05; ``"1/6"`` passes when the value rounds to that unit
   fraction; ``"True"`` / ``"False"`` must match exactly);
@@ -48,6 +48,21 @@ HANDHELD_AUDITS: tuple[str, ...] = ("audit_ark106_2d", "audit_ark106_cutr_sam3",
 WAREHOUSE_AUDITS: tuple[str, ...] = ("audit_ss12_2d", "audit_ss12_sparse4d_v22", "audit_ss12_sparse4d_v11")
 """tuple of str: the fixed-camera (12 synthetic warehouses) audit folders: monocular baseline, Sparse4D, Sparse4D
 pre-2026."""
+
+AIMS: dict[str, str] = {
+    "A1": "Auto-label error is large and structured enough to matter for metric questions, for a published labeller "
+          "and not only a rough one.",
+    "A2": "Checks that need no ground truth (consistency across frames, NIS) can pass while errors against "
+          "independent references are large, so independent references are necessary.",
+    "A3": "How labels are paired with ground truth changes the measured error, so the pairing step must be validated.",
+    "A4": "A calibrated error model and a certified gate can accept a useful share of labels with a stated error "
+          "bound at the decision's tolerance, or certify the decision a label supports.",
+    "A5": "A few references per site detect site-level error and correct it.",
+    "A6": "Label noise changes the conclusions drawn when evaluating models, in measurable ways.",
+    "A7": "Missed objects are structured and invisible to per-label audits, so they need their own guarantee: recall "
+          "bounded on held-out scenes, and likely misses flagged without ground truth by disagreement.",
+}
+"""dict of str to str: the project aims the claims are grouped by (``data`` claims describe the evaluation)."""
 
 Values = dict[str, float]
 

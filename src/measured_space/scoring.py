@@ -1,6 +1,6 @@
 """Score model answers against oracle and automatic labels, and measure how label noise moves conclusions.
 
-The analysis follows the evaluation design in ``docs/LOG.md``:
+The analysis:
 
 - Every answer is scored twice, against the oracle label and against the automatic label of the same
   question, always with :func:`measured_space.qa_schema.is_correct`.

@@ -3,7 +3,7 @@
 Every question is answered twice (see :mod:`measured_space.qa`): from ground truth (``oracle``) and from
 perception (``auto``, once per depth source). This module asks whether a per-label uncertainty predicted only
 from evidence available *without* ground truth is calibrated, and whether it can gate labels with a stated error
-guarantee. It follows the design review in ``docs/LOG.md``.
+guarantee.
 
 1. **Errors** (:func:`pair_table`). Numeric questions: ``e = auto - oracle`` in metres and ``e / oracle``. A
    label is *wrong* exactly when :func:`~measured_space.qa_schema.is_correct` rejects it, i.e. ``|e| > tau``

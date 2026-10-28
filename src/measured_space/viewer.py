@@ -1,7 +1,7 @@
 """A static HTML viewer of ground-truth objects, automatic labels and their pairing, and a spot-check page.
 
 Pairing a frame's automatic detections with its ground-truth objects is a step we compute, not ground truth
-(``docs/LEARNINGS.md``, L7): Hungarian assignment on the 2D IoU between a detection's box and the object's
+(``measured_space.matching``): Hungarian assignment on the 2D IoU between a detection's box and the object's
 *visible* 2D box, class-agnostic, at IoU >= 0.3. This module shows that step so a person can check it:
 
 - **Per-view overlays.** For each present ground-truth object: its projected 3D box (solid) and visible 2D box

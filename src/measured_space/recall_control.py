@@ -1,7 +1,7 @@
 """Certified recall for an automatic 3D labeller: conformal risk control of the false-negative rate.
 
 The gate of :mod:`measured_space.audit` certifies ``P(wrong | accepted)``. That guarantee is conditioned on a
-label existing, so it cannot see an object the labeller never found (``docs/LEARNINGS.md``, L16, aim A7). This
+label existing, so it cannot see an object the labeller never found (aim A7 in ``claims.py``). This
 module is the missing-label counterpart. It chooses the labeller's score threshold so that the expected share of
 present ground-truth objects it misses in a new scene stays at or below a target ``alpha``.
 

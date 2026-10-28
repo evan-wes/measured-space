@@ -6,7 +6,7 @@ There are two tiers.
   datasets, models or GPU.
 - **Tier 2** regenerates those tables from the raw data. It needs the datasets, seven sets of model weights, a GPU
   and many hours. **Tier 2 has not been re-run end to end from scratch**: the steps below are the ones the results
-  were produced with, taken from `docs/LOG.md` and the scripts' own documentation, but nobody has yet followed
+  were produced with, taken from the scripts' own documentation and the run summaries, but nobody has yet followed
   them on a clean machine.
 
 ## Tier 1: check the claims (minutes, CPU only)
@@ -28,7 +28,7 @@ python claims.py --block core        # leave out the decision-level block
 python claims.py --report claims.md  # also write a markdown report
 ```
 
-`claims.py` lists each claim once, grouped by the aims in `docs/LEARNINGS.md` (A1–A7), with the value as stated,
+`claims.py` lists each claim once, grouped by the project's aims (A1–A7, listed in `claims.py`), with the value as stated,
 the tables it is read from (under `results/`), the script that wrote those tables, and the lines that recompute
 it. A value passes when it rounds to the stated one (half a unit of the last written digit). The decision-level
 claims (`DEC.*`) are a separate block, read from `results/decisions_exact/` (the exact certificate, from the
@@ -56,7 +56,7 @@ Aggregate tables only (per-item tables of ARKitScenes are not redistributed; see
 | `spotcheck/` | The author's manual pairing spot check | `scripts/make_viewer.py` |
 
 The older folders (`audit/`, `association/`, `fusion/*.csv`, `references/*.csv`, `figures/`, ...) are the earlier
-6-video and design runs that `docs/LEARNINGS.md` L1–L16 refer to.
+6-video and design runs, kept for reference; `claims.py` does not read them.
 
 ## Tier 2: regenerate the tables from raw data
 

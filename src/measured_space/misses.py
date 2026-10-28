@@ -1,7 +1,7 @@
 """Missed objects (false negatives) of automatic 3D labellers: recall, effects on answers, flags without ground truth.
 
 A per-label error bar is conditioned on a label existing, so it cannot see an object the labeller never found
-(``docs/LEARNINGS.md``: aim A7, learning L16). This module measures those misses per labeller and source, measures
+(aim A7 in ``claims.py``). This module measures those misses per labeller and source, measures
 what they do to the answers, and measures how well disagreement flags them when no ground truth is available.
 
 **Population and pairing.** For one labeller and source (a v0 depth source such as ``lidar``, or ``cutr_sam3``,
