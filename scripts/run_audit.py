@@ -29,11 +29,30 @@ auto and oracle side together. Labels whose ambiguity is unknown (written before
 them with ``scripts/run_labels.py --rematch-from`` to add it) are kept. ``summary.json`` records, per dataset and
 depth source, the rows dropped and the unknown rows kept.
 
+``--depth-sources NAME [NAME ...]`` audits only those depth sources' auto answers (e.g. ``lidar`` alone of
+``laser``, ``lidar`` and ``moge``): only ``qa_oracle.jsonl`` and ``qa_auto_<NAME>.jsonl`` are read
+(:func:`measured_space.audit.load_labels`), so the other sources' (question, depth source) rows never enter the
+audit, its fits, its conformal cells or its gate certificates. Every NAME must have a file in each audited label
+folder. ``summary.json`` records the selection under ``depth_sources`` and lists only the files read.
+
+``--fold-groups PATH`` cross-fits by explicit groups of scenes instead of scene by scene
+(:attr:`measured_space.audit.AuditConfig.fold_groups`): ``PATH`` is a JSON object ``{dataset: {scene: group}}``,
+scene ids as in the labels (e.g. ``"MTMC_Tracking_2026/train/Warehouse_000"``), group labels any strings (e.g.
+``configs/smartspaces_layout_groups.json``, written by ``scripts/group_smartspaces_layouts.py``). For a listed
+dataset each group is one fold, whatever ``--max-folds``: leave one group out for the test predictions and two
+for calibration. Every scene of a listed dataset must be mapped, and every listed dataset must be audited; other
+datasets keep the default folds. The mapping is written to ``summary.json`` (``config.fold_groups``, plus the
+file's path and checksum under ``fold_groups``) and the assignment to ``folds.csv`` with a ``group`` column. A
+run without either option writes exactly what it wrote before they existed.
+
 Usage::
 
     python scripts/run_audit.py --results results/audit                       # both datasets, default settings
     python scripts/run_audit.py --results results/audit --wait-minutes 120    # wait for the labels' summary.json
     python scripts/run_audit.py --results <scratch folder> --exclude-ambiguous --labels <label root>
+    python scripts/run_audit.py --results <scratch folder> --labels <label root> --depth-sources lidar
+    python scripts/run_audit.py --results <scratch folder> --labels <label root> \
+        --fold-groups configs/smartspaces_layout_groups.json
     python scripts/run_audit.py --synthetic       # dry run on synthetic data (writes under --out only)
 """
 
@@ -42,6 +61,7 @@ from __future__ import annotations
 import argparse
 import dataclasses
 import hashlib
+import json
 import subprocess
 import sys
 import time
@@ -96,11 +116,20 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
                              "grouped into this many folds balanced by row count, and leave-one-scene-out "
                              "becomes leave-one-fold-out (default %(default)s)")
     parser.add_argument("--n-boot", type=int, default=AuditConfig.n_boot, help="scene-cluster bootstrap replicates")
+    parser.add_argument("--depth-sources", nargs="+", default=None, metavar="NAME",
+                        help="audit only these depth sources' auto answers (qa_auto_<NAME>.jsonl, e.g. lidar); "
+                             "the others are never loaded (default: every source in the label folder)")
+    parser.add_argument("--fold-groups", type=Path, default=None, metavar="PATH",
+                        help="JSON {dataset: {scene: group}}: cross-fit each listed dataset with one fold per group "
+                             "(leave one group out), ignoring --max-folds; every scene must be mapped (default: by "
+                             "scene)")
     parser.add_argument("--wait-minutes", type=float, default=0.0,
                         help="poll for each dataset's summary.json for up to this long (0: do not wait)")
     parser.add_argument("--synthetic", action="store_true",
                         help="audit synthetic data instead (outputs under <out>/_synthetic, results/ untouched)")
     args = parser.parse_args(argv)
+    if args.synthetic and args.depth_sources:
+        parser.error("--depth-sources selects label files; it does not apply to --synthetic")
     if args.results is None and not args.synthetic:
         parser.error("--results is required: the aggregate-table folder (the committed tables are in "
                      f"{REPO_ROOT / 'results' / 'audit'}; pass it explicitly to overwrite them)")
@@ -169,6 +198,37 @@ def git_commit() -> str | None:
         return head + ("+dirty" if dirty else "")
     except (OSError, subprocess.CalledProcessError):
         return None
+
+
+def read_fold_groups(path: Path) -> dict[str, dict[str, str]]:
+    """Read the explicit scene-to-group mapping of ``--fold-groups``.
+
+    Parameters
+    ----------
+    path : pathlib.Path
+        JSON file holding ``{dataset: {scene: group}}``: scene ids as in the labels, group labels strings (or
+        integers).
+
+    Returns
+    -------
+    dict of str to dict of str to str
+        ``{dataset: {scene: group}}``, every key and label as str.
+
+    Raises
+    ------
+    ValueError
+        If the file is not a non-empty object of non-empty objects (for example a flat ``{scene: group}``
+        object, which names no dataset) or a group label is not a string or an integer.
+    """
+    data = json.loads(Path(path).read_text())
+    if not isinstance(data, dict) or not data or not all(isinstance(m, dict) and m for m in data.values()):
+        raise ValueError(f"{path}: expected a JSON object {{dataset: {{scene: group}}}} with at least one scene "
+                         "per dataset")
+    bad = [f"{d}/{s}" for d, m in data.items() for s, g in m.items()
+           if isinstance(g, bool) or not isinstance(g, (str, int))]
+    if bad:
+        raise ValueError(f"{path}: group labels must be strings or integers, not for {bad[:5]}")
+    return {str(d): {str(s): str(g) for s, g in m.items()} for d, m in data.items()}
 
 
 def write_tables(result: AuditResult, out: Path, results: Path | None) -> None:
@@ -437,9 +497,10 @@ def main(argv: list[str] | None = None) -> int:
     """
     args = parse_args(argv)
     started = time.time()
+    fold_groups = read_fold_groups(args.fold_groups) if args.fold_groups is not None else None
     config = dataclasses.replace(AuditConfig(), epsilon=args.epsilon, delta=args.delta, kappa=args.kappa,
                                  ridge_grid=tuple(args.ridge_grid), n_boot=args.n_boot, n_jobs=args.n_jobs,
-                                 max_folds=args.max_folds)
+                                 max_folds=args.max_folds, fold_groups=fold_groups)
     out = args.out or data_root() / "outputs" / ("audit_exclude_ambiguous" if args.exclude_ambiguous else "audit")
     inputs: dict[str, Any] = {}
     if args.synthetic:
@@ -456,13 +517,24 @@ def main(argv: list[str] | None = None) -> int:
         tables = []
         for dataset in ready:
             folder = label_root / dataset
-            tables.append(load_labels(folder))
-            inputs[dataset] = {p.name: {"bytes": p.stat().st_size, "sha256": sha256(p)}
-                               for p in sorted(folder.glob("qa_*.jsonl"))}
+            tables.append(load_labels(folder, args.depth_sources))
+            read = sorted(folder.glob("qa_*.jsonl"))
+            if args.depth_sources:                         # record the files read, not the ones left out
+                names = {"qa_oracle.jsonl", *(f"qa_auto_{s}.jsonl" for s in args.depth_sources)}
+                read = [p for p in read if p.name in names]
+            inputs[dataset] = {p.name: {"bytes": p.stat().st_size, "sha256": sha256(p)} for p in read}
             inputs[dataset]["n_auto_only"] = tables[-1].attrs.get("n_auto_only")
             print(f"{dataset}: {len(tables[-1])} (question, depth source) rows from {folder}", flush=True)
         pairs = pd.concat(tables, ignore_index=True)
         results = args.results
+        if args.depth_sources:
+            print(f"--depth-sources: auditing {sorted(args.depth_sources)} only", flush=True)
+    if fold_groups is not None:
+        unknown = sorted(set(fold_groups) - set(pairs["dataset"].unique()))
+        if unknown:
+            raise ValueError(f"--fold-groups {args.fold_groups} lists datasets that are not audited: {unknown}")
+        described = [f"{d}: {len(set(m.values()))} groups of {len(m)} scenes" for d, m in sorted(fold_groups.items())]
+        print(f"--fold-groups {args.fold_groups}: {'; '.join(described)}", flush=True)
     counts: dict[str, dict[str, dict[str, int]]] | None = None
     if args.exclude_ambiguous:
         pairs, counts = exclude_ambiguous(pairs)
@@ -472,10 +544,27 @@ def main(argv: list[str] | None = None) -> int:
               f"of unknown ambiguity: {dumps(exclusion['counts'])}", flush=True)
     result = run_audit(pairs, config, log=lambda m: print(m, flush=True))
     write_tables(result, out, results)
-    summary = {"config": dataclasses.asdict(config), "gate_z": config.gate_z, "datasets": sorted(pairs["dataset"].unique()),
+    record = dataclasses.asdict(config)
+    if config.fold_groups is None:
+        del record["fold_groups"]           # without --fold-groups the summary is exactly what it always was
+    summary = {"config": record, "gate_z": config.gate_z, "datasets": sorted(pairs["dataset"].unique()),
                "n_rows": int(len(pairs)), "n_labelled": int(pairs["matched"].sum()), "inputs": inputs,
                "exclude_ambiguous": exclusion, "cross_fit": cross_fit_record(result, config),
                "notes": result.notes, "git_commit": git_commit(), "seconds": round(time.time() - started, 1)}
+    if args.depth_sources:
+        summary["depth_sources"] = {
+            "selected": sorted(args.depth_sources),
+            "rule": "only qa_oracle.jsonl and these sources' qa_auto_<source>.jsonl were read "
+                    "(measured_space.audit.load_labels), so every fit, conformal cell and gate certificate uses "
+                    "these sources' (question, depth source) rows only"}
+    if args.fold_groups is not None:
+        summary["fold_groups"] = {
+            "path": str(args.fold_groups), "sha256": sha256(args.fold_groups),
+            "rule": "for each dataset in config.fold_groups, every question type is cross-fitted with one fold per "
+                    "group (measured_space.audit.scene_folds), ignoring max_folds: a group's scenes are predicted by "
+                    "a model fitted without the group, and calibrated by the scenes of the other groups, each "
+                    "predicted without both groups; the inner ridge search and the scene-cluster bootstrap stay "
+                    "by scene; assignment in folds.csv"}
     for folder in [out] + ([results] if results is not None else []):
         (folder / "summary.json").write_text(dumps(summary))
     if len(result.gate):

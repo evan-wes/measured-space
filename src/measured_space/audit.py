@@ -43,6 +43,15 @@ guarantee. It follows the design review in ``docs/LOG.md``.
    train on one fold fewer than the test model (about ``n / K`` scenes rather than one), so their scores err
    further on the large side. The inner ridge search (:func:`select_ridge`) groups its training scenes the
    same way.
+
+   **Explicit fold groups** (:attr:`AuditConfig.fold_groups`). Scenes can share more than an object list: for
+   example several synthetic warehouses built in one building footprint. Given an explicit scene-to-group
+   mapping for a dataset, every question type of that dataset is cross-fitted with one fold per group,
+   whatever ``max_folds`` (:func:`scene_folds`): leave one group out for the test predictions, leave two
+   groups out for calibration, by the same fold-level scheme as above. No prediction for a scene then comes
+   from a model that saw a scene of its group, and no scene of its group calibrates it. Exchangeability is
+   assumed between groups, not between scenes. The inner ridge search, the scene-cluster bootstrap and the
+   per-scene reporting are unchanged (still by scene).
 4. **Conformal calibration** (:func:`conformal_calibrate`). Split conformal on ``|e - mu| / sigma``, Mondrian
    by question type and depth source (pooled over sources when a cell has too few calibration scores, which is
    recorded). Coverage is reported at nominal 50/80/90/95 % with Wilson intervals (:func:`coverage_table`). The
@@ -188,6 +197,12 @@ class AuditConfig:
         Seed for tie-breaking (including the fold assignment) and the cluster bootstrap (default 0).
     n_boot : int
         Scene-cluster bootstrap replicates for the headline coverage interval (default 2000).
+    fold_groups : mapping or None
+        Explicit cross-fitting groups, ``{dataset: {scene: group}}`` (stored as plain dicts of str). For a
+        dataset listed here, every question type is cross-fitted with one fold per group (:func:`scene_folds`),
+        ignoring ``max_folds``, and every scene of the dataset must be mapped; datasets not listed use the
+        default folds. A question type whose scenes fall in fewer than 3 groups is skipped. Default None: no
+        explicit groups. Excluded from the hash.
     """
 
     levels: tuple[float, ...] = LEVELS
@@ -210,17 +225,40 @@ class AuditConfig:
     max_folds: int = 20
     seed: int = 0
     n_boot: int = 2000
+    fold_groups: Mapping[str, Mapping[str, str]] | None = field(default=None, hash=False)
 
     def __post_init__(self) -> None:
-        """Check the settings that would make cross-fitting impossible.
+        """Check the settings that would make cross-fitting impossible, and store ``fold_groups`` as plain dicts.
 
         Raises
         ------
         ValueError
-            If ``max_folds`` is below 3 (leaving two folds out needs a third to train on).
+            If ``max_folds`` is below 3 (leaving two folds out needs a third to train on), or ``fold_groups`` is
+            not a mapping of datasets to mappings of scenes to groups.
         """
         if self.max_folds < 3:
             raise ValueError(f"max_folds must be at least 3, got {self.max_folds}")
+        if self.fold_groups is not None:
+            if not isinstance(self.fold_groups, Mapping) or not all(isinstance(m, Mapping)
+                                                                    for m in self.fold_groups.values()):
+                raise ValueError("fold_groups must map each dataset to a {scene: group} mapping")
+            object.__setattr__(self, "fold_groups", {str(d): {str(s): str(g) for s, g in m.items()}
+                                                     for d, m in self.fold_groups.items()})
+
+    def groups_of(self, dataset: str) -> Mapping[str, str] | None:
+        """The explicit scene-to-group mapping of one dataset.
+
+        Parameters
+        ----------
+        dataset : str
+            Dataset name.
+
+        Returns
+        -------
+        mapping of str to str or None
+            ``fold_groups[dataset]``, or None if there are no explicit groups or the dataset is not listed.
+        """
+        return None if self.fold_groups is None else self.fold_groups.get(str(dataset))
 
     @property
     def gate_z(self) -> float:
@@ -558,7 +596,7 @@ def _views_by_source(label_dir: Path) -> dict[str, set[tuple[str, str, str]]] | 
     return out or None
 
 
-def load_labels(label_dir: str | Path) -> pd.DataFrame:
+def load_labels(label_dir: str | Path, sources: Sequence[str] | None = None) -> pd.DataFrame:
     """Load one dataset's oracle labels and every depth source's auto labels as a pair table.
 
     A depth source is paired only with questions about views it was run on (from ``views.jsonl``; without it,
@@ -569,24 +607,37 @@ def load_labels(label_dir: str | Path) -> pd.DataFrame:
     ----------
     label_dir : str or pathlib.Path
         Folder with ``qa_oracle.jsonl``, ``qa_auto_<depth source>.jsonl`` files and optionally ``views.jsonl``.
+    sources : sequence of str, optional
+        Depth sources to load. The other sources' auto files are not read, so their (question, depth source)
+        rows never enter the pair table. Default: every ``qa_auto_<depth source>.jsonl`` in the folder.
 
     Returns
     -------
     pandas.DataFrame
-        :func:`pair_table` rows for every depth source, stacked. ``attrs["n_auto_only"]`` maps each depth
-        source to its count of auto items without an oracle item, ``attrs["n_not_run"]`` to its count of
-        oracle questions about views it was not run on (left out).
+        :func:`pair_table` rows for every loaded depth source, stacked. ``attrs["n_auto_only"]`` maps each
+        loaded depth source to its count of auto items without an oracle item, ``attrs["n_not_run"]`` to its
+        count of oracle questions about views it was not run on (left out).
 
     Raises
     ------
     FileNotFoundError
         If the oracle file or every auto file is missing.
+    ValueError
+        If ``sources`` is empty or names a source with no auto file in the folder.
     """
     label_dir = Path(label_dir)
     oracle = list(read_jsonl(label_dir / "qa_oracle.jsonl"))
     auto_files = sorted(label_dir.glob("qa_auto_*.jsonl"))
     if not auto_files:
         raise FileNotFoundError(f"No qa_auto_*.jsonl in {label_dir}")
+    if sources is not None:
+        available = {re.sub(r"^qa_auto_", "", p.stem) for p in auto_files}
+        unknown = sorted(set(sources) - available)
+        if not len(sources) or unknown:
+            raise ValueError(f"Depth sources {sorted(sources)} requested from {label_dir}: "
+                             + (f"no qa_auto_<source>.jsonl for {unknown}; " if unknown else "none given; ")
+                             + f"available: {sorted(available)}")
+        auto_files = [p for p in auto_files if re.sub(r"^qa_auto_", "", p.stem) in set(sources)]
     views = _views_by_source(label_dir)
     tables, auto_only, not_run = [], {}, {}
     for path in auto_files:
@@ -1483,7 +1534,8 @@ def _cross_fit_task(task: tuple[pd.DataFrame, str, bool, list[str], AuditConfig]
     ----------
     task : tuple
         ``(rows, kind, numeric, sources, config)``: the labelled rows, the model kind, whether the type is
-        numeric, the dataset's depth sources and the settings (``max_folds`` and ``seed`` set the folds).
+        numeric, the dataset's depth sources and the settings (``max_folds`` and ``seed`` set the folds, or the
+        dataset's explicit ``fold_groups`` do).
 
     Returns
     -------
@@ -1493,7 +1545,8 @@ def _cross_fit_task(task: tuple[pd.DataFrame, str, bool, list[str], AuditConfig]
     rows, kind, numeric, sources, config = task
     predictor: Any = NumericPredictor if numeric else LogisticPredictor
     test, cal = cross_fit(rows, lambda r: predictor.fit(r, kind, sources, config), lambda m, r: m.predict(r),
-                          max_folds=config.max_folds, seed=config.seed)
+                          max_folds=config.max_folds, seed=config.seed,
+                          groups=config.groups_of(rows["dataset"].iloc[0]))
     return test.assign(kind=kind), cal.assign(kind=kind)
 
 
@@ -1565,7 +1618,8 @@ def _run_tasks(tasks: list[tuple[pd.DataFrame, str, bool, list[str], AuditConfig
 # ============================================================================================================
 
 
-def scene_folds(scenes: ArrayLike, max_folds: int | None, seed: int = 0) -> dict[Any, int]:
+def scene_folds(scenes: ArrayLike, max_folds: int | None, seed: int = 0,
+                groups: Mapping[Any, Any] | None = None) -> dict[Any, int]:
     """Assign scenes to cross-fitting folds: one fold per scene, or ``max_folds`` folds balanced by row count.
 
     With at most ``max_folds`` distinct scenes (or ``max_folds`` None), scene ``i`` in sorted order is fold
@@ -1575,23 +1629,43 @@ def scene_folds(scenes: ArrayLike, max_folds: int | None, seed: int = 0) -> dict
     numbered by their first scene in sorted order. The assignment depends on the scene ids, their row counts
     and the seed only: never on errors, labels or features.
 
+    With explicit ``groups``, each group of the scenes present is one fold, whatever ``max_folds`` and
+    ``seed``, numbered in sorted order of each group's first scene (leave one group out).
+
     Parameters
     ----------
     scenes : array_like
         The scene of every row (each scene weighs as many rows as it has).
     max_folds : int or None
-        Most folds; None gives every scene its own fold.
+        Most folds; None gives every scene its own fold. Ignored with ``groups``.
     seed : int, default 0
-        Seed of the tie-breaks between scenes with equal row counts.
+        Seed of the tie-breaks between scenes with equal row counts. Ignored with ``groups``.
+    groups : mapping, optional
+        Scene to group label (:attr:`AuditConfig.fold_groups` of one dataset). Every scene in ``scenes`` must be
+        mapped; mapped scenes absent from ``scenes`` are ignored.
 
     Returns
     -------
     dict
         Scene to fold number in ``0 .. K - 1``, in sorted scene order; ``K`` is the number of scenes or
-        ``max_folds``, whichever is smaller.
+        ``max_folds``, whichever is smaller (with ``groups``: the number of groups among the scenes).
+
+    Raises
+    ------
+    ValueError
+        If ``groups`` is given and some scene has no group.
     """
     counts = pd.Series(np.asarray(scenes)).value_counts()
     names = sorted(counts.index)
+    if groups is not None:
+        missing = [s for s in names if s not in groups]
+        if missing:
+            raise ValueError(f"{len(missing)} of {len(names)} scenes have no fold group: {missing[:5]}"
+                             + (" ..." if len(missing) > 5 else ""))
+        group_number: dict[Any, int] = {}
+        for s in names:                                   # sorted: first sight is the group's first scene
+            group_number.setdefault(groups[s], len(group_number))
+        return {s: group_number[groups[s]] for s in names}
     if max_folds is None or len(names) <= max_folds:
         return {s: i for i, s in enumerate(names)}
     n_rows = counts.reindex(names).to_numpy(dtype=np.int64)
@@ -1616,26 +1690,30 @@ def fold_table(rows: pd.DataFrame, config: AuditConfig) -> pd.DataFrame:
     rows : pandas.DataFrame
         The modelled rows of one dataset and question type (``dataset``, ``qtype``, ``scene``).
     config : AuditConfig
-        ``max_folds`` and ``seed``.
+        ``max_folds`` and ``seed``, or the dataset's explicit ``fold_groups``.
 
     Returns
     -------
     pandas.DataFrame
         Columns ``dataset, qtype, scene, fold, n_rows, fold_rows, fold_scenes``, one row per scene in sorted
-        order: its fold (:func:`scene_folds`), its rows, and its fold's rows and scenes.
+        order: its fold (:func:`scene_folds`), its rows, and its fold's rows and scenes. With explicit fold
+        groups for the dataset, a ``group`` column (the scene's group label) follows ``fold``.
     """
-    fold_of = scene_folds(rows["scene"], config.max_folds, config.seed)
+    groups = config.groups_of(rows["dataset"].iloc[0])
+    fold_of = scene_folds(rows["scene"], config.max_folds, config.seed, groups)
     n_rows = rows["scene"].value_counts()
     table = pd.DataFrame({"dataset": rows["dataset"].iloc[0], "qtype": rows["qtype"].iloc[0],
                           "scene": list(fold_of), "fold": list(fold_of.values()),
                           "n_rows": [int(n_rows[s]) for s in fold_of]})
+    if groups is not None:
+        table.insert(table.columns.get_loc("fold") + 1, "group", [groups[s] for s in fold_of])
     by_fold = table.groupby("fold")
     return table.assign(fold_rows=by_fold["n_rows"].transform("sum"), fold_scenes=by_fold["scene"].transform("size"))
 
 
 def cross_fit(rows: pd.DataFrame, fit: Callable[[pd.DataFrame], T],
               predict: Callable[[T, pd.DataFrame], dict[str, Array]], *, max_folds: int | None = None,
-              seed: int = 0) -> tuple[pd.DataFrame, pd.DataFrame]:
+              seed: int = 0, groups: Mapping[Any, Any] | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Leave-one-scene-out test predictions and leave-two-scenes-out calibration predictions.
 
     For each scene ``S`` a model fitted on all other scenes predicts ``S`` (the test predictions). For each pair
@@ -1651,6 +1729,11 @@ def cross_fit(rows: pd.DataFrame, fit: Callable[[pd.DataFrame], T],
     from a model that saw ``S`` or the scene being calibrated. Scenes of ``S``'s own fold do not calibrate
     ``S``. Fits: ``K + K (K - 1) / 2`` for ``K`` folds.
 
+    With explicit ``groups``, each group is one fold whatever the number of scenes (:func:`scene_folds`), and the
+    same fold-level scheme gives leave-one-group-out test predictions and leave-two-groups-out calibration: no
+    model that predicts or calibrates ``S`` saw a scene of ``S``'s group, and no scene of ``S``'s group
+    calibrates ``S``.
+
     Parameters
     ----------
     rows : pandas.DataFrame
@@ -1663,6 +1746,8 @@ def cross_fit(rows: pd.DataFrame, fit: Callable[[pd.DataFrame], T],
         Most folds; None (the default) leaves every scene out on its own however many there are.
     seed : int, default 0
         Seed of the fold assignment's tie-breaks.
+    groups : mapping, optional
+        Scene to group label: one fold per group, ignoring ``max_folds`` and ``seed``; every scene must be mapped.
 
     Returns
     -------
@@ -1676,12 +1761,14 @@ def cross_fit(rows: pd.DataFrame, fit: Callable[[pd.DataFrame], T],
     Raises
     ------
     ValueError
-        If there are fewer than 3 scenes.
+        If there are fewer than 3 scenes or 3 folds, or (with ``groups``) a scene has no group.
     """
-    fold_of = scene_folds(rows["scene"], max_folds, seed)
+    fold_of = scene_folds(rows["scene"], max_folds, seed, groups)
     scenes = list(fold_of)
     if len(scenes) < 3:
         raise ValueError(f"Leave-two-scenes-out needs >= 3 scenes, got {len(scenes)}")
+    if max(fold_of.values()) + 1 < 3:
+        raise ValueError(f"Leave-two-folds-out needs >= 3 folds, got {max(fold_of.values()) + 1}")
     members = [[s for s in scenes if fold_of[s] == f] for f in range(max(fold_of.values()) + 1)]
     by_scene = {s: rows[rows["scene"] == s] for s in scenes}
     row_fold = rows["scene"].map(fold_of).to_numpy()
@@ -2482,7 +2569,8 @@ class AuditResult:
         Aggregate tables, the only outputs meant for committing: ``errors``, ``coverage``, ``rank``,
         ``comparison``, ``coefficients``, ``categorical``, ``reliability``, ``gate``, ``gate_thresholds``,
         ``risk_yield``, ``aurc``, ``bias_correction``, ``ridge``; and ``folds`` (:func:`fold_table` of every
-        dataset and question type with more than ``max_folds`` scenes) when there is such a group.
+        dataset and question type with more than ``max_folds`` scenes, and of every modelled question type of a
+        dataset with explicit ``fold_groups``) when there is such a group.
     notes : list of str
         Groups skipped and why, and other remarks produced while running.
     calibration : pandas.DataFrame
@@ -2689,16 +2777,27 @@ def run_audit(pairs: pd.DataFrame, config: AuditConfig | None = None,
     folds: list[pd.DataFrame] = []
     for dataset, dpairs in pairs.groupby("dataset", sort=True):
         sources = depth_sources(dpairs)
+        groups = config.groups_of(dataset)
+        if groups is not None:                        # every scene of the dataset, before anything is fitted
+            scene_folds(dpairs["scene"], None, groups=groups)
         labelled = dpairs[dpairs["matched"]]
         for qtype, rows in labelled.groupby("qtype", sort=True):
             numeric = rows["answer_type"].iloc[0] == "number"
             if numeric:
                 rows = rows[np.isfinite(rows["e"].to_numpy(float))]
             n_scenes = rows["scene"].nunique()
-            if n_scenes < config.min_scenes or len(rows) < config.min_rows:
-                notes.append(f"{dataset}/{qtype}: skipped ({len(rows)} labelled rows, {n_scenes} scenes)")
+            n_groups = None if groups is None else len(set(scene_folds(rows["scene"], None, groups=groups).values()))
+            if n_scenes < config.min_scenes or len(rows) < config.min_rows or (n_groups is not None and n_groups < 3):
+                notes.append(f"{dataset}/{qtype}: skipped ({len(rows)} labelled rows, {n_scenes} scenes"
+                             + ("" if n_groups is None else f" in {n_groups} fold groups") + ")")
                 continue
-            if n_scenes > config.max_folds:
+            if groups is not None:
+                fold = fold_table(rows, config)
+                folds.append(fold)
+                notes.append(f"{dataset}/{qtype}: {n_scenes} scenes cross-fitted in {n_groups} explicit fold groups "
+                             f"of {fold['fold_scenes'].min()}-{fold['fold_scenes'].max()} scenes and "
+                             f"{fold['fold_rows'].min()}-{fold['fold_rows'].max()} rows (table folds)")
+            elif n_scenes > config.max_folds:
                 fold = fold_table(rows, config)
                 folds.append(fold)
                 notes.append(f"{dataset}/{qtype}: {n_scenes} scenes cross-fitted in {config.max_folds} folds of "
