@@ -1,0 +1,10 @@
+dataset,qtype,n_sampled,n_scenes
+smartspaces,closest_instance,25,5
+smartspaces,count,25,7
+smartspaces,distance_center,25,9
+smartspaces,distance_surface,25,11
+smartspaces,ego_distance,25,9
+smartspaces,left_right,25,9
+smartspaces,relative_depth,25,10
+smartspaces,size_height,25,11
+smartspaces,size_longest,25,10

@@ -1,0 +1,665 @@
+{
+ "argv": [
+  "--results",
+  "<data>/outputs/review_effort_results/all6"
+ ],
+ "git_commit": "0ba474f5b2ab00c39363f9da9e6f6bf864323c5f+dirty",
+ "inputs": {
+  "audits": [
+   {
+    "name": "ark106_2d",
+    "folder": "<data>/outputs/audit_ark106_2d",
+    "source": "lidar",
+    "sources_stored": [
+     "laser",
+     "lidar",
+     "moge"
+    ],
+    "files": {
+     "pairs.csv": {
+      "bytes": 2026978,
+      "sha256": "e1aa09821f2d2c1c0acd04bfd81bea2c4742af67bc9ce9b7ea92e107f5c04754"
+     },
+     "gate.csv": {
+      "bytes": 11807290,
+      "sha256": "8040f3b2756b80b5eaeacf1a6c4fe7001c190efa06d35640f0ef62224a014511"
+     },
+     "summary.json": {
+      "bytes": 3414,
+      "sha256": "55da1345a2b376dc43b913eb7c3a94462192674ed1b072dbc8f79d0e430ab61f"
+     }
+    },
+    "counts": {
+     "arkitscenes": {
+      "numeric": {
+       "n_questions": 2530,
+       "n_unanswered": 340,
+       "n_answered": 2190,
+       "n_scored": 2190,
+       "n_answered_unscored": 0
+      },
+      "categorical": {
+       "n_questions": 975,
+       "n_unanswered": 30,
+       "n_answered": 945,
+       "n_scored": 943,
+       "n_answered_unscored": 2
+      }
+     }
+    },
+    "epsilon": 0.1,
+    "delta": 0.1
+   },
+   {
+    "name": "ark106_cutr_sam3",
+    "folder": "<data>/outputs/audit_ark106_cutr_sam3",
+    "source": "cutr_sam3",
+    "sources_stored": [
+     "cutr_sam3"
+    ],
+    "files": {
+     "pairs.csv": {
+      "bytes": 604111,
+      "sha256": "796f224ffeb0eb4abbd3cad20cdb421720122900f82675bf0f049360c9830b62"
+     },
+     "gate.csv": {
+      "bytes": 3673047,
+      "sha256": "31ec905ed125b692d94204d041f8b30144805b46963b8b71ad2837464bbdd6a5"
+     },
+     "summary.json": {
+      "bytes": 3037,
+      "sha256": "2946080184b42ed0d47d2d1d3ee3ccfa171cea0cbd52b3175d0fb341ba8bd1fa"
+     }
+    },
+    "counts": {
+     "arkitscenes": {
+      "numeric": {
+       "n_questions": 2530,
+       "n_unanswered": 523,
+       "n_answered": 2007,
+       "n_scored": 2007,
+       "n_answered_unscored": 0
+      },
+      "categorical": {
+       "n_questions": 975,
+       "n_unanswered": 70,
+       "n_answered": 905,
+       "n_scored": 905,
+       "n_answered_unscored": 0
+      }
+     }
+    },
+    "epsilon": 0.1,
+    "delta": 0.1
+   },
+   {
+    "name": "ark106_cutr_clip",
+    "folder": "<data>/outputs/audit_ark106_cutr_clip",
+    "source": "cutr_clip",
+    "sources_stored": [
+     "cutr_clip"
+    ],
+    "files": {
+     "pairs.csv": {
+      "bytes": 573221,
+      "sha256": "6b2287d8a2fe33eada2d354a3c072b5888abcee144df1f55ad019990a7cb27d7"
+     },
+     "gate.csv": {
+      "bytes": 3587356,
+      "sha256": "0f1626075de4ba0fc5a317d5d455d979ae15a75ce67b03a540794c2250a120ba"
+     },
+     "summary.json": {
+      "bytes": 2917,
+      "sha256": "c168ec75bd895c00d59d7ccdf918829311e72847e69cb9f87a4805954c08b116"
+     }
+    },
+    "counts": {
+     "arkitscenes": {
+      "numeric": {
+       "n_questions": 2530,
+       "n_unanswered": 563,
+       "n_answered": 1967,
+       "n_scored": 1967,
+       "n_answered_unscored": 0
+      },
+      "categorical": {
+       "n_questions": 975,
+       "n_unanswered": 92,
+       "n_answered": 883,
+       "n_scored": 882,
+       "n_answered_unscored": 1
+      }
+     }
+    },
+    "epsilon": 0.1,
+    "delta": 0.1
+   },
+   {
+    "name": "ss12_2d",
+    "folder": "<data>/outputs/audit_ss12_2d",
+    "source": "moge",
+    "sources_stored": [
+     "moge"
+    ],
+    "files": {
+     "pairs.csv": {
+      "bytes": 5954612,
+      "sha256": "b1f92d66233fa089f3e0c169e182208799f34d5fa451fdb588066442574e2c5f"
+     },
+     "gate.csv": {
+      "bytes": 23310015,
+      "sha256": "68c8a3f3827f97d28d32b6734f0141ae998e40e90e0b7399e7045bd057da6d31"
+     },
+     "summary.json": {
+      "bytes": 1547,
+      "sha256": "07e578089901cb9f253e5fb6a4a0cf32e696a7d93aabc3d8b77b915692629373"
+     }
+    },
+    "counts": {
+     "smartspaces": {
+      "numeric": {
+       "n_questions": 20754,
+       "n_unanswered": 8982,
+       "n_answered": 11772,
+       "n_scored": 11772,
+       "n_answered_unscored": 0
+      },
+      "categorical": {
+       "n_questions": 10118,
+       "n_unanswered": 5127,
+       "n_answered": 4991,
+       "n_scored": 4991,
+       "n_answered_unscored": 0
+      }
+     }
+    },
+    "epsilon": 0.1,
+    "delta": 0.1
+   },
+   {
+    "name": "ss12_sparse4d_v22",
+    "folder": "<data>/outputs/audit_ss12_sparse4d_v22",
+    "source": "sparse4d",
+    "sources_stored": [
+     "sparse4d"
+    ],
+    "files": {
+     "pairs.csv": {
+      "bytes": 6389104,
+      "sha256": "0281a6f059262cd0722858ae6afea455433a1bd66ee4a49155e9f8112ea5bd60"
+     },
+     "gate.csv": {
+      "bytes": 42129290,
+      "sha256": "8acd211db29a4002cbff6d906cb01fb10d10093ab92c6d1e5b1b8d5aa57463d1"
+     },
+     "summary.json": {
+      "bytes": 1555,
+      "sha256": "666ff28d4581cf71ee0fcb66edcfccd45b35682ee6ee3f323cb691b3ded04ee0"
+     }
+    },
+    "counts": {
+     "smartspaces": {
+      "numeric": {
+       "n_questions": 20754,
+       "n_unanswered": 998,
+       "n_answered": 19756,
+       "n_scored": 19756,
+       "n_answered_unscored": 0
+      },
+      "categorical": {
+       "n_questions": 10118,
+       "n_unanswered": 618,
+       "n_answered": 9500,
+       "n_scored": 9500,
+       "n_answered_unscored": 0
+      }
+     }
+    },
+    "epsilon": 0.1,
+    "delta": 0.1
+   },
+   {
+    "name": "ss12_sparse4d_v11",
+    "folder": "<data>/outputs/audit_ss12_sparse4d_v11",
+    "source": "sparse4d",
+    "sources_stored": [
+     "sparse4d"
+    ],
+    "files": {
+     "pairs.csv": {
+      "bytes": 5832443,
+      "sha256": "99b28d3ddf7055455554fe58e55bdb1967a3a21748a63768193fc048164ce801"
+     },
+     "gate.csv": {
+      "bytes": 29679346,
+      "sha256": "389830f46039d89c321af80fb109a07847c9e84fe84ed7dc20525988403e9d90"
+     },
+     "summary.json": {
+      "bytes": 1555,
+      "sha256": "724c8911b6f15498d092907e33466dfe4842331cbd2d16563ae87910b86c43b2"
+     }
+    },
+    "counts": {
+     "smartspaces": {
+      "numeric": {
+       "n_questions": 20754,
+       "n_unanswered": 6689,
+       "n_answered": 14065,
+       "n_scored": 14065,
+       "n_answered_unscored": 0
+      },
+      "categorical": {
+       "n_questions": 10118,
+       "n_unanswered": 3575,
+       "n_answered": 6543,
+       "n_scored": 6543,
+       "n_answered_unscored": 0
+      }
+     }
+    },
+    "epsilon": 0.1,
+    "delta": 0.1
+   }
+  ],
+  "misses": [
+   {
+    "name": "ark106_2d",
+    "folder": "<data>/outputs/misses_results/ark106_v0",
+    "select": [
+     "v0/lidar"
+    ],
+    "files": {
+     "flag_metrics.csv": {
+      "bytes": 17735,
+      "sha256": "67f2ee2a34a52090853bf4289ed9917efad5ef48aa392fe2ec843e1b8c7358d7"
+     }
+    }
+   },
+   {
+    "name": "ark106_cutr_sam3",
+    "folder": "<data>/outputs/misses_results/ark106_cutr",
+    "select": [
+     "cutr_sam3/cutr_sam3"
+    ],
+    "files": {
+     "flag_metrics.csv": {
+      "bytes": 3066,
+      "sha256": "b61e0e8308869bb90f1e8aa41b5d55aa93636ce8dc09b462e03fa993e5ff2223"
+     }
+    }
+   },
+   {
+    "name": "ark106_cutr_clip",
+    "folder": "<data>/outputs/misses_results/ark106_cutr",
+    "select": [
+     "cutr_clip/cutr_clip"
+    ],
+    "files": {
+     "flag_metrics.csv": {
+      "bytes": 3066,
+      "sha256": "b61e0e8308869bb90f1e8aa41b5d55aa93636ce8dc09b462e03fa993e5ff2223"
+     }
+    }
+   },
+   {
+    "name": "ss12_2d",
+    "folder": "<data>/outputs/misses_results/ss12_v0",
+    "select": [
+     "v0/moge"
+    ],
+    "files": {
+     "flag_metrics.csv": {
+      "bytes": 1593,
+      "sha256": "055c0e65213ada97ca10b54425d1048b36bdacc74f49dfd27ce7b4f42d6a4c81"
+     }
+    }
+   },
+   {
+    "name": "ss12_2d",
+    "folder": "<data>/outputs/misses_results/ss12_sparse4d_v22",
+    "select": [
+     "v0/moge"
+    ],
+    "files": {
+     "flag_metrics.csv": {
+      "bytes": 3779,
+      "sha256": "8187e750340d27a5e5222aa56906e5fb3119544871557ea2706fd5bbaa80ea40"
+     }
+    }
+   },
+   {
+    "name": "ss12_2d",
+    "folder": "<data>/outputs/misses_results/ss12_sparse4d_v11",
+    "select": [
+     "v0/moge"
+    ],
+    "files": {
+     "flag_metrics.csv": {
+      "bytes": 3815,
+      "sha256": "d8e4700fe263a1f3b8489c7098e6106a98978a900801d2410e2f9c69a5a39cc0"
+     }
+    }
+   },
+   {
+    "name": "ss12_sparse4d_v22",
+    "folder": "<data>/outputs/misses_results/ss12_sparse4d_v22",
+    "select": [
+     "sparse4d/sparse4d",
+     "s4d/boxes"
+    ],
+    "files": {
+     "flag_metrics.csv": {
+      "bytes": 3779,
+      "sha256": "8187e750340d27a5e5222aa56906e5fb3119544871557ea2706fd5bbaa80ea40"
+     }
+    }
+   },
+   {
+    "name": "ss12_sparse4d_v11",
+    "folder": "<data>/outputs/misses_results/ss12_sparse4d_v11",
+    "select": [
+     "sparse4d/sparse4d",
+     "s4d/boxes"
+    ],
+    "files": {
+     "flag_metrics.csv": {
+      "bytes": 3815,
+      "sha256": "d8e4700fe263a1f3b8489c7098e6106a98978a900801d2410e2f9c69a5a39cc0"
+     }
+    }
+   }
+  ]
+ },
+ "settings": {
+  "targets": [
+   0.05,
+   0.02,
+   0.01
+  ],
+  "seconds_per_review": [
+   10.0,
+   30.0,
+   60.0
+  ],
+  "n_boot": 1000,
+  "seed": 0,
+  "n_grid": 201,
+  "per": 1000,
+  "tau_scales": [
+   1.0,
+   2.0
+  ],
+  "interval_level": 0.95
+ },
+ "assumptions": [
+  "Answers are reviewed in an order; a reviewed answer is corrected (delivered right), an unreviewed answer is delivered as it is.",
+  "Every review costs the same human time, whatever the answer and whether it was right (--seconds); a rejected answer costs no more than a flagged one.",
+  "Population: the answers the audit scored (gate.csv rows of the feature model). Unanswered questions (a referent had no box) are not answers; they are the miss review's subject. Answered questions the audit did not score (question types with too few scenes or rows, non-finite errors) are left out and counted in summary.json.",
+  "Wrong: |auto - reference| > tau_scale * tau for numeric answers, a changed answer for categorical ones (gate.csv wrong_s). Categorical answers do not depend on the tolerance and are used as they are at every tau_scale.",
+  "Combined queue: numeric and categorical answers interleaved by their rank fraction within their own kind, so reviewing the share f reviews the riskiest share f of each kind (the two scores are on different scales).",
+  "Random review is its expected value, wrong_share * (1 - f); the ideal order reviews every wrong answer first.",
+  "Scene-cluster bootstrap: whole scenes resampled with replacement, the orders kept as ranked on all answers; with few scenes (12 in the warehouse) the intervals are rough.",
+  "Certified operating point: the gate's decisions as stored (thresholds certified per held-out scene by Learn-then-Test at epsilon, delta); flagged and rejected answers are reviewed. The combined accepted set inherits epsilon with confidence 1 - 2 delta (union bound). When a source is selected from an audit of several, the thresholds were certified on the sources pooled.",
+  "Miss review: reviewing one flag costs the same time; a flag that hits a missed object recovers it; images are the views the flag kind covers (by == 'all' rows: every flag, no score or support filter)."
+ ],
+ "definitions": {
+  "review_fraction": "share of answers reviewed",
+  "residual_wrong_share": "wrong answers left unreviewed / all answers (the delivered set's wrong share)",
+  "wrong_share": "wrong answers / all answers, before review",
+  "order": "ours: feature model risk score (numeric sigma, categorical logistic), highest first; const: the constant baseline's score; random: expected value of a random order; ideal: wrong answers first",
+  "lo, hi": "scene-cluster bootstrap 95% percentile interval",
+  "minus_random": "review fraction minus random review's, with a paired bootstrap interval",
+  "full_review_needed": "only reviewing every answer reaches the target",
+  "certified_bound": "epsilon * accepted_share: the residual wrong share the gate's certificate allows",
+  "random_review_fraction": "review fraction a random order needs to reach the gate's residual wrong share",
+  "ranked_review_fraction": "review fraction the same model's ranking needs to reach the gate's residual (uncertified)",
+  "minutes_<t>s": "human minutes per 1000 delivered answers (miss review: per 1000 images) at t seconds per review",
+  "minutes_all_<t>s": "minutes per 1000 answers to review every answer",
+  "tau_scale": "multiple of the question's tolerance a numeric answer must meet; *_tau columns use 1"
+ },
+ "notes": [
+  "ark106_2d: source lidar of ['laser', 'lidar', 'moge']; the gate's thresholds were certified on the sources pooled",
+  "ark106_2d/arkitscenes/categorical: 2 answered questions not scored by the audit are left out",
+  "ark106_cutr_clip/arkitscenes/categorical: 1 answered questions not scored by the audit are left out"
+ ],
+ "headline": [
+  {
+   "setting": "handheld",
+   "labeller": "ark106_2d",
+   "n_answers": 3133,
+   "wrong_share": 0.3217363549313757,
+   "gate_review_fraction": 0.6166613469518034,
+   "gate_residual_wrong_share": 0.01787424194063198,
+   "review_ours_0.05": [
+    0.5646345355888924,
+    0.5250279325269291,
+    0.6059003191889941
+   ],
+   "review_random_0.05": [
+    0.8445932539682539,
+    0.8302949700355827,
+    0.8561454019791985
+   ],
+   "review_ours_0.02": [
+    0.6875199489307373,
+    0.6540885335545268,
+    0.711396879021879
+   ],
+   "review_random_0.02": [
+    0.9378373015873016,
+    0.9321179880142331,
+    0.9424581607916794
+   ],
+   "review_ours_0.01": [
+    0.7571018193424832,
+    0.7039163539589883,
+    0.8207897135647508
+   ],
+   "review_random_0.01": [
+    0.9689186507936508,
+    0.9660589940071166,
+    0.9712290803958397
+   ]
+  },
+  {
+   "setting": "handheld",
+   "labeller": "ark106_cutr_sam3",
+   "n_answers": 2912,
+   "wrong_share": 0.24725274725274726,
+   "gate_review_fraction": 0.8358516483516484,
+   "gate_residual_wrong_share": 0.014766483516483516,
+   "review_ours_0.05": [
+    0.5504807692307693,
+    0.49277433839544116,
+    0.5932498575891355
+   ],
+   "review_random_0.05": [
+    0.7977777777777778,
+    0.7773826619479302,
+    0.815123254379698
+   ],
+   "review_ours_0.02": [
+    0.7160027472527473,
+    0.6395142150601753,
+    0.770524867555718
+   ],
+   "review_random_0.02": [
+    0.9191111111111111,
+    0.9109530647791722,
+    0.9260493017518792
+   ],
+   "review_ours_0.01": [
+    0.8176510989010989,
+    0.7523012474026136,
+    0.882114534313051
+   ],
+   "review_random_0.01": [
+    0.9595555555555556,
+    0.9554765323895861,
+    0.9630246508759397
+   ]
+  },
+  {
+   "setting": "handheld",
+   "labeller": "ark106_cutr_clip",
+   "n_answers": 2849,
+   "wrong_share": 0.3681993681993682,
+   "gate_review_fraction": 0.8132678132678133,
+   "gate_residual_wrong_share": 0.011934011934011933,
+   "review_ours_0.05": [
+    0.6065286065286065,
+    0.573905809159547,
+    0.6347956044872967
+   ],
+   "review_random_0.05": [
+    0.8642040038131553,
+    0.8538050472706608,
+    0.8739911622346995
+   ],
+   "review_ours_0.02": [
+    0.7381537381537382,
+    0.6909211991929721,
+    0.7765101775237563
+   ],
+   "review_random_0.02": [
+    0.9456816015252621,
+    0.9415220189082644,
+    0.9495964648938797
+   ],
+   "review_ours_0.01": [
+    0.8090558090558091,
+    0.7758010301309476,
+    0.8547812753716616
+   ],
+   "review_random_0.01": [
+    0.9728408007626311,
+    0.9707610094541321,
+    0.97479823244694
+   ]
+  },
+  {
+   "setting": "warehouse",
+   "labeller": "ss12_2d",
+   "n_answers": 16763,
+   "wrong_share": 0.4490246375947026,
+   "gate_review_fraction": 0.7932351011155521,
+   "gate_residual_wrong_share": 0.0003579311579072958,
+   "review_ours_0.05": [
+    0.8186482133269701,
+    0.6592855222558525,
+    0.8670981973991901
+   ],
+   "review_random_0.05": [
+    0.8886475355387272,
+    0.8632127720401338,
+    0.9119748483510086
+   ],
+   "review_ours_0.02": [
+    0.9360496331205631,
+    0.8545927356812032,
+    0.9466511722528442
+   ],
+   "review_random_0.02": [
+    0.9554590142154908,
+    0.9452851088160535,
+    0.9647899393404035
+   ],
+   "review_ours_0.01": [
+    0.9680248165602816,
+    0.9276186858342045,
+    0.9749546270836017
+   ],
+   "review_random_0.01": [
+    0.9777295071077454,
+    0.9726425544080268,
+    0.9823949696702017
+   ]
+  },
+  {
+   "setting": "warehouse",
+   "labeller": "ss12_sparse4d_v22",
+   "n_answers": 29256,
+   "wrong_share": 0.02457615531856713,
+   "gate_review_fraction": 0.08736669401148478,
+   "gate_residual_wrong_share": 0.010767022149302707,
+   "review_ours_0.05": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "review_random_0.05": [
+    0.0,
+    0.0,
+    0.0
+   ],
+   "review_ours_0.02": [
+    0.017842493847415916,
+    0.0,
+    0.06168296782853539
+   ],
+   "review_random_0.02": [
+    0.18620305980528506,
+    0.0,
+    0.3409464284221118
+   ],
+   "review_ours_0.01": [
+    0.09201531309816789,
+    0.07563391565382473,
+    0.11917577784201391
+   ],
+   "review_random_0.01": [
+    0.5931015299026425,
+    0.48400110533664287,
+    0.670473214211056
+   ]
+  },
+  {
+   "setting": "warehouse",
+   "labeller": "ss12_sparse4d_v11",
+   "n_answers": 20608,
+   "wrong_share": 0.05643439440993789,
+   "gate_review_fraction": 0.05910326086956519,
+   "gate_residual_wrong_share": 0.04076086956521739,
+   "review_ours_0.05": [
+    0.017565993788819876,
+    0.0,
+    0.19376363540404737
+   ],
+   "review_random_0.05": [
+    0.11401547721410143,
+    0.0,
+    0.5433646230493736
+   ],
+   "review_ours_0.02": [
+    0.15605590062111802,
+    0.06785442329227495,
+    0.24741624945145396
+   ],
+   "review_random_0.02": [
+    0.6456061908856405,
+    0.3375736927796916,
+    0.8173458492197494
+   ],
+   "review_ours_0.01": [
+    0.1828901397515528,
+    0.12823945461162733,
+    0.3214178973130191
+   ],
+   "review_random_0.01": [
+    0.8228030954428203,
+    0.6687868463898458,
+    0.9086729246098747
+   ]
+  }
+ ],
+ "outputs": [
+  "effort_curves.csv",
+  "effort_targets.csv",
+  "miss_review.csv",
+  "operating_points.csv",
+  "review_effort.pdf",
+  "review_effort.png",
+  "summary.json"
+ ],
+ "seconds": 9.5
+}

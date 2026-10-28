@@ -1,0 +1,40 @@
+{
+ "sim": "bev",
+ "gt": "<data>/outputs/sparse4d_smoke/gt/Warehouse_022_f0-900s6.txt",
+ "pred": "<data>/outputs/sparse4d_smoke/cpu_rn50_trainable_v2.2_rgb/Warehouse_022.txt",
+ "scenes": {
+  "22": {
+   "per_class": {
+    "Person": {
+     "HOTA": 49.12832307231337,
+     "DetA": 44.55646160475633,
+     "AssA": 55.2003684517817,
+     "LocA": 69.1574221800922,
+     "nGT": 854,
+     "nPred": 794
+    },
+    "NovaCarter": {
+     "HOTA": 21.52525738977662,
+     "DetA": 25.900244143765633,
+     "AssA": 17.90431266009876,
+     "LocA": 38.14043975415652,
+     "nGT": 52,
+     "nPred": 31
+    },
+    "Transporter": {
+     "HOTA": 14.865065236918786,
+     "DetA": 14.865065236918786,
+     "AssA": 14.865065236918786,
+     "LocA": 17.7678958118622,
+     "nGT": 35,
+     "nPred": 22
+    }
+   },
+   "det_pooled": {
+    "HOTA": 47.229664470258406,
+    "DetA": 42.313941161986016,
+    "AssA": 53.95208350989068
+   }
+  }
+ }
+}

@@ -1,0 +1,10 @@
+dataset,qtype,n_sampled,n_scenes
+arkitscenes,closest_instance,2,2
+arkitscenes,count,25,23
+arkitscenes,distance_center,25,15
+arkitscenes,distance_surface,25,17
+arkitscenes,ego_distance,25,21
+arkitscenes,left_right,25,19
+arkitscenes,relative_depth,25,15
+arkitscenes,size_height,25,23
+arkitscenes,size_longest,25,22

@@ -17,6 +17,7 @@ produced by a script in this repository, with the command to rerun it.
 
 - Datasets, licences and download sizes: [`docs/DATASETS.md`](docs/DATASETS.md)
 - Decisions and dead ends: [`docs/LOG.md`](docs/LOG.md)
+- Checking the key claims (`python claims.py`) and regenerating the results: [`REPRODUCE.md`](REPRODUCE.md)
 
 ## Environment
 

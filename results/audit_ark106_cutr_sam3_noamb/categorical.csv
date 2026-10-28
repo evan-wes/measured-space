@@ -1,0 +1,13 @@
+dataset,qtype,kind,n,flip_rate,brier,ece,log_loss,auroc,brier_skill
+arkitscenes,count,const,633,0.292259,0.208115,0.0514292,0.607235,0.350247,0
+arkitscenes,count,logistic,633,0.292259,0.193315,0.221239,0.562361,0.652039,0.0711115
+arkitscenes,count,margin,633,0.292259,0.20751,0.125074,0.604714,0.525808,0.00290435
+arkitscenes,left_right,const,42,0,1.59252e-07,0.000398894,0.000398973,,0
+arkitscenes,left_right,logistic,42,0,1.59246e-07,0.000398887,0.000398966,,3.4013e-05
+arkitscenes,left_right,margin,42,0,1.59244e-07,0.000398883,0.000398963,,5.0249e-05
+arkitscenes,relative_depth,const,36,0,2.10856e-07,0.000458876,0.000458982,,0
+arkitscenes,relative_depth,logistic,36,0,2.10846e-07,0.000458865,0.00045897,,4.85379e-05
+arkitscenes,relative_depth,margin,36,0,2.10853e-07,0.000458872,0.000458978,,1.62215e-05
+arkitscenes,all,const,711,0.260197,0.185283,0.045834,0.540666,0.446598,0
+arkitscenes,all,logistic,711,0.260197,0.172108,0.197015,0.500714,0.703638,0.0711115
+arkitscenes,all,margin,711,0.260197,0.184745,0.111399,0.538421,0.596126,0.00290435

@@ -1,0 +1,7283 @@
+{
+ "by_source": {
+  "laser": {
+   "n_captures": 106,
+   "n_evaluated_objects": 631,
+   "estimators": {
+    "single": {
+     "n": 2475,
+     "nees_mean": 229.03641196428234,
+     "nees_median": 35.77546701681674,
+     "nees_bounds": [
+      6.8533576905869555,
+      7.148173048933833
+     ],
+     "nees_mean_over_upper": 32.04125171514191,
+     "frac_nees_above_chi2_95": 0.7357575757575757,
+     "coverage_1sigma": {
+      "center": 0.5018181818181818,
+      "size": 0.3581144781144781,
+      "yaw": 0.7575757575757576,
+      "all": 0.4767676767676768
+     },
+     "coverage_2sigma": {
+      "center": 0.7092255892255892,
+      "size": 0.5536700336700336,
+      "yaw": 0.8496969696969697,
+      "all": 0.6626262626262627
+     },
+     "coverage_by_component": {
+      "cx": [
+       0.46101010101010104,
+       0.6707070707070707
+      ],
+      "cy": [
+       0.4808080808080808,
+       0.7046464646464646
+      ],
+      "cz": [
+       0.5636363636363636,
+       0.7523232323232323
+      ],
+      "size_x": [
+       0.4173737373737374,
+       0.5959595959595959
+      ],
+      "size_y": [
+       0.277979797979798,
+       0.49818181818181817
+      ],
+      "height": [
+       0.378989898989899,
+       0.5668686868686869
+      ],
+      "yaw": [
+       0.7575757575757576,
+       0.8496969696969697
+      ]
+     },
+     "center_error_m": {
+      "median": 0.3081262794284549,
+      "mean": 0.3673164501830402
+     },
+     "size_error_m": {
+      "median": 0.23972901918152867,
+      "mean": 0.3778816513981779
+     },
+     "yaw_error_deg": {
+      "median": 2.3955335816280594,
+      "mean": 8.289799845656827
+     },
+     "sigma_median": {
+      "cx": 0.10990553697490946,
+      "cy": 0.11070883579447804,
+      "cz": 0.11512643822507486,
+      "size_x": 0.17302636592865722,
+      "size_y": 0.17302636592865722,
+      "height": 0.17302636592865722,
+      "yaw": 0.19031454706525347
+     },
+     "along_ray_error_m": {
+      "median": -0.119307053083258,
+      "mean": -0.16208280717186055
+     },
+     "log_depth_ratio": {
+      "median": -0.05670652372612509
+     },
+     "range_m": {
+      "median": 1.5186385105105837
+     }
+    },
+    "naive": {
+     "n": 631,
+     "nees_mean": 521.4363442958645,
+     "nees_median": 73.69752059993868,
+     "nees_bounds": [
+      6.711070997154353,
+      7.294932946427442
+     ],
+     "nees_mean_over_upper": 71.479251163128,
+     "frac_nees_above_chi2_95": 0.873217115689382,
+     "coverage_1sigma": {
+      "center": 0.4326465927099842,
+      "size": 0.20126782884310618,
+      "yaw": 0.6719492868462758,
+      "all": 0.3676703645007924
+     },
+     "coverage_2sigma": {
+      "center": 0.6582144743792921,
+      "size": 0.3866877971473851,
+      "yaw": 0.8193343898573693,
+      "all": 0.564863029205343
+     },
+     "coverage_by_component": {
+      "cx": [
+       0.4215530903328051,
+       0.6212361331220285
+      ],
+      "cy": [
+       0.3898573692551506,
+       0.6418383518225039
+      ],
+      "cz": [
+       0.4865293185419968,
+       0.7115689381933439
+      ],
+      "size_x": [
+       0.2091917591125198,
+       0.3977812995245642
+      ],
+      "size_y": [
+       0.20285261489698891,
+       0.38510301109350237
+      ],
+      "height": [
+       0.19175911251980982,
+       0.37717908082408874
+      ],
+      "yaw": [
+       0.6719492868462758,
+       0.8193343898573693
+      ]
+     },
+     "center_error_m": {
+      "median": 0.21706184089603736,
+      "mean": 0.28988888427509746
+     },
+     "size_error_m": {
+      "median": 0.20544014754210171,
+      "mean": 0.3226871962559492
+     },
+     "yaw_error_deg": {
+      "median": 2.527570441167035,
+      "mean": 7.310033696862932
+     },
+     "sigma_median": {
+      "cx": 0.06431970416613128,
+      "cy": 0.06495853294688632,
+      "cz": 0.06979191111976409,
+      "size_x": 0.09870963029672825,
+      "size_y": 0.09870963029672825,
+      "height": 0.09870963029672825,
+      "yaw": 0.1345727067882871
+     },
+     "mean_p_gross": 0.18863632055248997,
+     "frac_objects_p_gross_positive": 0.4643423137876387
+    },
+    "scale_aware": {
+     "n": 631,
+     "nees_mean": 352.0172616216744,
+     "nees_median": 55.00867525977819,
+     "nees_bounds": [
+      6.711070997154353,
+      7.294932946427442
+     ],
+     "nees_mean_over_upper": 48.255037326157776,
+     "frac_nees_above_chi2_95": 0.8272583201267829,
+     "coverage_1sigma": {
+      "center": 0.45589012150026414,
+      "size": 0.2620179609086107,
+      "yaw": 0.6751188589540412,
+      "all": 0.4041204437400951
+     },
+     "coverage_2sigma": {
+      "center": 0.7041732699418912,
+      "size": 0.4685684099313259,
+      "yaw": 0.820919175911252,
+      "all": 0.6198777450758434
+     },
+     "coverage_by_component": {
+      "cx": [
+       0.45166402535657685,
+       0.6782884310618067
+      ],
+      "cy": [
+       0.43740095087163233,
+       0.7036450079239303
+      ],
+      "cz": [
+       0.4786053882725832,
+       0.7305863708399366
+      ],
+      "size_x": [
+       0.24722662440570523,
+       0.4675118858954041
+      ],
+      "size_y": [
+       0.2836767036450079,
+       0.4659270998415214
+      ],
+      "height": [
+       0.2551505546751189,
+       0.4722662440570523
+      ],
+      "yaw": [
+       0.6751188589540412,
+       0.820919175911252
+      ]
+     },
+     "center_error_m": {
+      "median": 0.2221557152653394,
+      "mean": 0.30008022266007583
+     },
+     "size_error_m": {
+      "median": 0.1978331483850319,
+      "mean": 0.311318920911423
+     },
+     "yaw_error_deg": {
+      "median": 2.6071467250278997,
+      "mean": 7.196354258004017
+     },
+     "sigma_median": {
+      "cx": 0.07699404489085972,
+      "cy": 0.077828649045463,
+      "cz": 0.07994910906841037,
+      "size_x": 0.10402087165011124,
+      "size_y": 0.10282594832966405,
+      "height": 0.10319541382474079,
+      "yaw": 0.10987815497882579
+     },
+     "mean_p_gross": 0.18040442373193044,
+     "frac_objects_p_gross_positive": 0.44849445324881143
+    }
+   },
+   "gate": {
+    "naive": {
+     "rejected": 619,
+     "measurements": 2714,
+     "rejected_fraction": 0.22807663964627856
+    },
+    "scale_aware": {
+     "rejected": 594,
+     "measurements": 2714,
+     "rejected_fraction": 0.21886514369933677
+    }
+   },
+   "nis_mean": {
+    "naive": 7.223528742191658,
+    "scale_aware": 7.297392296747325
+   },
+   "naive_over_scale_aware_nees_mean": 1.4812806107680905
+  },
+  "lidar": {
+   "n_captures": 106,
+   "n_evaluated_objects": 631,
+   "estimators": {
+    "single": {
+     "n": 2475,
+     "nees_mean": 65.86079900821521,
+     "nees_median": 26.84857960997501,
+     "nees_bounds": [
+      6.8533576905869555,
+      7.148173048933833
+     ],
+     "nees_mean_over_upper": 9.213654811845736,
+     "frac_nees_above_chi2_95": 0.6682828282828283,
+     "coverage_1sigma": {
+      "center": 0.5278114478114478,
+      "size": 0.41104377104377104,
+      "yaw": 0.74989898989899,
+      "all": 0.5094949494949494
+     },
+     "coverage_2sigma": {
+      "center": 0.7434343434343434,
+      "size": 0.6199326599326599,
+      "yaw": 0.8650505050505051,
+      "all": 0.7078787878787879
+     },
+     "coverage_by_component": {
+      "cx": [
+       0.48444444444444446,
+       0.7054545454545454
+      ],
+      "cy": [
+       0.5014141414141414,
+       0.7393939393939394
+      ],
+      "cz": [
+       0.5975757575757575,
+       0.7854545454545454
+      ],
+      "size_x": [
+       0.4682828282828283,
+       0.6581818181818182
+      ],
+      "size_y": [
+       0.33090909090909093,
+       0.5595959595959596
+      ],
+      "height": [
+       0.43393939393939396,
+       0.642020202020202
+      ],
+      "yaw": [
+       0.74989898989899,
+       0.8650505050505051
+      ]
+     },
+     "center_error_m": {
+      "median": 0.3125688823820429,
+      "mean": 0.3705752785254773
+     },
+     "size_error_m": {
+      "median": 0.227134930822256,
+      "mean": 0.3690262212108019
+     },
+     "yaw_error_deg": {
+      "median": 3.450416133550657,
+      "mean": 9.319004787617594
+     },
+     "sigma_median": {
+      "cx": 0.12375421574976152,
+      "cy": 0.12467827780351445,
+      "cz": 0.12929951232841946,
+      "size_x": 0.18328972823484205,
+      "size_y": 0.18328972823484205,
+      "height": 0.18328972823484205,
+      "yaw": 0.22245925921204746
+     },
+     "along_ray_error_m": {
+      "median": -0.1332607917404476,
+      "mean": -0.17039083896775428
+     },
+     "log_depth_ratio": {
+      "median": -0.06255795541106253
+     },
+     "range_m": {
+      "median": 1.5186385105105837
+     }
+    },
+    "naive": {
+     "n": 631,
+     "nees_mean": 141.88175830720232,
+     "nees_median": 50.50264807766087,
+     "nees_bounds": [
+      6.711070997154353,
+      7.294932946427442
+     ],
+     "nees_mean_over_upper": 19.449357430582864,
+     "frac_nees_above_chi2_95": 0.7939778129952456,
+     "coverage_1sigma": {
+      "center": 0.4543053354463814,
+      "size": 0.24828314844162705,
+      "yaw": 0.6497622820919176,
+      "all": 0.39393253339370615
+     },
+     "coverage_2sigma": {
+      "center": 0.6851558372952985,
+      "size": 0.47437929212889596,
+      "yaw": 0.8367670364500792,
+      "all": 0.6164817749603804
+     },
+     "coverage_by_component": {
+      "cx": [
+       0.42630744849445323,
+       0.6545166402535658
+      ],
+      "cy": [
+       0.4120443740095087,
+       0.6624405705229794
+      ],
+      "cz": [
+       0.5245641838351822,
+       0.7385103011093502
+      ],
+      "size_x": [
+       0.24564183835182252,
+       0.4754358161648177
+      ],
+      "size_y": [
+       0.2694136291600634,
+       0.49128367670364503
+      ],
+      "height": [
+       0.22979397781299524,
+       0.45641838351822506
+      ],
+      "yaw": [
+       0.6497622820919176,
+       0.8367670364500792
+      ]
+     },
+     "center_error_m": {
+      "median": 0.21712872548067694,
+      "mean": 0.287658333621827
+     },
+     "size_error_m": {
+      "median": 0.1964790280159021,
+      "mean": 0.31099375819706926
+     },
+     "yaw_error_deg": {
+      "median": 4.220237106936902,
+      "mean": 8.121092476622453
+     },
+     "sigma_median": {
+      "cx": 0.07075335665844698,
+      "cy": 0.07197088688724365,
+      "cz": 0.0764047771168715,
+      "size_x": 0.10332092360566696,
+      "size_y": 0.10332092360566696,
+      "height": 0.10332092360566696,
+      "yaw": 0.12843691318980033
+     },
+     "mean_p_gross": 0.15248395855358884,
+     "frac_objects_p_gross_positive": 0.393026941362916
+    },
+    "scale_aware": {
+     "n": 631,
+     "nees_mean": 112.53600153942942,
+     "nees_median": 36.693483363052856,
+     "nees_bounds": [
+      6.711070997154353,
+      7.294932946427442
+     ],
+     "nees_mean_over_upper": 15.426598484985641,
+     "frac_nees_above_chi2_95": 0.7385103011093502,
+     "coverage_1sigma": {
+      "center": 0.49867934495509775,
+      "size": 0.3248811410459588,
+      "yaw": 0.6608557844690967,
+      "all": 0.44736246321032375
+     },
+     "coverage_2sigma": {
+      "center": 0.7422081352350766,
+      "size": 0.5388272583201268,
+      "yaw": 0.8510301109350238,
+      "all": 0.6705908988000906
+     },
+     "coverage_by_component": {
+      "cx": [
+       0.4960380348652932,
+       0.7115689381933439
+      ],
+      "cy": [
+       0.47702060221870046,
+       0.7432646592709984
+      ],
+      "cz": [
+       0.5229793977812995,
+       0.7717908082408875
+      ],
+      "size_x": [
+       0.294770206022187,
+       0.5213946117274167
+      ],
+      "size_y": [
+       0.3502377179080824,
+       0.5404120443740095
+      ],
+      "height": [
+       0.329635499207607,
+       0.554675118858954
+      ],
+      "yaw": [
+       0.6608557844690967,
+       0.8510301109350238
+      ]
+     },
+     "center_error_m": {
+      "median": 0.22284868551835682,
+      "mean": 0.2964634274960204
+     },
+     "size_error_m": {
+      "median": 0.18345311806056275,
+      "mean": 0.29769302452683066
+     },
+     "yaw_error_deg": {
+      "median": 3.989102378251631,
+      "mean": 7.681783360113307
+     },
+     "sigma_median": {
+      "cx": 0.08532632539608986,
+      "cy": 0.08635031585613784,
+      "cz": 0.08759125330068217,
+      "size_x": 0.10814432687427819,
+      "size_y": 0.10780834584751742,
+      "height": 0.10867972283040164,
+      "yaw": 0.12843691318980033
+     },
+     "mean_p_gross": 0.14657392719485557,
+     "frac_objects_p_gross_positive": 0.38351822503961963
+    }
+   },
+   "gate": {
+    "naive": {
+     "rejected": 521,
+     "measurements": 2715,
+     "rejected_fraction": 0.19189686924493554
+    },
+    "scale_aware": {
+     "rejected": 497,
+     "measurements": 2715,
+     "rejected_fraction": 0.1830570902394107
+    }
+   },
+   "nis_mean": {
+    "naive": 7.075912010488823,
+    "scale_aware": 7.067075934010758
+   },
+   "naive_over_scale_aware_nees_mean": 1.260767722029745
+  },
+  "moge": {
+   "n_captures": 106,
+   "n_evaluated_objects": 631,
+   "estimators": {
+    "single": {
+     "n": 2475,
+     "nees_mean": 60.55770630656916,
+     "nees_median": 25.570861914098444,
+     "nees_bounds": [
+      6.8533576905869555,
+      7.148173048933833
+     ],
+     "nees_mean_over_upper": 8.471773961264338,
+     "frac_nees_above_chi2_95": 0.665050505050505,
+     "coverage_1sigma": {
+      "center": 0.5497643097643098,
+      "size": 0.39905723905723905,
+      "yaw": 0.7571717171717172,
+      "all": 0.5148051948051948
+     },
+     "coverage_2sigma": {
+      "center": 0.7710437710437711,
+      "size": 0.6126599326599327,
+      "yaw": 0.8618181818181818,
+      "all": 0.7161327561327562
+     },
+     "coverage_by_component": {
+      "cx": [
+       0.5127272727272727,
+       0.7341414141414141
+      ],
+      "cy": [
+       0.5296969696969697,
+       0.7729292929292929
+      ],
+      "cz": [
+       0.6068686868686869,
+       0.806060606060606
+      ],
+      "size_x": [
+       0.458989898989899,
+       0.6476767676767676
+      ],
+      "size_y": [
+       0.31191919191919193,
+       0.5486868686868687
+      ],
+      "height": [
+       0.4262626262626263,
+       0.6416161616161616
+      ],
+      "yaw": [
+       0.7571717171717172,
+       0.8618181818181818
+      ]
+     },
+     "center_error_m": {
+      "median": 0.31614661044166853,
+      "mean": 0.37552130161593583
+     },
+     "size_error_m": {
+      "median": 0.23419140414005646,
+      "mean": 0.3740202716863285
+     },
+     "yaw_error_deg": {
+      "median": 2.8964103182808305,
+      "mean": 8.308433273965832
+     },
+     "sigma_median": {
+      "cx": 0.13515381593066586,
+      "cy": 0.13568776272264854,
+      "cz": 0.13746934885901585,
+      "size_x": 0.18852169973909505,
+      "size_y": 0.18852169973909505,
+      "height": 0.18852169973909505,
+      "yaw": 0.19274259061365367
+     },
+     "along_ray_error_m": {
+      "median": -0.1394971848433833,
+      "mean": -0.17821379528099268
+     },
+     "log_depth_ratio": {
+      "median": -0.06573402939894196
+     },
+     "range_m": {
+      "median": 1.5186385105105837
+     }
+    },
+    "naive": {
+     "n": 631,
+     "nees_mean": 140.25333001089103,
+     "nees_median": 52.43185960658952,
+     "nees_bounds": [
+      6.711070997154353,
+      7.294932946427442
+     ],
+     "nees_mean_over_upper": 19.226130115366928,
+     "frac_nees_above_chi2_95": 0.7971473851030111,
+     "coverage_1sigma": {
+      "center": 0.4849445324881141,
+      "size": 0.23718964606444798,
+      "yaw": 0.6481774960380349,
+      "all": 0.4020828616708173
+     },
+     "coverage_2sigma": {
+      "center": 0.7205493924986793,
+      "size": 0.4469096671949287,
+      "yaw": 0.8288431061806656,
+      "all": 0.6187457550373556
+     },
+     "coverage_by_component": {
+      "cx": [
+       0.4706814580031696,
+       0.7020602218700476
+      ],
+      "cy": [
+       0.4548335974643423,
+       0.694136291600634
+      ],
+      "cz": [
+       0.5293185419968305,
+       0.7654516640253566
+      ],
+      "size_x": [
+       0.23613312202852615,
+       0.44532488114104596
+      ],
+      "size_y": [
+       0.2551505546751189,
+       0.4595879556259905
+      ],
+      "height": [
+       0.2202852614896989,
+       0.4358161648177496
+      ],
+      "yaw": [
+       0.6481774960380349,
+       0.8288431061806656
+      ]
+     },
+     "center_error_m": {
+      "median": 0.22219262636630996,
+      "mean": 0.28699075512985095
+     },
+     "size_error_m": {
+      "median": 0.20929627388474514,
+      "mean": 0.32050532166927387
+     },
+     "yaw_error_deg": {
+      "median": 3.1863571627439984,
+      "mean": 7.0057313098300265
+     },
+     "sigma_median": {
+      "cx": 0.08006781461351703,
+      "cy": 0.08058670788339031,
+      "cz": 0.08080467664468433,
+      "size_x": 0.09668262779663443,
+      "size_y": 0.09668262779663443,
+      "height": 0.09668262779663443,
+      "yaw": 0.11127998657509879
+     },
+     "mean_p_gross": 0.13582984382106172,
+     "frac_objects_p_gross_positive": 0.358161648177496
+    },
+    "scale_aware": {
+     "n": 631,
+     "nees_mean": 101.06683773905664,
+     "nees_median": 35.48115293093422,
+     "nees_bounds": [
+      6.711070997154353,
+      7.294932946427442
+     ],
+     "nees_mean_over_upper": 13.854388858851985,
+     "frac_nees_above_chi2_95": 0.7290015847860539,
+     "coverage_1sigma": {
+      "center": 0.5224511357633386,
+      "size": 0.34072900158478603,
+      "yaw": 0.6402535657686212,
+      "all": 0.46139913968757074
+     },
+     "coverage_2sigma": {
+      "center": 0.7797147385103012,
+      "size": 0.554675118858954,
+      "yaw": 0.8161648177496038,
+      "all": 0.6884763414081956
+     },
+     "coverage_by_component": {
+      "cx": [
+       0.526148969889065,
+       0.7638668779714739
+      ],
+      "cy": [
+       0.5103011093502378,
+       0.7733755942947702
+      ],
+      "cz": [
+       0.5309033280507132,
+       0.8019017432646592
+      ],
+      "size_x": [
+       0.312202852614897,
+       0.5340729001584786
+      ],
+      "size_y": [
+       0.35657686212361334,
+       0.5530903328050714
+      ],
+      "height": [
+       0.35340729001584786,
+       0.5768621236133122
+      ],
+      "yaw": [
+       0.6402535657686212,
+       0.8161648177496038
+      ]
+     },
+     "center_error_m": {
+      "median": 0.21958937858711888,
+      "mean": 0.300042464908722
+     },
+     "size_error_m": {
+      "median": 0.17702524897460176,
+      "mean": 0.2934859342606713
+     },
+     "yaw_error_deg": {
+      "median": 3.4042235016305433,
+      "mean": 7.322148187927368
+     },
+     "sigma_median": {
+      "cx": 0.09865771601890427,
+      "cy": 0.09788122182800565,
+      "cz": 0.09555451977913475,
+      "size_x": 0.11053932148971805,
+      "size_y": 0.11040350033972526,
+      "height": 0.11025609360457127,
+      "yaw": 0.11127998657509879
+     },
+     "mean_p_gross": 0.12641005817726883,
+     "frac_objects_p_gross_positive": 0.34548335974643424
+    }
+   },
+   "gate": {
+    "naive": {
+     "rejected": 471,
+     "measurements": 2715,
+     "rejected_fraction": 0.1734806629834254
+    },
+    "scale_aware": {
+     "rejected": 440,
+     "measurements": 2715,
+     "rejected_fraction": 0.16206261510128914
+    }
+   },
+   "nis_mean": {
+    "naive": 7.099298955265285,
+    "scale_aware": 6.992971477723041
+   },
+   "naive_over_scale_aware_nees_mean": 1.3877284888739625
+  }
+ },
+ "captures": [
+  {
+   "video": "41069021",
+   "source": "laser",
+   "n_measurements": 32,
+   "n_objects": 15,
+   "n_evaluated": 11,
+   "log_scale": -0.021468224891615557,
+   "log_scale_sd": 0.041623381205430986,
+   "gt_median_log_depth_ratio": -0.0664919556929211,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 4.800941944297826,
+    "scale_aware": 4.817647515316122
+   },
+   "converged": true
+  },
+  {
+   "video": "41069021",
+   "source": "lidar",
+   "n_measurements": 32,
+   "n_objects": 15,
+   "n_evaluated": 11,
+   "log_scale": -0.09414397683319374,
+   "log_scale_sd": 0.048249372079696436,
+   "gt_median_log_depth_ratio": -0.06647324155604042,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 5.774409325830708,
+    "scale_aware": 5.500616482848539
+   },
+   "converged": true
+  },
+  {
+   "video": "41069021",
+   "source": "moge",
+   "n_measurements": 32,
+   "n_objects": 15,
+   "n_evaluated": 11,
+   "log_scale": -0.11386242145644165,
+   "log_scale_sd": 0.052894465643039644,
+   "gt_median_log_depth_ratio": -0.0669435962994537,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 5.402055631684179,
+    "scale_aware": 5.0403533270466605
+   },
+   "converged": true
+  },
+  {
+   "video": "41069042",
+   "source": "laser",
+   "n_measurements": 27,
+   "n_objects": 6,
+   "n_evaluated": 5,
+   "log_scale": 0.06501191410737779,
+   "log_scale_sd": 0.03521743552159593,
+   "gt_median_log_depth_ratio": -0.2042373311467982,
+   "rejected": {
+    "naive": 14,
+    "scale_aware": 14
+   },
+   "nis_mean": {
+    "naive": 7.423611082767655,
+    "scale_aware": 7.226146763637015
+   },
+   "converged": true
+  },
+  {
+   "video": "41069042",
+   "source": "lidar",
+   "n_measurements": 27,
+   "n_objects": 6,
+   "n_evaluated": 5,
+   "log_scale": -0.04340918647196831,
+   "log_scale_sd": 0.032405711127008054,
+   "gt_median_log_depth_ratio": -0.20808474370929134,
+   "rejected": {
+    "naive": 10,
+    "scale_aware": 10
+   },
+   "nis_mean": {
+    "naive": 9.597462253709626,
+    "scale_aware": 9.672250093340091
+   },
+   "converged": true
+  },
+  {
+   "video": "41069042",
+   "source": "moge",
+   "n_measurements": 27,
+   "n_objects": 6,
+   "n_evaluated": 5,
+   "log_scale": 0.027132954151276825,
+   "log_scale_sd": 0.0416336276332464,
+   "gt_median_log_depth_ratio": -0.1408680432938209,
+   "rejected": {
+    "naive": 11,
+    "scale_aware": 11
+   },
+   "nis_mean": {
+    "naive": 7.488531324193324,
+    "scale_aware": 6.155105081245523
+   },
+   "converged": true
+  },
+  {
+   "video": "41069048",
+   "source": "laser",
+   "n_measurements": 8,
+   "n_objects": 3,
+   "n_evaluated": 3,
+   "log_scale": -0.08150087624342413,
+   "log_scale_sd": 0.07836849182877005,
+   "gt_median_log_depth_ratio": 0.03369967197689434,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 8.927829786391646,
+    "scale_aware": 8.533936177286833
+   },
+   "converged": true
+  },
+  {
+   "video": "41069048",
+   "source": "lidar",
+   "n_measurements": 8,
+   "n_objects": 3,
+   "n_evaluated": 3,
+   "log_scale": -0.07711286832788253,
+   "log_scale_sd": 0.08181208871249593,
+   "gt_median_log_depth_ratio": 0.01984028195273201,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 7.481725358248227,
+    "scale_aware": 7.14703548358924
+   },
+   "converged": true
+  },
+  {
+   "video": "41069048",
+   "source": "moge",
+   "n_measurements": 8,
+   "n_objects": 3,
+   "n_evaluated": 3,
+   "log_scale": -0.09035736810139107,
+   "log_scale_sd": 0.08355835749938215,
+   "gt_median_log_depth_ratio": -0.020629782016095066,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 7.809850483035503,
+    "scale_aware": 7.358144512571532
+   },
+   "converged": true
+  },
+  {
+   "video": "41142278",
+   "source": "laser",
+   "n_measurements": 19,
+   "n_objects": 3,
+   "n_evaluated": 3,
+   "log_scale": -0.2022458943657305,
+   "log_scale_sd": 0.06436243704258231,
+   "gt_median_log_depth_ratio": -0.008829766518931515,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 7.277625189730718,
+    "scale_aware": 5.918928959492423
+   },
+   "converged": true
+  },
+  {
+   "video": "41142278",
+   "source": "lidar",
+   "n_measurements": 19,
+   "n_objects": 3,
+   "n_evaluated": 3,
+   "log_scale": -0.21857284897817014,
+   "log_scale_sd": 0.06273603448988312,
+   "gt_median_log_depth_ratio": -0.035518888449417224,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 7.530915406642778,
+    "scale_aware": 6.163838200783789
+   },
+   "converged": true
+  },
+  {
+   "video": "41142278",
+   "source": "moge",
+   "n_measurements": 19,
+   "n_objects": 3,
+   "n_evaluated": 3,
+   "log_scale": -0.2050178603069264,
+   "log_scale_sd": 0.0692820962203503,
+   "gt_median_log_depth_ratio": -0.017711932634919977,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 5.527735585102182,
+    "scale_aware": 5.702299542981713
+   },
+   "converged": true
+  },
+  {
+   "video": "42444946",
+   "source": "laser",
+   "n_measurements": 22,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": -0.18092851187925216,
+   "log_scale_sd": 0.06314245155166363,
+   "gt_median_log_depth_ratio": -0.04342878516293104,
+   "rejected": {
+    "naive": 9,
+    "scale_aware": 8
+   },
+   "nis_mean": {
+    "naive": 10.726821467093734,
+    "scale_aware": 11.070959271901492
+   },
+   "converged": true
+  },
+  {
+   "video": "42444946",
+   "source": "lidar",
+   "n_measurements": 22,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": -0.18657469524714018,
+   "log_scale_sd": 0.06597053228945349,
+   "gt_median_log_depth_ratio": -0.053705253538235395,
+   "rejected": {
+    "naive": 7,
+    "scale_aware": 6
+   },
+   "nis_mean": {
+    "naive": 8.629626589105545,
+    "scale_aware": 9.004502338348512
+   },
+   "converged": true
+  },
+  {
+   "video": "42444946",
+   "source": "moge",
+   "n_measurements": 22,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": -0.2587828126052775,
+   "log_scale_sd": 0.0678128308198741,
+   "gt_median_log_depth_ratio": -0.05224547586193467,
+   "rejected": {
+    "naive": 7,
+    "scale_aware": 6
+   },
+   "nis_mean": {
+    "naive": 8.667350294167681,
+    "scale_aware": 8.475040221865356
+   },
+   "converged": true
+  },
+  {
+   "video": "42444966",
+   "source": "laser",
+   "n_measurements": 41,
+   "n_objects": 17,
+   "n_evaluated": 12,
+   "log_scale": -0.0713071300994651,
+   "log_scale_sd": 0.03937931979795825,
+   "gt_median_log_depth_ratio": -0.04306513163597042,
+   "rejected": {
+    "naive": 11,
+    "scale_aware": 11
+   },
+   "nis_mean": {
+    "naive": 7.459124334242503,
+    "scale_aware": 7.296572489008478
+   },
+   "converged": true
+  },
+  {
+   "video": "42444966",
+   "source": "lidar",
+   "n_measurements": 41,
+   "n_objects": 17,
+   "n_evaluated": 12,
+   "log_scale": -0.09418754550509806,
+   "log_scale_sd": 0.04125577309746555,
+   "gt_median_log_depth_ratio": -0.0552345090550879,
+   "rejected": {
+    "naive": 6,
+    "scale_aware": 6
+   },
+   "nis_mean": {
+    "naive": 8.060563070380166,
+    "scale_aware": 7.9265909389726605
+   },
+   "converged": true
+  },
+  {
+   "video": "42444966",
+   "source": "moge",
+   "n_measurements": 41,
+   "n_objects": 17,
+   "n_evaluated": 12,
+   "log_scale": -0.08387708376097189,
+   "log_scale_sd": 0.046716203934372855,
+   "gt_median_log_depth_ratio": -0.04056005108182758,
+   "rejected": {
+    "naive": 6,
+    "scale_aware": 6
+   },
+   "nis_mean": {
+    "naive": 6.169082920556645,
+    "scale_aware": 6.014767551290747
+   },
+   "converged": true
+  },
+  {
+   "video": "42445021",
+   "source": "laser",
+   "n_measurements": 20,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": -0.11720281968384308,
+   "log_scale_sd": 0.07664722120324072,
+   "gt_median_log_depth_ratio": -0.0261717707127472,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 5
+   },
+   "nis_mean": {
+    "naive": 7.554395045915199,
+    "scale_aware": 7.198392444052642
+   },
+   "converged": true
+  },
+  {
+   "video": "42445021",
+   "source": "lidar",
+   "n_measurements": 20,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": -0.049865606174919065,
+   "log_scale_sd": 0.07840713321300725,
+   "gt_median_log_depth_ratio": -0.030865877738566243,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 5
+   },
+   "nis_mean": {
+    "naive": 6.026846275293645,
+    "scale_aware": 5.9753334760840024
+   },
+   "converged": true
+  },
+  {
+   "video": "42445021",
+   "source": "moge",
+   "n_measurements": 20,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": -0.08335516034902272,
+   "log_scale_sd": 0.08474688199664152,
+   "gt_median_log_depth_ratio": -0.014099390678984906,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 5
+   },
+   "nis_mean": {
+    "naive": 7.0485726778133575,
+    "scale_aware": 6.93622505941399
+   },
+   "converged": true
+  },
+  {
+   "video": "42445028",
+   "source": "laser",
+   "n_measurements": 25,
+   "n_objects": 6,
+   "n_evaluated": 5,
+   "log_scale": -0.2358405399739971,
+   "log_scale_sd": 0.07550522480377887,
+   "gt_median_log_depth_ratio": -0.0627662022514642,
+   "rejected": {
+    "naive": 9,
+    "scale_aware": 8
+   },
+   "nis_mean": {
+    "naive": 13.258069367776306,
+    "scale_aware": 12.673866355897214
+   },
+   "converged": true
+  },
+  {
+   "video": "42445028",
+   "source": "lidar",
+   "n_measurements": 25,
+   "n_objects": 6,
+   "n_evaluated": 5,
+   "log_scale": -0.1904625256877461,
+   "log_scale_sd": 0.07867473515620674,
+   "gt_median_log_depth_ratio": -0.06282287707092074,
+   "rejected": {
+    "naive": 9,
+    "scale_aware": 8
+   },
+   "nis_mean": {
+    "naive": 9.5708615510604,
+    "scale_aware": 10.949220926445511
+   },
+   "converged": true
+  },
+  {
+   "video": "42445028",
+   "source": "moge",
+   "n_measurements": 25,
+   "n_objects": 6,
+   "n_evaluated": 5,
+   "log_scale": -0.22231764650389862,
+   "log_scale_sd": 0.08226572522556608,
+   "gt_median_log_depth_ratio": -0.04984869560266059,
+   "rejected": {
+    "naive": 7,
+    "scale_aware": 7
+   },
+   "nis_mean": {
+    "naive": 11.760993533451634,
+    "scale_aware": 10.697629160051115
+   },
+   "converged": true
+  },
+  {
+   "video": "42445429",
+   "source": "laser",
+   "n_measurements": 47,
+   "n_objects": 8,
+   "n_evaluated": 8,
+   "log_scale": -0.052741298108327686,
+   "log_scale_sd": 0.029833283123955293,
+   "gt_median_log_depth_ratio": -0.0089812747689984,
+   "rejected": {
+    "naive": 16,
+    "scale_aware": 15
+   },
+   "nis_mean": {
+    "naive": 6.50144530902307,
+    "scale_aware": 7.112737316758621
+   },
+   "converged": true
+  },
+  {
+   "video": "42445429",
+   "source": "lidar",
+   "n_measurements": 47,
+   "n_objects": 8,
+   "n_evaluated": 8,
+   "log_scale": -0.04986211317197816,
+   "log_scale_sd": 0.03363927935868534,
+   "gt_median_log_depth_ratio": -0.007536032217076485,
+   "rejected": {
+    "naive": 12,
+    "scale_aware": 15
+   },
+   "nis_mean": {
+    "naive": 8.020151650342738,
+    "scale_aware": 6.571378339191502
+   },
+   "converged": true
+  },
+  {
+   "video": "42445429",
+   "source": "moge",
+   "n_measurements": 47,
+   "n_objects": 8,
+   "n_evaluated": 8,
+   "log_scale": -0.0672564980174564,
+   "log_scale_sd": 0.037879368669559474,
+   "gt_median_log_depth_ratio": -0.03158194067914611,
+   "rejected": {
+    "naive": 11,
+    "scale_aware": 11
+   },
+   "nis_mean": {
+    "naive": 7.831642008696212,
+    "scale_aware": 7.765649542504444
+   },
+   "converged": true
+  },
+  {
+   "video": "42445991",
+   "source": "laser",
+   "n_measurements": 21,
+   "n_objects": 9,
+   "n_evaluated": 6,
+   "log_scale": -0.04723814751553872,
+   "log_scale_sd": 0.038701836430091466,
+   "gt_median_log_depth_ratio": -0.07118378539200404,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 5
+   },
+   "nis_mean": {
+    "naive": 9.274820341815236,
+    "scale_aware": 9.336840411015869
+   },
+   "converged": true
+  },
+  {
+   "video": "42445991",
+   "source": "lidar",
+   "n_measurements": 21,
+   "n_objects": 9,
+   "n_evaluated": 6,
+   "log_scale": 0.03112324424933619,
+   "log_scale_sd": 0.04162700722342914,
+   "gt_median_log_depth_ratio": -0.029616145340412722,
+   "rejected": {
+    "naive": 6,
+    "scale_aware": 6
+   },
+   "nis_mean": {
+    "naive": 9.73373235943501,
+    "scale_aware": 9.735382677971021
+   },
+   "converged": true
+  },
+  {
+   "video": "42445991",
+   "source": "moge",
+   "n_measurements": 21,
+   "n_objects": 9,
+   "n_evaluated": 6,
+   "log_scale": -0.029150190366926173,
+   "log_scale_sd": 0.046558913989227534,
+   "gt_median_log_depth_ratio": -0.0743931367849808,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 8.47713361939232,
+    "scale_aware": 8.551971431222793
+   },
+   "converged": true
+  },
+  {
+   "video": "42446038",
+   "source": "laser",
+   "n_measurements": 22,
+   "n_objects": 7,
+   "n_evaluated": 4,
+   "log_scale": -0.06676193091637893,
+   "log_scale_sd": 0.07694555780529107,
+   "gt_median_log_depth_ratio": -0.16531611179162867,
+   "rejected": {
+    "naive": 9,
+    "scale_aware": 9
+   },
+   "nis_mean": {
+    "naive": 4.628199815528306,
+    "scale_aware": 4.4710490079169
+   },
+   "converged": true
+  },
+  {
+   "video": "42446038",
+   "source": "lidar",
+   "n_measurements": 22,
+   "n_objects": 7,
+   "n_evaluated": 4,
+   "log_scale": -0.1098674584556852,
+   "log_scale_sd": 0.0809025976668073,
+   "gt_median_log_depth_ratio": -0.17657628472761522,
+   "rejected": {
+    "naive": 8,
+    "scale_aware": 7
+   },
+   "nis_mean": {
+    "naive": 4.463846614415631,
+    "scale_aware": 6.24974881901491
+   },
+   "converged": true
+  },
+  {
+   "video": "42446038",
+   "source": "moge",
+   "n_measurements": 22,
+   "n_objects": 7,
+   "n_evaluated": 4,
+   "log_scale": -0.0490558371136241,
+   "log_scale_sd": 0.08436415309219503,
+   "gt_median_log_depth_ratio": -0.15987072711188632,
+   "rejected": {
+    "naive": 8,
+    "scale_aware": 8
+   },
+   "nis_mean": {
+    "naive": 4.321594354898025,
+    "scale_aware": 4.2694880646221955
+   },
+   "converged": true
+  },
+  {
+   "video": "42446100",
+   "source": "laser",
+   "n_measurements": 87,
+   "n_objects": 25,
+   "n_evaluated": 22,
+   "log_scale": -0.018601832132194813,
+   "log_scale_sd": 0.0155573446357392,
+   "gt_median_log_depth_ratio": -0.057922533120186526,
+   "rejected": {
+    "naive": 22,
+    "scale_aware": 22
+   },
+   "nis_mean": {
+    "naive": 6.923401594064563,
+    "scale_aware": 6.900843877187415
+   },
+   "converged": true
+  },
+  {
+   "video": "42446100",
+   "source": "lidar",
+   "n_measurements": 87,
+   "n_objects": 25,
+   "n_evaluated": 22,
+   "log_scale": -0.02373882357028805,
+   "log_scale_sd": 0.01786213139047984,
+   "gt_median_log_depth_ratio": -0.06003758232285149,
+   "rejected": {
+    "naive": 16,
+    "scale_aware": 18
+   },
+   "nis_mean": {
+    "naive": 6.156830418961608,
+    "scale_aware": 5.50131457198646
+   },
+   "converged": true
+  },
+  {
+   "video": "42446100",
+   "source": "moge",
+   "n_measurements": 87,
+   "n_objects": 25,
+   "n_evaluated": 22,
+   "log_scale": -0.04420924842254281,
+   "log_scale_sd": 0.024359197299560455,
+   "gt_median_log_depth_ratio": -0.052485604419960266,
+   "rejected": {
+    "naive": 18,
+    "scale_aware": 18
+   },
+   "nis_mean": {
+    "naive": 5.7694565902687405,
+    "scale_aware": 5.686506029114101
+   },
+   "converged": true
+  },
+  {
+   "video": "42446156",
+   "source": "laser",
+   "n_measurements": 55,
+   "n_objects": 13,
+   "n_evaluated": 13,
+   "log_scale": -0.008736294038790568,
+   "log_scale_sd": 0.02795297797513805,
+   "gt_median_log_depth_ratio": -0.025752743786278464,
+   "rejected": {
+    "naive": 13,
+    "scale_aware": 13
+   },
+   "nis_mean": {
+    "naive": 6.84682037872964,
+    "scale_aware": 6.875876278626644
+   },
+   "converged": true
+  },
+  {
+   "video": "42446156",
+   "source": "lidar",
+   "n_measurements": 55,
+   "n_objects": 13,
+   "n_evaluated": 13,
+   "log_scale": -0.03356384324737265,
+   "log_scale_sd": 0.03173431994093891,
+   "gt_median_log_depth_ratio": -0.03198215429143044,
+   "rejected": {
+    "naive": 12,
+    "scale_aware": 12
+   },
+   "nis_mean": {
+    "naive": 5.592169358897708,
+    "scale_aware": 5.569919371274623
+   },
+   "converged": true
+  },
+  {
+   "video": "42446156",
+   "source": "moge",
+   "n_measurements": 55,
+   "n_objects": 13,
+   "n_evaluated": 13,
+   "log_scale": -0.08548324175147434,
+   "log_scale_sd": 0.039850959456548984,
+   "gt_median_log_depth_ratio": -0.03475322539393664,
+   "rejected": {
+    "naive": 9,
+    "scale_aware": 9
+   },
+   "nis_mean": {
+    "naive": 5.833296416474714,
+    "scale_aware": 5.6994361421281745
+   },
+   "converged": true
+  },
+  {
+   "video": "42446163",
+   "source": "laser",
+   "n_measurements": 31,
+   "n_objects": 9,
+   "n_evaluated": 7,
+   "log_scale": -0.04968386727597427,
+   "log_scale_sd": 0.02286097477120988,
+   "gt_median_log_depth_ratio": -0.04114272498159545,
+   "rejected": {
+    "naive": 10,
+    "scale_aware": 10
+   },
+   "nis_mean": {
+    "naive": 7.772229559888268,
+    "scale_aware": 7.335639213387611
+   },
+   "converged": true
+  },
+  {
+   "video": "42446163",
+   "source": "lidar",
+   "n_measurements": 31,
+   "n_objects": 9,
+   "n_evaluated": 7,
+   "log_scale": -0.059811335256071956,
+   "log_scale_sd": 0.030244457661864517,
+   "gt_median_log_depth_ratio": -0.05560620030880735,
+   "rejected": {
+    "naive": 11,
+    "scale_aware": 11
+   },
+   "nis_mean": {
+    "naive": 5.425779478485264,
+    "scale_aware": 5.043002203296295
+   },
+   "converged": true
+  },
+  {
+   "video": "42446163",
+   "source": "moge",
+   "n_measurements": 31,
+   "n_objects": 9,
+   "n_evaluated": 7,
+   "log_scale": -0.1326597184787967,
+   "log_scale_sd": 0.03192387006296975,
+   "gt_median_log_depth_ratio": -0.08921574844043022,
+   "rejected": {
+    "naive": 8,
+    "scale_aware": 8
+   },
+   "nis_mean": {
+    "naive": 9.31659477612523,
+    "scale_aware": 7.845908466388716
+   },
+   "converged": true
+  },
+  {
+   "video": "42446517",
+   "source": "laser",
+   "n_measurements": 20,
+   "n_objects": 6,
+   "n_evaluated": 5,
+   "log_scale": 0.0057854217098717966,
+   "log_scale_sd": 0.028949346665218822,
+   "gt_median_log_depth_ratio": -0.1110635622331435,
+   "rejected": {
+    "naive": 8,
+    "scale_aware": 8
+   },
+   "nis_mean": {
+    "naive": 10.106165500695234,
+    "scale_aware": 10.197230857728051
+   },
+   "converged": true
+  },
+  {
+   "video": "42446517",
+   "source": "lidar",
+   "n_measurements": 20,
+   "n_objects": 6,
+   "n_evaluated": 5,
+   "log_scale": -0.07352755303439952,
+   "log_scale_sd": 0.030151245855159842,
+   "gt_median_log_depth_ratio": -0.048714477836117626,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 6
+   },
+   "nis_mean": {
+    "naive": 13.464343483145342,
+    "scale_aware": 11.056528429063034
+   },
+   "converged": true
+  },
+  {
+   "video": "42446517",
+   "source": "moge",
+   "n_measurements": 20,
+   "n_objects": 6,
+   "n_evaluated": 5,
+   "log_scale": -0.11399822869135492,
+   "log_scale_sd": 0.04222817387315467,
+   "gt_median_log_depth_ratio": -0.1553152045434528,
+   "rejected": {
+    "naive": 6,
+    "scale_aware": 5
+   },
+   "nis_mean": {
+    "naive": 11.902921008848674,
+    "scale_aware": 12.367871716369807
+   },
+   "converged": true
+  },
+  {
+   "video": "42446527",
+   "source": "laser",
+   "n_measurements": 21,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": -0.001998401884279528,
+   "log_scale_sd": 0.02993671680764513,
+   "gt_median_log_depth_ratio": -0.03219790646609429,
+   "rejected": {
+    "naive": 10,
+    "scale_aware": 10
+   },
+   "nis_mean": {
+    "naive": 4.0758232346559575,
+    "scale_aware": 4.099365724813132
+   },
+   "converged": true
+  },
+  {
+   "video": "42446527",
+   "source": "lidar",
+   "n_measurements": 21,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": 0.012585908181833817,
+   "log_scale_sd": 0.03358204718968479,
+   "gt_median_log_depth_ratio": -0.06045707600225467,
+   "rejected": {
+    "naive": 9,
+    "scale_aware": 9
+   },
+   "nis_mean": {
+    "naive": 7.278575551010622,
+    "scale_aware": 7.283933524832933
+   },
+   "converged": true
+  },
+  {
+   "video": "42446527",
+   "source": "moge",
+   "n_measurements": 21,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": -0.03642870661696442,
+   "log_scale_sd": 0.04554732353076387,
+   "gt_median_log_depth_ratio": -0.05068638457667905,
+   "rejected": {
+    "naive": 9,
+    "scale_aware": 9
+   },
+   "nis_mean": {
+    "naive": 8.671219389772974,
+    "scale_aware": 8.604237193730425
+   },
+   "converged": true
+  },
+  {
+   "video": "42446533",
+   "source": "laser",
+   "n_measurements": 4,
+   "n_objects": 3,
+   "n_evaluated": 1,
+   "log_scale": 0.032581724383815784,
+   "log_scale_sd": 0.07857272841754763,
+   "gt_median_log_depth_ratio": -0.04458373915816072,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 6.806471123307899,
+    "scale_aware": 6.640045235960938
+   },
+   "converged": true
+  },
+  {
+   "video": "42446533",
+   "source": "lidar",
+   "n_measurements": 4,
+   "n_objects": 3,
+   "n_evaluated": 1,
+   "log_scale": 0.029227060664443215,
+   "log_scale_sd": 0.08273778347544476,
+   "gt_median_log_depth_ratio": -0.054414503879371086,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 6.231096186009319,
+    "scale_aware": 6.109914729684009
+   },
+   "converged": true
+  },
+  {
+   "video": "42446533",
+   "source": "moge",
+   "n_measurements": 4,
+   "n_objects": 3,
+   "n_evaluated": 1,
+   "log_scale": -0.0007790903721917313,
+   "log_scale_sd": 0.08816613586534072,
+   "gt_median_log_depth_ratio": -0.07889561785431264,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 5.352498769154233,
+    "scale_aware": 5.352420622500454
+   },
+   "converged": true
+  },
+  {
+   "video": "42446540",
+   "source": "laser",
+   "n_measurements": 53,
+   "n_objects": 23,
+   "n_evaluated": 14,
+   "log_scale": -0.04889582937860852,
+   "log_scale_sd": 0.018690236358982808,
+   "gt_median_log_depth_ratio": -0.05010490846096062,
+   "rejected": {
+    "naive": 14,
+    "scale_aware": 13
+   },
+   "nis_mean": {
+    "naive": 8.560138290017285,
+    "scale_aware": 9.125222403977135
+   },
+   "converged": true
+  },
+  {
+   "video": "42446540",
+   "source": "lidar",
+   "n_measurements": 53,
+   "n_objects": 23,
+   "n_evaluated": 14,
+   "log_scale": -0.07973202643866385,
+   "log_scale_sd": 0.020913565111058345,
+   "gt_median_log_depth_ratio": -0.06812283925275461,
+   "rejected": {
+    "naive": 13,
+    "scale_aware": 12
+   },
+   "nis_mean": {
+    "naive": 7.926596037276133,
+    "scale_aware": 7.864741216198027
+   },
+   "converged": true
+  },
+  {
+   "video": "42446540",
+   "source": "moge",
+   "n_measurements": 53,
+   "n_objects": 23,
+   "n_evaluated": 14,
+   "log_scale": -0.0658376513560048,
+   "log_scale_sd": 0.0241904265501303,
+   "gt_median_log_depth_ratio": -0.059743508843029286,
+   "rejected": {
+    "naive": 9,
+    "scale_aware": 10
+   },
+   "nis_mean": {
+    "naive": 9.047370884731135,
+    "scale_aware": 7.9036748640884
+   },
+   "converged": true
+  },
+  {
+   "video": "42897501",
+   "source": "laser",
+   "n_measurements": 35,
+   "n_objects": 13,
+   "n_evaluated": 11,
+   "log_scale": -0.027635559584230602,
+   "log_scale_sd": 0.032819491590321714,
+   "gt_median_log_depth_ratio": -0.08945995935651006,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 9.20255400851794,
+    "scale_aware": 9.180263993347113
+   },
+   "converged": true
+  },
+  {
+   "video": "42897501",
+   "source": "lidar",
+   "n_measurements": 35,
+   "n_objects": 13,
+   "n_evaluated": 11,
+   "log_scale": -0.040735913273356114,
+   "log_scale_sd": 0.03721451280920473,
+   "gt_median_log_depth_ratio": -0.09756302267227832,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 8.639847812351071,
+    "scale_aware": 8.590990086965757
+   },
+   "converged": true
+  },
+  {
+   "video": "42897501",
+   "source": "moge",
+   "n_measurements": 35,
+   "n_objects": 13,
+   "n_evaluated": 11,
+   "log_scale": -0.12185903692160255,
+   "log_scale_sd": 0.050795154801158,
+   "gt_median_log_depth_ratio": -0.10551200731449428,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 7.470128302783879,
+    "scale_aware": 7.777745137112166
+   },
+   "converged": true
+  },
+  {
+   "video": "42897521",
+   "source": "laser",
+   "n_measurements": 11,
+   "n_objects": 8,
+   "n_evaluated": 3,
+   "log_scale": -0.09383818340825367,
+   "log_scale_sd": 0.0655703459591046,
+   "gt_median_log_depth_ratio": -0.08408912742348423,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 7.86770732593614,
+    "scale_aware": 6.662992953954966
+   },
+   "converged": true
+  },
+  {
+   "video": "42897521",
+   "source": "lidar",
+   "n_measurements": 11,
+   "n_objects": 8,
+   "n_evaluated": 3,
+   "log_scale": -0.0874502536027572,
+   "log_scale_sd": 0.07051553161401433,
+   "gt_median_log_depth_ratio": -0.10884567403743167,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 6.678157600923334,
+    "scale_aware": 5.761522292248363
+   },
+   "converged": true
+  },
+  {
+   "video": "42897521",
+   "source": "moge",
+   "n_measurements": 11,
+   "n_objects": 8,
+   "n_evaluated": 3,
+   "log_scale": -0.07877926253318185,
+   "log_scale_sd": 0.07599276318955503,
+   "gt_median_log_depth_ratio": -0.03422989986854294,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 6.695697176890037,
+    "scale_aware": 6.101018903095519
+   },
+   "converged": true
+  },
+  {
+   "video": "42897541",
+   "source": "laser",
+   "n_measurements": 24,
+   "n_objects": 7,
+   "n_evaluated": 7,
+   "log_scale": -0.026661726384269474,
+   "log_scale_sd": 0.02374020355151717,
+   "gt_median_log_depth_ratio": -0.00640180154012263,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 5
+   },
+   "nis_mean": {
+    "naive": 6.3249673326456275,
+    "scale_aware": 6.326593159213898
+   },
+   "converged": true
+  },
+  {
+   "video": "42897541",
+   "source": "lidar",
+   "n_measurements": 24,
+   "n_objects": 7,
+   "n_evaluated": 7,
+   "log_scale": -0.023609762659649525,
+   "log_scale_sd": 0.026788835067242577,
+   "gt_median_log_depth_ratio": -0.011012180356803972,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 5
+   },
+   "nis_mean": {
+    "naive": 5.821156111726333,
+    "scale_aware": 5.84784987837549
+   },
+   "converged": true
+  },
+  {
+   "video": "42897541",
+   "source": "moge",
+   "n_measurements": 24,
+   "n_objects": 7,
+   "n_evaluated": 7,
+   "log_scale": -0.035313688817387716,
+   "log_scale_sd": 0.033739282884834035,
+   "gt_median_log_depth_ratio": -0.017845378000929613,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 5
+   },
+   "nis_mean": {
+    "naive": 5.531757080400812,
+    "scale_aware": 5.487916898861161
+   },
+   "converged": true
+  },
+  {
+   "video": "42897545",
+   "source": "laser",
+   "n_measurements": 5,
+   "n_objects": 4,
+   "n_evaluated": 1,
+   "log_scale": -0.014963966984484336,
+   "log_scale_sd": 0.09349949176397794,
+   "gt_median_log_depth_ratio": -0.029272003762525978,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 9.729639442062783,
+    "scale_aware": 9.70364019888558
+   },
+   "converged": true
+  },
+  {
+   "video": "42897545",
+   "source": "lidar",
+   "n_measurements": 5,
+   "n_objects": 4,
+   "n_evaluated": 1,
+   "log_scale": -0.018537923882679816,
+   "log_scale_sd": 0.09490838929088263,
+   "gt_median_log_depth_ratio": -0.047257455388751646,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 8.08171604842853,
+    "scale_aware": 8.042852456654238
+   },
+   "converged": true
+  },
+  {
+   "video": "42897545",
+   "source": "moge",
+   "n_measurements": 5,
+   "n_objects": 4,
+   "n_evaluated": 1,
+   "log_scale": -0.022932179290891776,
+   "log_scale_sd": 0.09565995867747312,
+   "gt_median_log_depth_ratio": 0.025671583072913517,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 7.397628589470295,
+    "scale_aware": 7.33883137153647
+   },
+   "converged": true
+  },
+  {
+   "video": "42897552",
+   "source": "laser",
+   "n_measurements": 3,
+   "n_objects": 3,
+   "n_evaluated": 0,
+   "log_scale": -6.266361251334087e-31,
+   "log_scale_sd": 0.1,
+   "gt_median_log_depth_ratio": null,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": null,
+    "scale_aware": null
+   },
+   "converged": true
+  },
+  {
+   "video": "42897552",
+   "source": "lidar",
+   "n_measurements": 3,
+   "n_objects": 3,
+   "n_evaluated": 0,
+   "log_scale": 1.0372683395987719e-30,
+   "log_scale_sd": 0.1,
+   "gt_median_log_depth_ratio": null,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": null,
+    "scale_aware": null
+   },
+   "converged": true
+  },
+  {
+   "video": "42897552",
+   "source": "moge",
+   "n_measurements": 3,
+   "n_objects": 3,
+   "n_evaluated": 0,
+   "log_scale": -1.3509526763623858e-33,
+   "log_scale_sd": 0.1,
+   "gt_median_log_depth_ratio": null,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": null,
+    "scale_aware": null
+   },
+   "converged": true
+  },
+  {
+   "video": "42897561",
+   "source": "laser",
+   "n_measurements": 13,
+   "n_objects": 7,
+   "n_evaluated": 4,
+   "log_scale": -0.034337802998709324,
+   "log_scale_sd": 0.03414613140253365,
+   "gt_median_log_depth_ratio": -0.012875239350402901,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 8.772930217166449,
+    "scale_aware": 8.436413089033916
+   },
+   "converged": true
+  },
+  {
+   "video": "42897561",
+   "source": "lidar",
+   "n_measurements": 13,
+   "n_objects": 7,
+   "n_evaluated": 4,
+   "log_scale": 0.015104219870778429,
+   "log_scale_sd": 0.04113756591923997,
+   "gt_median_log_depth_ratio": 0.04363658964655097,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 5.812105727005053,
+    "scale_aware": 5.747111558318986
+   },
+   "converged": true
+  },
+  {
+   "video": "42897561",
+   "source": "moge",
+   "n_measurements": 13,
+   "n_objects": 7,
+   "n_evaluated": 4,
+   "log_scale": -0.0751228177405645,
+   "log_scale_sd": 0.04173726013102479,
+   "gt_median_log_depth_ratio": -0.047161278379811974,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 12.146992220778406,
+    "scale_aware": 14.127965600537156
+   },
+   "converged": true
+  },
+  {
+   "video": "42897599",
+   "source": "laser",
+   "n_measurements": 70,
+   "n_objects": 20,
+   "n_evaluated": 14,
+   "log_scale": -0.13161058557792862,
+   "log_scale_sd": 0.01956076234433247,
+   "gt_median_log_depth_ratio": -0.1444212014825093,
+   "rejected": {
+    "naive": 18,
+    "scale_aware": 15
+   },
+   "nis_mean": {
+    "naive": 7.913639757483463,
+    "scale_aware": 8.830875213919532
+   },
+   "converged": true
+  },
+  {
+   "video": "42897599",
+   "source": "lidar",
+   "n_measurements": 70,
+   "n_objects": 20,
+   "n_evaluated": 14,
+   "log_scale": -0.16870875144467,
+   "log_scale_sd": 0.022264837699671032,
+   "gt_median_log_depth_ratio": -0.16099087836802958,
+   "rejected": {
+    "naive": 17,
+    "scale_aware": 11
+   },
+   "nis_mean": {
+    "naive": 7.098092346683491,
+    "scale_aware": 8.906450618411709
+   },
+   "converged": true
+  },
+  {
+   "video": "42897599",
+   "source": "moge",
+   "n_measurements": 70,
+   "n_objects": 20,
+   "n_evaluated": 14,
+   "log_scale": -0.19153363873408533,
+   "log_scale_sd": 0.027055604759825796,
+   "gt_median_log_depth_ratio": -0.16662835091995237,
+   "rejected": {
+    "naive": 13,
+    "scale_aware": 12
+   },
+   "nis_mean": {
+    "naive": 8.218247747064286,
+    "scale_aware": 7.261508108638613
+   },
+   "converged": true
+  },
+  {
+   "video": "42897647",
+   "source": "laser",
+   "n_measurements": 32,
+   "n_objects": 10,
+   "n_evaluated": 8,
+   "log_scale": -0.013881596436383271,
+   "log_scale_sd": 0.03639522208807739,
+   "gt_median_log_depth_ratio": -0.06585349867658248,
+   "rejected": {
+    "naive": 9,
+    "scale_aware": 9
+   },
+   "nis_mean": {
+    "naive": 7.1007244389740025,
+    "scale_aware": 7.130716236303027
+   },
+   "converged": true
+  },
+  {
+   "video": "42897647",
+   "source": "lidar",
+   "n_measurements": 32,
+   "n_objects": 10,
+   "n_evaluated": 8,
+   "log_scale": -0.0209174651153054,
+   "log_scale_sd": 0.04115836065863511,
+   "gt_median_log_depth_ratio": -0.08455455769157891,
+   "rejected": {
+    "naive": 8,
+    "scale_aware": 8
+   },
+   "nis_mean": {
+    "naive": 7.742305442219876,
+    "scale_aware": 7.854909241260866
+   },
+   "converged": true
+  },
+  {
+   "video": "42897647",
+   "source": "moge",
+   "n_measurements": 32,
+   "n_objects": 10,
+   "n_evaluated": 8,
+   "log_scale": -0.14684958918578522,
+   "log_scale_sd": 0.05153687769030674,
+   "gt_median_log_depth_ratio": -0.07247834460541719,
+   "rejected": {
+    "naive": 7,
+    "scale_aware": 6
+   },
+   "nis_mean": {
+    "naive": 6.6451319526028065,
+    "scale_aware": 7.473435159216234
+   },
+   "converged": true
+  },
+  {
+   "video": "42897688",
+   "source": "laser",
+   "n_measurements": 22,
+   "n_objects": 6,
+   "n_evaluated": 5,
+   "log_scale": -0.03104944626315601,
+   "log_scale_sd": 0.029944082822250633,
+   "gt_median_log_depth_ratio": -0.07018043947799066,
+   "rejected": {
+    "naive": 6,
+    "scale_aware": 5
+   },
+   "nis_mean": {
+    "naive": 6.967158854988822,
+    "scale_aware": 8.116264825596627
+   },
+   "converged": true
+  },
+  {
+   "video": "42897688",
+   "source": "lidar",
+   "n_measurements": 22,
+   "n_objects": 6,
+   "n_evaluated": 5,
+   "log_scale": -0.07857950212168502,
+   "log_scale_sd": 0.034919103736668615,
+   "gt_median_log_depth_ratio": -0.06584284798235605,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 6.271978574346132,
+    "scale_aware": 7.132064986555114
+   },
+   "converged": true
+  },
+  {
+   "video": "42897688",
+   "source": "moge",
+   "n_measurements": 22,
+   "n_objects": 6,
+   "n_evaluated": 5,
+   "log_scale": -0.11459527171901568,
+   "log_scale_sd": 0.04292236693131978,
+   "gt_median_log_depth_ratio": -0.07692848273279865,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 9.698589494571971,
+    "scale_aware": 8.863671040310852
+   },
+   "converged": true
+  },
+  {
+   "video": "42898811",
+   "source": "laser",
+   "n_measurements": 8,
+   "n_objects": 3,
+   "n_evaluated": 2,
+   "log_scale": -0.0618773584848304,
+   "log_scale_sd": 0.09037104314587997,
+   "gt_median_log_depth_ratio": -0.14369172460328938,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 4.145300502244199,
+    "scale_aware": 3.906618722884109
+   },
+   "converged": true
+  },
+  {
+   "video": "42898811",
+   "source": "lidar",
+   "n_measurements": 8,
+   "n_objects": 3,
+   "n_evaluated": 2,
+   "log_scale": -0.08965110042199835,
+   "log_scale_sd": 0.05970360736644641,
+   "gt_median_log_depth_ratio": -0.14010261918663147,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 7.8788541991487335,
+    "scale_aware": 6.985411914332924
+   },
+   "converged": true
+  },
+  {
+   "video": "42898811",
+   "source": "moge",
+   "n_measurements": 8,
+   "n_objects": 3,
+   "n_evaluated": 2,
+   "log_scale": -0.07361167904635126,
+   "log_scale_sd": 0.06853206202363886,
+   "gt_median_log_depth_ratio": -0.17160686086057003,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 6.6873122877272415,
+    "scale_aware": 6.255806158834779
+   },
+   "converged": true
+  },
+  {
+   "video": "42898818",
+   "source": "laser",
+   "n_measurements": 16,
+   "n_objects": 5,
+   "n_evaluated": 4,
+   "log_scale": -0.016634235063232913,
+   "log_scale_sd": 0.049609333660098225,
+   "gt_median_log_depth_ratio": -0.015496494677804664,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 6.208309095090384,
+    "scale_aware": 6.218254028606679
+   },
+   "converged": true
+  },
+  {
+   "video": "42898818",
+   "source": "lidar",
+   "n_measurements": 16,
+   "n_objects": 5,
+   "n_evaluated": 4,
+   "log_scale": -0.01477145764377008,
+   "log_scale_sd": 0.0533466979584093,
+   "gt_median_log_depth_ratio": -0.022096010939630522,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 3.892554329777393,
+    "scale_aware": 3.8858060457481116
+   },
+   "converged": true
+  },
+  {
+   "video": "42898818",
+   "source": "moge",
+   "n_measurements": 16,
+   "n_objects": 5,
+   "n_evaluated": 4,
+   "log_scale": -0.027695715476001404,
+   "log_scale_sd": 0.05942392465571223,
+   "gt_median_log_depth_ratio": -0.05986871348062295,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 4.780635134869623,
+    "scale_aware": 4.766872336300866
+   },
+   "converged": true
+  },
+  {
+   "video": "42898849",
+   "source": "laser",
+   "n_measurements": 37,
+   "n_objects": 23,
+   "n_evaluated": 10,
+   "log_scale": 0.024310453701129064,
+   "log_scale_sd": 0.01503411145129437,
+   "gt_median_log_depth_ratio": -0.021631441252893596,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 6.660089304048736,
+    "scale_aware": 6.489562735836388
+   },
+   "converged": true
+  },
+  {
+   "video": "42898849",
+   "source": "lidar",
+   "n_measurements": 37,
+   "n_objects": 23,
+   "n_evaluated": 10,
+   "log_scale": -0.007314088222639478,
+   "log_scale_sd": 0.01780740241698812,
+   "gt_median_log_depth_ratio": -0.047221203968075456,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 5.705885710499935,
+    "scale_aware": 5.7609083295338
+   },
+   "converged": true
+  },
+  {
+   "video": "42898849",
+   "source": "moge",
+   "n_measurements": 37,
+   "n_objects": 23,
+   "n_evaluated": 10,
+   "log_scale": -0.012181445286909806,
+   "log_scale_sd": 0.027647623162509627,
+   "gt_median_log_depth_ratio": -0.06974304304314256,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 5.207541846171209,
+    "scale_aware": 5.213368397624364
+   },
+   "converged": true
+  },
+  {
+   "video": "42899461",
+   "source": "laser",
+   "n_measurements": 18,
+   "n_objects": 13,
+   "n_evaluated": 3,
+   "log_scale": 0.044718948739878694,
+   "log_scale_sd": 0.07898353240701562,
+   "gt_median_log_depth_ratio": -0.027034083980796236,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 3.0405491258808977,
+    "scale_aware": 2.910584913414768
+   },
+   "converged": true
+  },
+  {
+   "video": "42899461",
+   "source": "lidar",
+   "n_measurements": 18,
+   "n_objects": 13,
+   "n_evaluated": 3,
+   "log_scale": 0.027660323420068623,
+   "log_scale_sd": 0.08363307476616533,
+   "gt_median_log_depth_ratio": -0.0578335150408406,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 3.229503862613516,
+    "scale_aware": 3.1770133175030733
+   },
+   "converged": true
+  },
+  {
+   "video": "42899461",
+   "source": "moge",
+   "n_measurements": 18,
+   "n_objects": 13,
+   "n_evaluated": 3,
+   "log_scale": -0.09519930385865417,
+   "log_scale_sd": 0.04963190794239909,
+   "gt_median_log_depth_ratio": -0.047360953114975256,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 1.553570358091968,
+    "scale_aware": 5.482611580636308
+   },
+   "converged": true
+  },
+  {
+   "video": "42899611",
+   "source": "laser",
+   "n_measurements": 21,
+   "n_objects": 11,
+   "n_evaluated": 8,
+   "log_scale": -0.012959422301528805,
+   "log_scale_sd": 0.028999501591004617,
+   "gt_median_log_depth_ratio": -0.03313723872819321,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 10.984578545322922,
+    "scale_aware": 11.02174564207518
+   },
+   "converged": true
+  },
+  {
+   "video": "42899611",
+   "source": "lidar",
+   "n_measurements": 21,
+   "n_objects": 11,
+   "n_evaluated": 8,
+   "log_scale": 0.03319052825788699,
+   "log_scale_sd": 0.03131175784383361,
+   "gt_median_log_depth_ratio": -0.034777802194939214,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 8.65494600719022,
+    "scale_aware": 8.585995364893959
+   },
+   "converged": true
+  },
+  {
+   "video": "42899611",
+   "source": "moge",
+   "n_measurements": 21,
+   "n_objects": 11,
+   "n_evaluated": 8,
+   "log_scale": 0.01124644244386015,
+   "log_scale_sd": 0.03924052994293139,
+   "gt_median_log_depth_ratio": -0.05347824948681906,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 5.918862055251067,
+    "scale_aware": 5.950227877521268
+   },
+   "converged": true
+  },
+  {
+   "video": "42899619",
+   "source": "laser",
+   "n_measurements": 5,
+   "n_objects": 3,
+   "n_evaluated": 2,
+   "log_scale": 0.01206940264197222,
+   "log_scale_sd": 0.08748778511070801,
+   "gt_median_log_depth_ratio": 0.015497411218756548,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 0.5124567900124233,
+    "scale_aware": 0.49365374652888694
+   },
+   "converged": true
+  },
+  {
+   "video": "42899619",
+   "source": "lidar",
+   "n_measurements": 5,
+   "n_objects": 3,
+   "n_evaluated": 2,
+   "log_scale": 0.009848923939862891,
+   "log_scale_sd": 0.089721635383578,
+   "gt_median_log_depth_ratio": 0.005292758270565758,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 0.4727531293110121,
+    "scale_aware": 0.4608214691191786
+   },
+   "converged": true
+  },
+  {
+   "video": "42899619",
+   "source": "moge",
+   "n_measurements": 5,
+   "n_objects": 3,
+   "n_evaluated": 2,
+   "log_scale": 0.012894927325475626,
+   "log_scale_sd": 0.09021169511442191,
+   "gt_median_log_depth_ratio": 0.016363791569883684,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 0.3082931872713822,
+    "scale_aware": 0.2881233136481372
+   },
+   "converged": true
+  },
+  {
+   "video": "44358442",
+   "source": "laser",
+   "n_measurements": 11,
+   "n_objects": 5,
+   "n_evaluated": 2,
+   "log_scale": 0.09930210684613026,
+   "log_scale_sd": 0.07845894413445685,
+   "gt_median_log_depth_ratio": -0.04842813581190054,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 10.335076090713072,
+    "scale_aware": 9.929948892183031
+   },
+   "converged": true
+  },
+  {
+   "video": "44358442",
+   "source": "lidar",
+   "n_measurements": 11,
+   "n_objects": 5,
+   "n_evaluated": 2,
+   "log_scale": 0.10771313989292844,
+   "log_scale_sd": 0.08222817970992624,
+   "gt_median_log_depth_ratio": -0.0545461027325036,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 9.003286414449978,
+    "scale_aware": 7.987159203466504
+   },
+   "converged": true
+  },
+  {
+   "video": "44358442",
+   "source": "moge",
+   "n_measurements": 11,
+   "n_objects": 5,
+   "n_evaluated": 2,
+   "log_scale": -0.051709673355522644,
+   "log_scale_sd": 0.08881110965358038,
+   "gt_median_log_depth_ratio": -0.02622014234358387,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 9.199186412984284,
+    "scale_aware": 9.37031540236846
+   },
+   "converged": true
+  },
+  {
+   "video": "44358451",
+   "source": "laser",
+   "n_measurements": 23,
+   "n_objects": 4,
+   "n_evaluated": 4,
+   "log_scale": -0.12129342317420815,
+   "log_scale_sd": 0.04404080293267744,
+   "gt_median_log_depth_ratio": -0.18380017089815184,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 6.527558609959257,
+    "scale_aware": 7.253094262181968
+   },
+   "converged": true
+  },
+  {
+   "video": "44358451",
+   "source": "lidar",
+   "n_measurements": 23,
+   "n_objects": 4,
+   "n_evaluated": 4,
+   "log_scale": -0.12753882977711636,
+   "log_scale_sd": 0.049244979712329454,
+   "gt_median_log_depth_ratio": -0.19119820832348533,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 6.5398897452049045,
+    "scale_aware": 5.989561303166771
+   },
+   "converged": true
+  },
+  {
+   "video": "44358451",
+   "source": "moge",
+   "n_measurements": 23,
+   "n_objects": 4,
+   "n_evaluated": 4,
+   "log_scale": -0.17318672509422162,
+   "log_scale_sd": 0.05529303094035787,
+   "gt_median_log_depth_ratio": -0.20209058786527176,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 6.004610629533126,
+    "scale_aware": 6.416707803200655
+   },
+   "converged": true
+  },
+  {
+   "video": "45260854",
+   "source": "laser",
+   "n_measurements": 20,
+   "n_objects": 9,
+   "n_evaluated": 4,
+   "log_scale": 0.0737244316522345,
+   "log_scale_sd": 0.018442445381606942,
+   "gt_median_log_depth_ratio": -0.03290839630528432,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 6.888624794183264,
+    "scale_aware": 7.565227189414559
+   },
+   "converged": true
+  },
+  {
+   "video": "45260854",
+   "source": "lidar",
+   "n_measurements": 20,
+   "n_objects": 9,
+   "n_evaluated": 4,
+   "log_scale": -0.011484107198033599,
+   "log_scale_sd": 0.02316310242146643,
+   "gt_median_log_depth_ratio": -0.06353122377304414,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 8.561794522873338,
+    "scale_aware": 8.992568704673367
+   },
+   "converged": true
+  },
+  {
+   "video": "45260854",
+   "source": "moge",
+   "n_measurements": 20,
+   "n_objects": 9,
+   "n_evaluated": 4,
+   "log_scale": -0.05571189645187857,
+   "log_scale_sd": 0.02772124692063595,
+   "gt_median_log_depth_ratio": -0.05707660826424494,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 7.359650712016049,
+    "scale_aware": 7.078900214953813
+   },
+   "converged": true
+  },
+  {
+   "video": "45260898",
+   "source": "laser",
+   "n_measurements": 5,
+   "n_objects": 2,
+   "n_evaluated": 2,
+   "log_scale": 0.004677852265015907,
+   "log_scale_sd": 0.06300041481791452,
+   "gt_median_log_depth_ratio": -0.001768080269022422,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 6.40571234114384,
+    "scale_aware": 6.670216240052969
+   },
+   "converged": true
+  },
+  {
+   "video": "45260898",
+   "source": "lidar",
+   "n_measurements": 5,
+   "n_objects": 2,
+   "n_evaluated": 2,
+   "log_scale": 0.03832488910035248,
+   "log_scale_sd": 0.06632166758128236,
+   "gt_median_log_depth_ratio": -0.012521376599344807,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 7.9966399689892285,
+    "scale_aware": 8.402601801395521
+   },
+   "converged": true
+  },
+  {
+   "video": "45260898",
+   "source": "moge",
+   "n_measurements": 5,
+   "n_objects": 2,
+   "n_evaluated": 2,
+   "log_scale": 0.10424671448980222,
+   "log_scale_sd": 0.0598845140899882,
+   "gt_median_log_depth_ratio": 0.019120149633007916,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 11.658991728922024,
+    "scale_aware": 10.639826672162702
+   },
+   "converged": true
+  },
+  {
+   "video": "45260920",
+   "source": "laser",
+   "n_measurements": 35,
+   "n_objects": 11,
+   "n_evaluated": 9,
+   "log_scale": -0.02832626047293096,
+   "log_scale_sd": 0.025798800494921257,
+   "gt_median_log_depth_ratio": -0.03131419103540076,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 4.068776637763817,
+    "scale_aware": 4.033271695478577
+   },
+   "converged": true
+  },
+  {
+   "video": "45260920",
+   "source": "lidar",
+   "n_measurements": 35,
+   "n_objects": 11,
+   "n_evaluated": 9,
+   "log_scale": -0.027686727286382357,
+   "log_scale_sd": 0.030691828232412028,
+   "gt_median_log_depth_ratio": -0.022040640637375274,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 5
+   },
+   "nis_mean": {
+    "naive": 4.571149846672032,
+    "scale_aware": 4.644339409370942
+   },
+   "converged": true
+  },
+  {
+   "video": "45260920",
+   "source": "moge",
+   "n_measurements": 35,
+   "n_objects": 11,
+   "n_evaluated": 9,
+   "log_scale": -0.07227012914851207,
+   "log_scale_sd": 0.03508087748643199,
+   "gt_median_log_depth_ratio": -0.06044048242062307,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 5.543739515612322,
+    "scale_aware": 5.369758269853936
+   },
+   "converged": true
+  },
+  {
+   "video": "45261121",
+   "source": "laser",
+   "n_measurements": 18,
+   "n_objects": 9,
+   "n_evaluated": 5,
+   "log_scale": 0.036055002014097066,
+   "log_scale_sd": 0.03271862966975127,
+   "gt_median_log_depth_ratio": -0.028046000246267556,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 9.770916434601556,
+    "scale_aware": 9.648153273366349
+   },
+   "converged": true
+  },
+  {
+   "video": "45261121",
+   "source": "lidar",
+   "n_measurements": 18,
+   "n_objects": 9,
+   "n_evaluated": 5,
+   "log_scale": 0.04471207302902071,
+   "log_scale_sd": 0.03622052729770342,
+   "gt_median_log_depth_ratio": -0.03152515172716302,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 5.2752797690995585,
+    "scale_aware": 5.105882243723183
+   },
+   "converged": true
+  },
+  {
+   "video": "45261121",
+   "source": "moge",
+   "n_measurements": 18,
+   "n_objects": 9,
+   "n_evaluated": 5,
+   "log_scale": 0.01824425140276773,
+   "log_scale_sd": 0.042287536384925,
+   "gt_median_log_depth_ratio": -0.018832397755809322,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 5.725662632321383,
+    "scale_aware": 5.738493552456553
+   },
+   "converged": true
+  },
+  {
+   "video": "45261133",
+   "source": "laser",
+   "n_measurements": 113,
+   "n_objects": 11,
+   "n_evaluated": 11,
+   "log_scale": -0.01579951592017842,
+   "log_scale_sd": 0.014226986914326419,
+   "gt_median_log_depth_ratio": -0.055635600376547245,
+   "rejected": {
+    "naive": 27,
+    "scale_aware": 27
+   },
+   "nis_mean": {
+    "naive": 5.500559411294692,
+    "scale_aware": 5.451537899984583
+   },
+   "converged": true
+  },
+  {
+   "video": "45261133",
+   "source": "lidar",
+   "n_measurements": 113,
+   "n_objects": 11,
+   "n_evaluated": 11,
+   "log_scale": -0.03285822367175298,
+   "log_scale_sd": 0.01594876633679722,
+   "gt_median_log_depth_ratio": -0.04479786410568744,
+   "rejected": {
+    "naive": 24,
+    "scale_aware": 23
+   },
+   "nis_mean": {
+    "naive": 5.578100418066032,
+    "scale_aware": 5.745561806103429
+   },
+   "converged": true
+  },
+  {
+   "video": "45261133",
+   "source": "moge",
+   "n_measurements": 113,
+   "n_objects": 11,
+   "n_evaluated": 11,
+   "log_scale": -0.09503076116510135,
+   "log_scale_sd": 0.019973975097873062,
+   "gt_median_log_depth_ratio": -0.04379631808057466,
+   "rejected": {
+    "naive": 22,
+    "scale_aware": 21
+   },
+   "nis_mean": {
+    "naive": 5.455035846608463,
+    "scale_aware": 5.402803838437972
+   },
+   "converged": true
+  },
+  {
+   "video": "45261143",
+   "source": "laser",
+   "n_measurements": 12,
+   "n_objects": 5,
+   "n_evaluated": 3,
+   "log_scale": -0.04147397223578355,
+   "log_scale_sd": 0.07976131822365391,
+   "gt_median_log_depth_ratio": -0.2170685537768379,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 12.152079435931444,
+    "scale_aware": 12.25720872791371
+   },
+   "converged": true
+  },
+  {
+   "video": "45261143",
+   "source": "lidar",
+   "n_measurements": 12,
+   "n_objects": 5,
+   "n_evaluated": 3,
+   "log_scale": -0.04311776273413286,
+   "log_scale_sd": 0.08338319771967817,
+   "gt_median_log_depth_ratio": -0.29265130633710884,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 11.85328265912483,
+    "scale_aware": 12.007483766265583
+   },
+   "converged": true
+  },
+  {
+   "video": "45261143",
+   "source": "moge",
+   "n_measurements": 12,
+   "n_objects": 5,
+   "n_evaluated": 3,
+   "log_scale": -0.12439085039018037,
+   "log_scale_sd": 0.09033259421686402,
+   "gt_median_log_depth_ratio": -0.2145937428590069,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 9.030015785734257,
+    "scale_aware": 8.351247145722098
+   },
+   "converged": true
+  },
+  {
+   "video": "45261179",
+   "source": "laser",
+   "n_measurements": 2,
+   "n_objects": 1,
+   "n_evaluated": 1,
+   "log_scale": -1.0014835710813626e-32,
+   "log_scale_sd": 0.1,
+   "gt_median_log_depth_ratio": 0.11261244269960743,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": null,
+    "scale_aware": null
+   },
+   "converged": true
+  },
+  {
+   "video": "45261179",
+   "source": "lidar",
+   "n_measurements": 2,
+   "n_objects": 1,
+   "n_evaluated": 1,
+   "log_scale": -0.030830994306009787,
+   "log_scale_sd": 0.0981792074881233,
+   "gt_median_log_depth_ratio": 0.10289165221610704,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 20.659390397003385,
+    "scale_aware": 20.55770427668586
+   },
+   "converged": true
+  },
+  {
+   "video": "45261179",
+   "source": "moge",
+   "n_measurements": 2,
+   "n_objects": 1,
+   "n_evaluated": 1,
+   "log_scale": -0.026883532539813723,
+   "log_scale_sd": 0.09830888871482292,
+   "gt_median_log_depth_ratio": 0.11231642050372302,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 18.749968729925158,
+    "scale_aware": 18.673159491896318
+   },
+   "converged": true
+  },
+  {
+   "video": "45261575",
+   "source": "laser",
+   "n_measurements": 18,
+   "n_objects": 6,
+   "n_evaluated": 4,
+   "log_scale": 0.012135207561878721,
+   "log_scale_sd": 0.034203331299648,
+   "gt_median_log_depth_ratio": -0.07411063612858082,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 5
+   },
+   "nis_mean": {
+    "naive": 10.246676085117555,
+    "scale_aware": 10.337823384399924
+   },
+   "converged": true
+  },
+  {
+   "video": "45261575",
+   "source": "lidar",
+   "n_measurements": 18,
+   "n_objects": 6,
+   "n_evaluated": 4,
+   "log_scale": -0.007299132214015304,
+   "log_scale_sd": 0.03766262200157424,
+   "gt_median_log_depth_ratio": -0.10280874302382788,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 10.494948315421645,
+    "scale_aware": 10.578801246768023
+   },
+   "converged": true
+  },
+  {
+   "video": "45261575",
+   "source": "moge",
+   "n_measurements": 18,
+   "n_objects": 6,
+   "n_evaluated": 4,
+   "log_scale": -0.019468751406584446,
+   "log_scale_sd": 0.045244185676625026,
+   "gt_median_log_depth_ratio": -0.052924830357226824,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 8.989062600788879,
+    "scale_aware": 8.997201714757987
+   },
+   "converged": true
+  },
+  {
+   "video": "45261588",
+   "source": "laser",
+   "n_measurements": 16,
+   "n_objects": 3,
+   "n_evaluated": 3,
+   "log_scale": 0.41131620179849576,
+   "log_scale_sd": 0.040916485957747904,
+   "gt_median_log_depth_ratio": 0.05132084944129415,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 4.902483327963932,
+    "scale_aware": 5.158274928551361
+   },
+   "converged": true
+  },
+  {
+   "video": "45261588",
+   "source": "lidar",
+   "n_measurements": 16,
+   "n_objects": 3,
+   "n_evaluated": 3,
+   "log_scale": 0.4035908203378401,
+   "log_scale_sd": 0.043023425124770816,
+   "gt_median_log_depth_ratio": 0.043632914373496964,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 4.6228765647588395,
+    "scale_aware": 5.0863748677652625
+   },
+   "converged": true
+  },
+  {
+   "video": "45261588",
+   "source": "moge",
+   "n_measurements": 16,
+   "n_objects": 3,
+   "n_evaluated": 3,
+   "log_scale": 0.42772384760685267,
+   "log_scale_sd": 0.04660152816988341,
+   "gt_median_log_depth_ratio": 0.08807805663123638,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 5.670169230158582,
+    "scale_aware": 6.272674683141235
+   },
+   "converged": true
+  },
+  {
+   "video": "45261615",
+   "source": "laser",
+   "n_measurements": 16,
+   "n_objects": 4,
+   "n_evaluated": 4,
+   "log_scale": -0.039730741545151035,
+   "log_scale_sd": 0.032857990800730395,
+   "gt_median_log_depth_ratio": -0.051771029764226616,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 5
+   },
+   "nis_mean": {
+    "naive": 7.52342870075886,
+    "scale_aware": 7.3468709764518785
+   },
+   "converged": true
+  },
+  {
+   "video": "45261615",
+   "source": "lidar",
+   "n_measurements": 16,
+   "n_objects": 4,
+   "n_evaluated": 4,
+   "log_scale": -0.05410253709400069,
+   "log_scale_sd": 0.03451213888730844,
+   "gt_median_log_depth_ratio": -0.0666180098327177,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 7.730584287010456,
+    "scale_aware": 9.224465415910347
+   },
+   "converged": true
+  },
+  {
+   "video": "45261615",
+   "source": "moge",
+   "n_measurements": 16,
+   "n_objects": 4,
+   "n_evaluated": 4,
+   "log_scale": -0.10608063931920828,
+   "log_scale_sd": 0.044344891027971726,
+   "gt_median_log_depth_ratio": -0.012085292334892327,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 8.129416657586871,
+    "scale_aware": 9.719605880968349
+   },
+   "converged": true
+  },
+  {
+   "video": "45261631",
+   "source": "laser",
+   "n_measurements": 33,
+   "n_objects": 4,
+   "n_evaluated": 3,
+   "log_scale": -0.6958838354412069,
+   "log_scale_sd": 0.05102640973547151,
+   "gt_median_log_depth_ratio": -0.19444479445757376,
+   "rejected": {
+    "naive": 19,
+    "scale_aware": 14
+   },
+   "nis_mean": {
+    "naive": 5.187518477546833,
+    "scale_aware": 9.071183252740656
+   },
+   "converged": true
+  },
+  {
+   "video": "45261631",
+   "source": "lidar",
+   "n_measurements": 33,
+   "n_objects": 4,
+   "n_evaluated": 3,
+   "log_scale": -0.6192687093612327,
+   "log_scale_sd": 0.05117235246034748,
+   "gt_median_log_depth_ratio": -0.21372670372403746,
+   "rejected": {
+    "naive": 17,
+    "scale_aware": 12
+   },
+   "nis_mean": {
+    "naive": 6.363853354250306,
+    "scale_aware": 8.815967154092743
+   },
+   "converged": true
+  },
+  {
+   "video": "45261631",
+   "source": "moge",
+   "n_measurements": 33,
+   "n_objects": 4,
+   "n_evaluated": 3,
+   "log_scale": -0.6257225952107565,
+   "log_scale_sd": 0.054249509801781164,
+   "gt_median_log_depth_ratio": -0.1722560345063931,
+   "rejected": {
+    "naive": 18,
+    "scale_aware": 12
+   },
+   "nis_mean": {
+    "naive": 5.045540308806315,
+    "scale_aware": 8.544341759479035
+   },
+   "converged": true
+  },
+  {
+   "video": "45662921",
+   "source": "laser",
+   "n_measurements": 26,
+   "n_objects": 15,
+   "n_evaluated": 9,
+   "log_scale": -0.003032144920826151,
+   "log_scale_sd": 0.03602188235039643,
+   "gt_median_log_depth_ratio": -0.047756969287424185,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 2.3505740691687698,
+    "scale_aware": 2.3518502714553793
+   },
+   "converged": true
+  },
+  {
+   "video": "45662921",
+   "source": "lidar",
+   "n_measurements": 26,
+   "n_objects": 15,
+   "n_evaluated": 9,
+   "log_scale": -0.022475487908402227,
+   "log_scale_sd": 0.04036052842460594,
+   "gt_median_log_depth_ratio": -0.05336673438467662,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 5.512324901099897,
+    "scale_aware": 5.486681901304086
+   },
+   "converged": true
+  },
+  {
+   "video": "45662921",
+   "source": "moge",
+   "n_measurements": 26,
+   "n_objects": 15,
+   "n_evaluated": 9,
+   "log_scale": -0.02654333530654809,
+   "log_scale_sd": 0.052547463680995374,
+   "gt_median_log_depth_ratio": -0.06519216695479739,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 5.318260703878757,
+    "scale_aware": 5.365563996673417
+   },
+   "converged": true
+  },
+  {
+   "video": "45662942",
+   "source": "laser",
+   "n_measurements": 13,
+   "n_objects": 8,
+   "n_evaluated": 3,
+   "log_scale": -0.044951740324825386,
+   "log_scale_sd": 0.05196089389732282,
+   "gt_median_log_depth_ratio": -0.05059116841416226,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 6.256245451702303,
+    "scale_aware": 6.051450696792908
+   },
+   "converged": true
+  },
+  {
+   "video": "45662942",
+   "source": "lidar",
+   "n_measurements": 13,
+   "n_objects": 8,
+   "n_evaluated": 3,
+   "log_scale": -0.06543542600158737,
+   "log_scale_sd": 0.05752167700045754,
+   "gt_median_log_depth_ratio": -0.05026143534580204,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 5.932781788771216,
+    "scale_aware": 5.578398998632404
+   },
+   "converged": true
+  },
+  {
+   "video": "45662942",
+   "source": "moge",
+   "n_measurements": 13,
+   "n_objects": 8,
+   "n_evaluated": 3,
+   "log_scale": -0.05044687921527822,
+   "log_scale_sd": 0.060225513685056034,
+   "gt_median_log_depth_ratio": -0.060011899938226435,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 5.087016151031791,
+    "scale_aware": 4.835977700215345
+   },
+   "converged": true
+  },
+  {
+   "video": "45662970",
+   "source": "laser",
+   "n_measurements": 35,
+   "n_objects": 8,
+   "n_evaluated": 7,
+   "log_scale": -0.04365095784943527,
+   "log_scale_sd": 0.034469461373851734,
+   "gt_median_log_depth_ratio": -0.17393099963007727,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 5
+   },
+   "nis_mean": {
+    "naive": 8.79511784037215,
+    "scale_aware": 8.792492138624988
+   },
+   "converged": true
+  },
+  {
+   "video": "45662970",
+   "source": "lidar",
+   "n_measurements": 35,
+   "n_objects": 8,
+   "n_evaluated": 7,
+   "log_scale": -0.056983447003308395,
+   "log_scale_sd": 0.03929477889881238,
+   "gt_median_log_depth_ratio": -0.17687684169710566,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 5
+   },
+   "nis_mean": {
+    "naive": 7.409349403936941,
+    "scale_aware": 7.349781968000018
+   },
+   "converged": true
+  },
+  {
+   "video": "45662970",
+   "source": "moge",
+   "n_measurements": 35,
+   "n_objects": 8,
+   "n_evaluated": 7,
+   "log_scale": -0.16711781119143695,
+   "log_scale_sd": 0.048188996696663815,
+   "gt_median_log_depth_ratio": -0.1492083783678944,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 6.382562022032781,
+    "scale_aware": 7.23018673906781
+   },
+   "converged": true
+  },
+  {
+   "video": "45662981",
+   "source": "laser",
+   "n_measurements": 25,
+   "n_objects": 8,
+   "n_evaluated": 7,
+   "log_scale": -0.0650301121178779,
+   "log_scale_sd": 0.020898210385109955,
+   "gt_median_log_depth_ratio": -0.027711811895935388,
+   "rejected": {
+    "naive": 9,
+    "scale_aware": 8
+   },
+   "nis_mean": {
+    "naive": 9.254631788159532,
+    "scale_aware": 10.956135433942306
+   },
+   "converged": true
+  },
+  {
+   "video": "45662981",
+   "source": "lidar",
+   "n_measurements": 25,
+   "n_objects": 8,
+   "n_evaluated": 7,
+   "log_scale": -0.024030878458728092,
+   "log_scale_sd": 0.02597284812578301,
+   "gt_median_log_depth_ratio": -0.03782610553561884,
+   "rejected": {
+    "naive": 8,
+    "scale_aware": 9
+   },
+   "nis_mean": {
+    "naive": 9.041238718463118,
+    "scale_aware": 7.736600766519246
+   },
+   "converged": true
+  },
+  {
+   "video": "45662981",
+   "source": "moge",
+   "n_measurements": 25,
+   "n_objects": 8,
+   "n_evaluated": 7,
+   "log_scale": -0.13064092319824733,
+   "log_scale_sd": 0.02919648004828071,
+   "gt_median_log_depth_ratio": -0.05670494360578903,
+   "rejected": {
+    "naive": 7,
+    "scale_aware": 6
+   },
+   "nis_mean": {
+    "naive": 9.126633237539698,
+    "scale_aware": 8.789126921998754
+   },
+   "converged": true
+  },
+  {
+   "video": "45663113",
+   "source": "laser",
+   "n_measurements": 12,
+   "n_objects": 4,
+   "n_evaluated": 4,
+   "log_scale": 0.02158708752209371,
+   "log_scale_sd": 0.04351873486211461,
+   "gt_median_log_depth_ratio": 0.011339049273236593,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 4.769617715892984,
+    "scale_aware": 4.736116260081792
+   },
+   "converged": true
+  },
+  {
+   "video": "45663113",
+   "source": "lidar",
+   "n_measurements": 12,
+   "n_objects": 4,
+   "n_evaluated": 4,
+   "log_scale": -0.0014603816295159341,
+   "log_scale_sd": 0.048560807076611284,
+   "gt_median_log_depth_ratio": 0.009890259552929536,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 6.738553386652674,
+    "scale_aware": 6.786845456657663
+   },
+   "converged": true
+  },
+  {
+   "video": "45663113",
+   "source": "moge",
+   "n_measurements": 12,
+   "n_objects": 4,
+   "n_evaluated": 4,
+   "log_scale": 0.016358838618385108,
+   "log_scale_sd": 0.053877536522140106,
+   "gt_median_log_depth_ratio": 0.009269826755506708,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 5.137952443945944,
+    "scale_aware": 2.8896995072099627
+   },
+   "converged": true
+  },
+  {
+   "video": "45663149",
+   "source": "laser",
+   "n_measurements": 22,
+   "n_objects": 8,
+   "n_evaluated": 6,
+   "log_scale": 0.01030853931393034,
+   "log_scale_sd": 0.028012339848442962,
+   "gt_median_log_depth_ratio": -0.019613960008152673,
+   "rejected": {
+    "naive": 7,
+    "scale_aware": 7
+   },
+   "nis_mean": {
+    "naive": 3.7452899787266123,
+    "scale_aware": 3.741322632356952
+   },
+   "converged": true
+  },
+  {
+   "video": "45663149",
+   "source": "lidar",
+   "n_measurements": 22,
+   "n_objects": 8,
+   "n_evaluated": 6,
+   "log_scale": -0.02581811782459083,
+   "log_scale_sd": 0.03137112633704445,
+   "gt_median_log_depth_ratio": -0.03030888533531706,
+   "rejected": {
+    "naive": 6,
+    "scale_aware": 6
+   },
+   "nis_mean": {
+    "naive": 6.053641934766305,
+    "scale_aware": 6.042153138552259
+   },
+   "converged": true
+  },
+  {
+   "video": "45663149",
+   "source": "moge",
+   "n_measurements": 22,
+   "n_objects": 8,
+   "n_evaluated": 6,
+   "log_scale": -0.05640218238004668,
+   "log_scale_sd": 0.04201657878698915,
+   "gt_median_log_depth_ratio": -0.06746609779702696,
+   "rejected": {
+    "naive": 7,
+    "scale_aware": 7
+   },
+   "nis_mean": {
+    "naive": 5.2198675285361436,
+    "scale_aware": 3.7422925605565363
+   },
+   "converged": true
+  },
+  {
+   "video": "45663164",
+   "source": "laser",
+   "n_measurements": 59,
+   "n_objects": 13,
+   "n_evaluated": 12,
+   "log_scale": -0.039620008177419674,
+   "log_scale_sd": 0.017220667995949714,
+   "gt_median_log_depth_ratio": -0.0836193301024752,
+   "rejected": {
+    "naive": 9,
+    "scale_aware": 9
+   },
+   "nis_mean": {
+    "naive": 4.071569354162964,
+    "scale_aware": 3.949404032531634
+   },
+   "converged": true
+  },
+  {
+   "video": "45663164",
+   "source": "lidar",
+   "n_measurements": 59,
+   "n_objects": 13,
+   "n_evaluated": 12,
+   "log_scale": -0.05088006329462091,
+   "log_scale_sd": 0.01955776469408742,
+   "gt_median_log_depth_ratio": -0.09382267234315046,
+   "rejected": {
+    "naive": 7,
+    "scale_aware": 7
+   },
+   "nis_mean": {
+    "naive": 4.062214783568208,
+    "scale_aware": 3.895098640280439
+   },
+   "converged": true
+  },
+  {
+   "video": "45663164",
+   "source": "moge",
+   "n_measurements": 59,
+   "n_objects": 13,
+   "n_evaluated": 12,
+   "log_scale": -0.08275731649297595,
+   "log_scale_sd": 0.025501945404203422,
+   "gt_median_log_depth_ratio": -0.09433302233763048,
+   "rejected": {
+    "naive": 8,
+    "scale_aware": 7
+   },
+   "nis_mean": {
+    "naive": 3.517328063265441,
+    "scale_aware": 3.6504972686824204
+   },
+   "converged": true
+  },
+  {
+   "video": "47115452",
+   "source": "laser",
+   "n_measurements": 9,
+   "n_objects": 6,
+   "n_evaluated": 2,
+   "log_scale": -0.05013348781324842,
+   "log_scale_sd": 0.09884542994536728,
+   "gt_median_log_depth_ratio": -0.43568664183762995,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 21.392023527839278,
+    "scale_aware": 21.121662527850567
+   },
+   "converged": true
+  },
+  {
+   "video": "47115452",
+   "source": "lidar",
+   "n_measurements": 9,
+   "n_objects": 6,
+   "n_evaluated": 2,
+   "log_scale": -0.12678868019495793,
+   "log_scale_sd": 0.09419205261970647,
+   "gt_median_log_depth_ratio": -0.5240301356733044,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 18.88290884024734,
+    "scale_aware": 17.520751095771267
+   },
+   "converged": true
+  },
+  {
+   "video": "47115452",
+   "source": "moge",
+   "n_measurements": 9,
+   "n_objects": 6,
+   "n_evaluated": 2,
+   "log_scale": -0.004086529368832913,
+   "log_scale_sd": 0.09593261206475676,
+   "gt_median_log_depth_ratio": -0.5684994167366473,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 11.37287092563206,
+    "scale_aware": 11.469941399941474
+   },
+   "converged": true
+  },
+  {
+   "video": "47115469",
+   "source": "laser",
+   "n_measurements": 15,
+   "n_objects": 5,
+   "n_evaluated": 4,
+   "log_scale": 0.03678840318662474,
+   "log_scale_sd": 0.07055900525367331,
+   "gt_median_log_depth_ratio": -0.010959293558997683,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 5
+   },
+   "nis_mean": {
+    "naive": 4.649705711713278,
+    "scale_aware": 4.620595662206227
+   },
+   "converged": true
+  },
+  {
+   "video": "47115469",
+   "source": "lidar",
+   "n_measurements": 15,
+   "n_objects": 5,
+   "n_evaluated": 4,
+   "log_scale": -0.02881754774868168,
+   "log_scale_sd": 0.06463571586143119,
+   "gt_median_log_depth_ratio": -0.022338435847418077,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 7.988814746467829,
+    "scale_aware": 8.105273775070618
+   },
+   "converged": true
+  },
+  {
+   "video": "47115469",
+   "source": "moge",
+   "n_measurements": 15,
+   "n_objects": 5,
+   "n_evaluated": 4,
+   "log_scale": -0.0611459663071206,
+   "log_scale_sd": 0.07105019841103846,
+   "gt_median_log_depth_ratio": -0.03200164560810347,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 8.310449315363032,
+    "scale_aware": 8.243193813006373
+   },
+   "converged": true
+  },
+  {
+   "video": "47204552",
+   "source": "laser",
+   "n_measurements": 37,
+   "n_objects": 13,
+   "n_evaluated": 10,
+   "log_scale": -0.06510703023913442,
+   "log_scale_sd": 0.029105029780163272,
+   "gt_median_log_depth_ratio": -0.10848833212079512,
+   "rejected": {
+    "naive": 10,
+    "scale_aware": 10
+   },
+   "nis_mean": {
+    "naive": 7.213155068936024,
+    "scale_aware": 6.940555131397014
+   },
+   "converged": true
+  },
+  {
+   "video": "47204552",
+   "source": "lidar",
+   "n_measurements": 38,
+   "n_objects": 14,
+   "n_evaluated": 10,
+   "log_scale": -0.056334974231320285,
+   "log_scale_sd": 0.017386994119325493,
+   "gt_median_log_depth_ratio": -0.11913128842230694,
+   "rejected": {
+    "naive": 8,
+    "scale_aware": 8
+   },
+   "nis_mean": {
+    "naive": 7.6559836647527995,
+    "scale_aware": 7.043512400270641
+   },
+   "converged": true
+  },
+  {
+   "video": "47204552",
+   "source": "moge",
+   "n_measurements": 38,
+   "n_objects": 14,
+   "n_evaluated": 10,
+   "log_scale": -0.0795423799627726,
+   "log_scale_sd": 0.026463144104034414,
+   "gt_median_log_depth_ratio": -0.14666631302614752,
+   "rejected": {
+    "naive": 8,
+    "scale_aware": 7
+   },
+   "nis_mean": {
+    "naive": 7.219444665273643,
+    "scale_aware": 7.471199921703666
+   },
+   "converged": true
+  },
+  {
+   "video": "47204559",
+   "source": "laser",
+   "n_measurements": 16,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": 0.1687242346293842,
+   "log_scale_sd": 0.05343707273473764,
+   "gt_median_log_depth_ratio": -0.009691355315649207,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 7.065069232134287,
+    "scale_aware": 7.311587244237154
+   },
+   "converged": true
+  },
+  {
+   "video": "47204559",
+   "source": "lidar",
+   "n_measurements": 16,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": 0.14691966057813616,
+   "log_scale_sd": 0.0591112639681651,
+   "gt_median_log_depth_ratio": -0.021132490370841174,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 7.151172298837135,
+    "scale_aware": 6.616276355999556
+   },
+   "converged": true
+  },
+  {
+   "video": "47204559",
+   "source": "moge",
+   "n_measurements": 16,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": 0.08734759813609388,
+   "log_scale_sd": 0.06815112389143288,
+   "gt_median_log_depth_ratio": -0.02615335613663074,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 6.300405397278363,
+    "scale_aware": 6.24482560124929
+   },
+   "converged": true
+  },
+  {
+   "video": "47204573",
+   "source": "laser",
+   "n_measurements": 37,
+   "n_objects": 8,
+   "n_evaluated": 5,
+   "log_scale": -0.019881217867484695,
+   "log_scale_sd": 0.036008652729679104,
+   "gt_median_log_depth_ratio": -0.10226636945992479,
+   "rejected": {
+    "naive": 9,
+    "scale_aware": 10
+   },
+   "nis_mean": {
+    "naive": 7.478058553077757,
+    "scale_aware": 6.90596415217631
+   },
+   "converged": true
+  },
+  {
+   "video": "47204573",
+   "source": "lidar",
+   "n_measurements": 37,
+   "n_objects": 8,
+   "n_evaluated": 5,
+   "log_scale": 0.012140192576209583,
+   "log_scale_sd": 0.036943511830561084,
+   "gt_median_log_depth_ratio": -0.09428326168088316,
+   "rejected": {
+    "naive": 8,
+    "scale_aware": 8
+   },
+   "nis_mean": {
+    "naive": 6.593811733188541,
+    "scale_aware": 6.642856209519339
+   },
+   "converged": true
+  },
+  {
+   "video": "47204573",
+   "source": "moge",
+   "n_measurements": 37,
+   "n_objects": 8,
+   "n_evaluated": 5,
+   "log_scale": -0.03995726962939755,
+   "log_scale_sd": 0.04425692710715568,
+   "gt_median_log_depth_ratio": -0.10260510035214965,
+   "rejected": {
+    "naive": 7,
+    "scale_aware": 7
+   },
+   "nis_mean": {
+    "naive": 6.72609402110329,
+    "scale_aware": 6.731972134334982
+   },
+   "converged": true
+  },
+  {
+   "video": "47204605",
+   "source": "laser",
+   "n_measurements": 16,
+   "n_objects": 9,
+   "n_evaluated": 4,
+   "log_scale": 0.03081132656877482,
+   "log_scale_sd": 0.06264870657073199,
+   "gt_median_log_depth_ratio": -0.0378624487561328,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 10.466883634709736,
+    "scale_aware": 10.857086078000151
+   },
+   "converged": true
+  },
+  {
+   "video": "47204605",
+   "source": "lidar",
+   "n_measurements": 16,
+   "n_objects": 9,
+   "n_evaluated": 4,
+   "log_scale": 0.005001812541570813,
+   "log_scale_sd": 0.06557013475600271,
+   "gt_median_log_depth_ratio": -0.03546423097601652,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 7.5120723664086775,
+    "scale_aware": 7.509499351478127
+   },
+   "converged": true
+  },
+  {
+   "video": "47204605",
+   "source": "moge",
+   "n_measurements": 16,
+   "n_objects": 9,
+   "n_evaluated": 4,
+   "log_scale": 0.006348987700917352,
+   "log_scale_sd": 0.0658657767952518,
+   "gt_median_log_depth_ratio": -0.04556427070198627,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 11.937924406340581,
+    "scale_aware": 9.683283857607938
+   },
+   "converged": true
+  },
+  {
+   "video": "47331068",
+   "source": "laser",
+   "n_measurements": 19,
+   "n_objects": 5,
+   "n_evaluated": 4,
+   "log_scale": 0.023941972087538746,
+   "log_scale_sd": 0.06695649934731203,
+   "gt_median_log_depth_ratio": -0.028821227920563713,
+   "rejected": {
+    "naive": 6,
+    "scale_aware": 6
+   },
+   "nis_mean": {
+    "naive": 3.4687962284935403,
+    "scale_aware": 3.4563533456649815
+   },
+   "converged": true
+  },
+  {
+   "video": "47331068",
+   "source": "lidar",
+   "n_measurements": 19,
+   "n_objects": 5,
+   "n_evaluated": 4,
+   "log_scale": -0.000903445344265425,
+   "log_scale_sd": 0.07150159870493568,
+   "gt_median_log_depth_ratio": -0.037231781530514166,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 5.915768403203861,
+    "scale_aware": 5.924640147224958
+   },
+   "converged": true
+  },
+  {
+   "video": "47331068",
+   "source": "moge",
+   "n_measurements": 19,
+   "n_objects": 5,
+   "n_evaluated": 4,
+   "log_scale": -0.007500945291776388,
+   "log_scale_sd": 0.0786744194568749,
+   "gt_median_log_depth_ratio": 0.0031808661447154324,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 5.157950415809319,
+    "scale_aware": 5.191653921988743
+   },
+   "converged": true
+  },
+  {
+   "video": "47331262",
+   "source": "laser",
+   "n_measurements": 32,
+   "n_objects": 15,
+   "n_evaluated": 11,
+   "log_scale": -0.11869110835921708,
+   "log_scale_sd": 0.029360327264352042,
+   "gt_median_log_depth_ratio": -0.03312388147371863,
+   "rejected": {
+    "naive": 6,
+    "scale_aware": 5
+   },
+   "nis_mean": {
+    "naive": 9.509860650865317,
+    "scale_aware": 8.999620643564825
+   },
+   "converged": true
+  },
+  {
+   "video": "47331262",
+   "source": "lidar",
+   "n_measurements": 32,
+   "n_objects": 15,
+   "n_evaluated": 11,
+   "log_scale": -0.15009236421692154,
+   "log_scale_sd": 0.03260489018321972,
+   "gt_median_log_depth_ratio": -0.03653803435163007,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 9.488321899173803,
+    "scale_aware": 8.99224303738353
+   },
+   "converged": true
+  },
+  {
+   "video": "47331262",
+   "source": "moge",
+   "n_measurements": 32,
+   "n_objects": 15,
+   "n_evaluated": 11,
+   "log_scale": -0.16368195155102003,
+   "log_scale_sd": 0.035558725161898036,
+   "gt_median_log_depth_ratio": -0.035902409492622064,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 9.217793642779915,
+    "scale_aware": 8.656683222332374
+   },
+   "converged": true
+  },
+  {
+   "video": "47331319",
+   "source": "laser",
+   "n_measurements": 24,
+   "n_objects": 14,
+   "n_evaluated": 8,
+   "log_scale": 0.0003697754211315057,
+   "log_scale_sd": 0.06692962537266399,
+   "gt_median_log_depth_ratio": -0.06633961565501867,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 9.999994660217707,
+    "scale_aware": 10.159190136647847
+   },
+   "converged": true
+  },
+  {
+   "video": "47331319",
+   "source": "lidar",
+   "n_measurements": 24,
+   "n_objects": 14,
+   "n_evaluated": 8,
+   "log_scale": -0.05305002868084083,
+   "log_scale_sd": 0.07310198431581538,
+   "gt_median_log_depth_ratio": -0.1133199875224627,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 8.624520334871242,
+    "scale_aware": 8.623297441036915
+   },
+   "converged": true
+  },
+  {
+   "video": "47331319",
+   "source": "moge",
+   "n_measurements": 24,
+   "n_objects": 14,
+   "n_evaluated": 8,
+   "log_scale": -0.08403132868790233,
+   "log_scale_sd": 0.07590632849654631,
+   "gt_median_log_depth_ratio": -0.17927532335444296,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 9.035849701976622,
+    "scale_aware": 8.896091012284105
+   },
+   "converged": true
+  },
+  {
+   "video": "47331336",
+   "source": "laser",
+   "n_measurements": 4,
+   "n_objects": 4,
+   "n_evaluated": 0,
+   "log_scale": -1.5605279983719785e-31,
+   "log_scale_sd": 0.1,
+   "gt_median_log_depth_ratio": null,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": null,
+    "scale_aware": null
+   },
+   "converged": true
+  },
+  {
+   "video": "47331336",
+   "source": "lidar",
+   "n_measurements": 4,
+   "n_objects": 4,
+   "n_evaluated": 0,
+   "log_scale": 4.131787908216492e-32,
+   "log_scale_sd": 0.1,
+   "gt_median_log_depth_ratio": null,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": null,
+    "scale_aware": null
+   },
+   "converged": true
+  },
+  {
+   "video": "47331336",
+   "source": "moge",
+   "n_measurements": 4,
+   "n_objects": 4,
+   "n_evaluated": 0,
+   "log_scale": 4.678246238679469e-32,
+   "log_scale_sd": 0.1,
+   "gt_median_log_depth_ratio": null,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": null,
+    "scale_aware": null
+   },
+   "converged": true
+  },
+  {
+   "video": "47331651",
+   "source": "laser",
+   "n_measurements": 62,
+   "n_objects": 18,
+   "n_evaluated": 15,
+   "log_scale": -0.06754170935726574,
+   "log_scale_sd": 0.04500833522135177,
+   "gt_median_log_depth_ratio": -0.07633639466578178,
+   "rejected": {
+    "naive": 7,
+    "scale_aware": 7
+   },
+   "nis_mean": {
+    "naive": 7.185055305388304,
+    "scale_aware": 7.083137870304588
+   },
+   "converged": true
+  },
+  {
+   "video": "47331651",
+   "source": "lidar",
+   "n_measurements": 62,
+   "n_objects": 18,
+   "n_evaluated": 15,
+   "log_scale": -0.08101176158179789,
+   "log_scale_sd": 0.04784833529800263,
+   "gt_median_log_depth_ratio": -0.09503938058537573,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 7.0427162394188425,
+    "scale_aware": 6.95489921721024
+   },
+   "converged": true
+  },
+  {
+   "video": "47331651",
+   "source": "moge",
+   "n_measurements": 62,
+   "n_objects": 18,
+   "n_evaluated": 15,
+   "log_scale": -0.08321704802589812,
+   "log_scale_sd": 0.05296000132984228,
+   "gt_median_log_depth_ratio": -0.09820099837145217,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 7.338089362348501,
+    "scale_aware": 7.261460073461469
+   },
+   "converged": true
+  },
+  {
+   "video": "47331661",
+   "source": "laser",
+   "n_measurements": 58,
+   "n_objects": 14,
+   "n_evaluated": 11,
+   "log_scale": -0.08328418589693533,
+   "log_scale_sd": 0.02790472961759633,
+   "gt_median_log_depth_ratio": -0.09480735228516428,
+   "rejected": {
+    "naive": 16,
+    "scale_aware": 15
+   },
+   "nis_mean": {
+    "naive": 7.017108438021367,
+    "scale_aware": 7.413261686349517
+   },
+   "converged": true
+  },
+  {
+   "video": "47331661",
+   "source": "lidar",
+   "n_measurements": 58,
+   "n_objects": 14,
+   "n_evaluated": 11,
+   "log_scale": -0.05985498469811718,
+   "log_scale_sd": 0.02607636254222388,
+   "gt_median_log_depth_ratio": -0.08874513453134378,
+   "rejected": {
+    "naive": 15,
+    "scale_aware": 13
+   },
+   "nis_mean": {
+    "naive": 7.945130587183452,
+    "scale_aware": 8.740390597787068
+   },
+   "converged": true
+  },
+  {
+   "video": "47331661",
+   "source": "moge",
+   "n_measurements": 58,
+   "n_objects": 14,
+   "n_evaluated": 11,
+   "log_scale": -0.13936969797891954,
+   "log_scale_sd": 0.035904056336400224,
+   "gt_median_log_depth_ratio": -0.08129558137477853,
+   "rejected": {
+    "naive": 12,
+    "scale_aware": 10
+   },
+   "nis_mean": {
+    "naive": 8.51904959071726,
+    "scale_aware": 9.020809101699069
+   },
+   "converged": true
+  },
+  {
+   "video": "47331988",
+   "source": "laser",
+   "n_measurements": 55,
+   "n_objects": 6,
+   "n_evaluated": 6,
+   "log_scale": -0.04957080681298119,
+   "log_scale_sd": 0.024048654981306768,
+   "gt_median_log_depth_ratio": -0.0726934931177936,
+   "rejected": {
+    "naive": 23,
+    "scale_aware": 26
+   },
+   "nis_mean": {
+    "naive": 8.628291237968117,
+    "scale_aware": 7.529448634475356
+   },
+   "converged": true
+  },
+  {
+   "video": "47331988",
+   "source": "lidar",
+   "n_measurements": 55,
+   "n_objects": 6,
+   "n_evaluated": 6,
+   "log_scale": -0.13809216211692454,
+   "log_scale_sd": 0.022684507977146696,
+   "gt_median_log_depth_ratio": -0.08095856756999546,
+   "rejected": {
+    "naive": 21,
+    "scale_aware": 17
+   },
+   "nis_mean": {
+    "naive": 7.7794986248074185,
+    "scale_aware": 8.454748707924548
+   },
+   "converged": true
+  },
+  {
+   "video": "47331988",
+   "source": "moge",
+   "n_measurements": 55,
+   "n_objects": 6,
+   "n_evaluated": 6,
+   "log_scale": -0.10554749775052469,
+   "log_scale_sd": 0.028597777996289035,
+   "gt_median_log_depth_ratio": -0.07912351012547904,
+   "rejected": {
+    "naive": 15,
+    "scale_aware": 17
+   },
+   "nis_mean": {
+    "naive": 8.732466909044783,
+    "scale_aware": 7.733187860939442
+   },
+   "converged": true
+  },
+  {
+   "video": "47332000",
+   "source": "laser",
+   "n_measurements": 5,
+   "n_objects": 3,
+   "n_evaluated": 2,
+   "log_scale": -0.10110415836406839,
+   "log_scale_sd": 0.0817736081095361,
+   "gt_median_log_depth_ratio": -0.011050513180196878,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 12.46587775338256,
+    "scale_aware": 11.948979409336337
+   },
+   "converged": true
+  },
+  {
+   "video": "47332000",
+   "source": "lidar",
+   "n_measurements": 5,
+   "n_objects": 3,
+   "n_evaluated": 2,
+   "log_scale": -0.11535082525377022,
+   "log_scale_sd": 0.08521763088528689,
+   "gt_median_log_depth_ratio": -0.06482642041235069,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 10.560261364977748,
+    "scale_aware": 9.494945026854046
+   },
+   "converged": true
+  },
+  {
+   "video": "47332000",
+   "source": "moge",
+   "n_measurements": 5,
+   "n_objects": 3,
+   "n_evaluated": 2,
+   "log_scale": -0.09979486770696842,
+   "log_scale_sd": 0.08590179813610592,
+   "gt_median_log_depth_ratio": -0.04967991098363272,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 9.743204307780818,
+    "scale_aware": 9.064306917321368
+   },
+   "converged": true
+  },
+  {
+   "video": "47332885",
+   "source": "laser",
+   "n_measurements": 23,
+   "n_objects": 8,
+   "n_evaluated": 6,
+   "log_scale": 0.0048094872586468725,
+   "log_scale_sd": 0.03123979817061796,
+   "gt_median_log_depth_ratio": -0.059596050634975084,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 6.837439356888381,
+    "scale_aware": 6.930085089566647
+   },
+   "converged": true
+  },
+  {
+   "video": "47332885",
+   "source": "lidar",
+   "n_measurements": 23,
+   "n_objects": 8,
+   "n_evaluated": 6,
+   "log_scale": -0.009844432120993857,
+   "log_scale_sd": 0.03581936640159635,
+   "gt_median_log_depth_ratio": -0.06809607563785722,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 7.155661195949385,
+    "scale_aware": 7.211274487086707
+   },
+   "converged": true
+  },
+  {
+   "video": "47332885",
+   "source": "moge",
+   "n_measurements": 23,
+   "n_objects": 8,
+   "n_evaluated": 6,
+   "log_scale": -0.09991370159188127,
+   "log_scale_sd": 0.05129509846232229,
+   "gt_median_log_depth_ratio": -0.08589902322584289,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 7.8368430286348465,
+    "scale_aware": 7.48765077104196
+   },
+   "converged": true
+  },
+  {
+   "video": "47332893",
+   "source": "laser",
+   "n_measurements": 49,
+   "n_objects": 6,
+   "n_evaluated": 6,
+   "log_scale": 0.0028780987246280823,
+   "log_scale_sd": 0.02283110669600832,
+   "gt_median_log_depth_ratio": -0.00949396385674645,
+   "rejected": {
+    "naive": 23,
+    "scale_aware": 22
+   },
+   "nis_mean": {
+    "naive": 6.195030671026232,
+    "scale_aware": 5.716127213293186
+   },
+   "converged": true
+  },
+  {
+   "video": "47332893",
+   "source": "lidar",
+   "n_measurements": 49,
+   "n_objects": 6,
+   "n_evaluated": 6,
+   "log_scale": 0.009928108982424204,
+   "log_scale_sd": 0.02668586612583368,
+   "gt_median_log_depth_ratio": -0.009721728840051137,
+   "rejected": {
+    "naive": 21,
+    "scale_aware": 21
+   },
+   "nis_mean": {
+    "naive": 6.512308856696414,
+    "scale_aware": 6.542623467166384
+   },
+   "converged": true
+  },
+  {
+   "video": "47332893",
+   "source": "moge",
+   "n_measurements": 49,
+   "n_objects": 6,
+   "n_evaluated": 6,
+   "log_scale": -0.08488698317290382,
+   "log_scale_sd": 0.03388012279960406,
+   "gt_median_log_depth_ratio": -0.045074892476798155,
+   "rejected": {
+    "naive": 17,
+    "scale_aware": 17
+   },
+   "nis_mean": {
+    "naive": 9.129704704599316,
+    "scale_aware": 8.85861780780175
+   },
+   "converged": true
+  },
+  {
+   "video": "47332901",
+   "source": "laser",
+   "n_measurements": 27,
+   "n_objects": 11,
+   "n_evaluated": 10,
+   "log_scale": 0.007237092810586843,
+   "log_scale_sd": 0.030237219525218594,
+   "gt_median_log_depth_ratio": -0.08928930677799149,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 5.912014745412629,
+    "scale_aware": 6.016278922712917
+   },
+   "converged": true
+  },
+  {
+   "video": "47332901",
+   "source": "lidar",
+   "n_measurements": 27,
+   "n_objects": 11,
+   "n_evaluated": 10,
+   "log_scale": 0.02049187090317278,
+   "log_scale_sd": 0.03318746669416764,
+   "gt_median_log_depth_ratio": -0.08859135315604286,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 9.661609604337249,
+    "scale_aware": 9.719927193955222
+   },
+   "converged": true
+  },
+  {
+   "video": "47332901",
+   "source": "moge",
+   "n_measurements": 27,
+   "n_objects": 11,
+   "n_evaluated": 10,
+   "log_scale": -0.038366527084259375,
+   "log_scale_sd": 0.040287433111572006,
+   "gt_median_log_depth_ratio": -0.07866346009263002,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 9.252382703841636,
+    "scale_aware": 9.230099133335893
+   },
+   "converged": true
+  },
+  {
+   "video": "47332908",
+   "source": "laser",
+   "n_measurements": 10,
+   "n_objects": 4,
+   "n_evaluated": 3,
+   "log_scale": -0.138656838779286,
+   "log_scale_sd": 0.07907110715528651,
+   "gt_median_log_depth_ratio": -0.35687174108549047,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 7.346829307190478,
+    "scale_aware": 6.452052067946515
+   },
+   "converged": true
+  },
+  {
+   "video": "47332908",
+   "source": "lidar",
+   "n_measurements": 10,
+   "n_objects": 4,
+   "n_evaluated": 3,
+   "log_scale": -0.13669192221031723,
+   "log_scale_sd": 0.08278827838477033,
+   "gt_median_log_depth_ratio": -0.23638412081708465,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 7.113137292483509,
+    "scale_aware": 6.259362215385577
+   },
+   "converged": true
+  },
+  {
+   "video": "47332908",
+   "source": "moge",
+   "n_measurements": 10,
+   "n_objects": 4,
+   "n_evaluated": 3,
+   "log_scale": -0.19980598650018047,
+   "log_scale_sd": 0.08436328377161494,
+   "gt_median_log_depth_ratio": -0.37397115330309144,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 8.559275598074574,
+    "scale_aware": 6.686962598188837
+   },
+   "converged": true
+  },
+  {
+   "video": "47332915",
+   "source": "laser",
+   "n_measurements": 55,
+   "n_objects": 11,
+   "n_evaluated": 11,
+   "log_scale": 0.03338791784062212,
+   "log_scale_sd": 0.015058592375899498,
+   "gt_median_log_depth_ratio": -0.02791124109543045,
+   "rejected": {
+    "naive": 19,
+    "scale_aware": 18
+   },
+   "nis_mean": {
+    "naive": 7.661171721242507,
+    "scale_aware": 7.952287534776848
+   },
+   "converged": true
+  },
+  {
+   "video": "47332915",
+   "source": "lidar",
+   "n_measurements": 55,
+   "n_objects": 11,
+   "n_evaluated": 11,
+   "log_scale": 0.03287931668068969,
+   "log_scale_sd": 0.015585474431955557,
+   "gt_median_log_depth_ratio": -0.026912589131949265,
+   "rejected": {
+    "naive": 13,
+    "scale_aware": 13
+   },
+   "nis_mean": {
+    "naive": 8.542919909175238,
+    "scale_aware": 8.530874483288272
+   },
+   "converged": true
+  },
+  {
+   "video": "47332915",
+   "source": "moge",
+   "n_measurements": 55,
+   "n_objects": 11,
+   "n_evaluated": 11,
+   "log_scale": -0.06500977996333164,
+   "log_scale_sd": 0.021734746621977327,
+   "gt_median_log_depth_ratio": -0.02314240280318494,
+   "rejected": {
+    "naive": 13,
+    "scale_aware": 11
+   },
+   "nis_mean": {
+    "naive": 7.958282590307429,
+    "scale_aware": 8.591853758537978
+   },
+   "converged": true
+  },
+  {
+   "video": "47333440",
+   "source": "laser",
+   "n_measurements": 16,
+   "n_objects": 8,
+   "n_evaluated": 6,
+   "log_scale": -0.06723693888324841,
+   "log_scale_sd": 0.08331583083383742,
+   "gt_median_log_depth_ratio": -0.0427388454444183,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 4.840764311064987,
+    "scale_aware": 4.734508539325668
+   },
+   "converged": true
+  },
+  {
+   "video": "47333440",
+   "source": "lidar",
+   "n_measurements": 16,
+   "n_objects": 8,
+   "n_evaluated": 6,
+   "log_scale": -0.059986419156660906,
+   "log_scale_sd": 0.08629116422866667,
+   "gt_median_log_depth_ratio": -0.0348609720085943,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 4.246977043144673,
+    "scale_aware": 4.160471986188617
+   },
+   "converged": true
+  },
+  {
+   "video": "47333440",
+   "source": "moge",
+   "n_measurements": 16,
+   "n_objects": 8,
+   "n_evaluated": 6,
+   "log_scale": -0.03485988325964647,
+   "log_scale_sd": 0.08713327745516378,
+   "gt_median_log_depth_ratio": -0.010818903637982848,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 5.7197030854734505,
+    "scale_aware": 5.725516209760493
+   },
+   "converged": true
+  },
+  {
+   "video": "47333452",
+   "source": "laser",
+   "n_measurements": 59,
+   "n_objects": 26,
+   "n_evaluated": 18,
+   "log_scale": -0.002359353703461034,
+   "log_scale_sd": 0.026795949300897414,
+   "gt_median_log_depth_ratio": -0.028820311545121203,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 5
+   },
+   "nis_mean": {
+    "naive": 6.691660159063464,
+    "scale_aware": 6.738774145486497
+   },
+   "converged": true
+  },
+  {
+   "video": "47333452",
+   "source": "lidar",
+   "n_measurements": 59,
+   "n_objects": 26,
+   "n_evaluated": 18,
+   "log_scale": 0.0053901580002961545,
+   "log_scale_sd": 0.02944549778965854,
+   "gt_median_log_depth_ratio": -0.023069278270884983,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 5.282189743859786,
+    "scale_aware": 5.306307026803938
+   },
+   "converged": true
+  },
+  {
+   "video": "47333452",
+   "source": "moge",
+   "n_measurements": 59,
+   "n_objects": 26,
+   "n_evaluated": 18,
+   "log_scale": -0.09710027575926235,
+   "log_scale_sd": 0.04158214416273255,
+   "gt_median_log_depth_ratio": -0.012889533325170944,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 5.928141175192054,
+    "scale_aware": 5.767542556953733
+   },
+   "converged": true
+  },
+  {
+   "video": "47333898",
+   "source": "laser",
+   "n_measurements": 40,
+   "n_objects": 14,
+   "n_evaluated": 11,
+   "log_scale": -0.021549092315425792,
+   "log_scale_sd": 0.03178040432171742,
+   "gt_median_log_depth_ratio": -0.08570617403590808,
+   "rejected": {
+    "naive": 9,
+    "scale_aware": 9
+   },
+   "nis_mean": {
+    "naive": 9.127635789819944,
+    "scale_aware": 9.18813109240354
+   },
+   "converged": true
+  },
+  {
+   "video": "47333898",
+   "source": "lidar",
+   "n_measurements": 40,
+   "n_objects": 14,
+   "n_evaluated": 11,
+   "log_scale": -0.02847432838609654,
+   "log_scale_sd": 0.031097680887807986,
+   "gt_median_log_depth_ratio": -0.10379027929247847,
+   "rejected": {
+    "naive": 6,
+    "scale_aware": 7
+   },
+   "nis_mean": {
+    "naive": 8.61745945622614,
+    "scale_aware": 8.496600493812222
+   },
+   "converged": true
+  },
+  {
+   "video": "47333898",
+   "source": "moge",
+   "n_measurements": 40,
+   "n_objects": 14,
+   "n_evaluated": 11,
+   "log_scale": -0.0015898972704360868,
+   "log_scale_sd": 0.03478149736285674,
+   "gt_median_log_depth_ratio": -0.07025067409348465,
+   "rejected": {
+    "naive": 6,
+    "scale_aware": 6
+   },
+   "nis_mean": {
+    "naive": 8.289473345121166,
+    "scale_aware": 8.323601708365437
+   },
+   "converged": true
+  },
+  {
+   "video": "47333916",
+   "source": "laser",
+   "n_measurements": 10,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": -0.09148288968627756,
+   "log_scale_sd": 0.09307992593671331,
+   "gt_median_log_depth_ratio": -0.28801452840328007,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 6.357704661600372,
+    "scale_aware": 5.8577329638243105
+   },
+   "converged": true
+  },
+  {
+   "video": "47333916",
+   "source": "lidar",
+   "n_measurements": 10,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": -0.06825133091121055,
+   "log_scale_sd": 0.0944719392156117,
+   "gt_median_log_depth_ratio": -0.2988389482719469,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 4.399794789250081,
+    "scale_aware": 4.129567151251006
+   },
+   "converged": true
+  },
+  {
+   "video": "47333916",
+   "source": "moge",
+   "n_measurements": 10,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": -0.07257736371679883,
+   "log_scale_sd": 0.09480951387398902,
+   "gt_median_log_depth_ratio": -0.30499764493381354,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 5.892145952600483,
+    "scale_aware": 5.5887182649170235
+   },
+   "converged": true
+  },
+  {
+   "video": "47333923",
+   "source": "laser",
+   "n_measurements": 14,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": -0.09748910883574331,
+   "log_scale_sd": 0.09172749802410718,
+   "gt_median_log_depth_ratio": -0.06664383466585684,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 6.451859612092487,
+    "scale_aware": 6.192893439601833
+   },
+   "converged": true
+  },
+  {
+   "video": "47333923",
+   "source": "lidar",
+   "n_measurements": 14,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": -0.0755709068172279,
+   "log_scale_sd": 0.09209504732313178,
+   "gt_median_log_depth_ratio": -0.08257209774918343,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 7.3660170082834115,
+    "scale_aware": 7.2271730880498035
+   },
+   "converged": true
+  },
+  {
+   "video": "47333923",
+   "source": "moge",
+   "n_measurements": 14,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": -0.0708927566598992,
+   "log_scale_sd": 0.09364984650577278,
+   "gt_median_log_depth_ratio": -0.07934490463172317,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 6.224750180166766,
+    "scale_aware": 6.093792459497394
+   },
+   "converged": true
+  },
+  {
+   "video": "47333927",
+   "source": "laser",
+   "n_measurements": 30,
+   "n_objects": 8,
+   "n_evaluated": 7,
+   "log_scale": -0.0006212792036989112,
+   "log_scale_sd": 0.02257895829461387,
+   "gt_median_log_depth_ratio": -0.07821015800776789,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 6.783754227670886,
+    "scale_aware": 6.8218989457270185
+   },
+   "converged": true
+  },
+  {
+   "video": "47333927",
+   "source": "lidar",
+   "n_measurements": 30,
+   "n_objects": 8,
+   "n_evaluated": 7,
+   "log_scale": 0.040877350885461745,
+   "log_scale_sd": 0.024660556974892098,
+   "gt_median_log_depth_ratio": -0.07149173631865742,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 7.362247105330355,
+    "scale_aware": 7.2490962106724375
+   },
+   "converged": true
+  },
+  {
+   "video": "47333927",
+   "source": "moge",
+   "n_measurements": 30,
+   "n_objects": 8,
+   "n_evaluated": 7,
+   "log_scale": -0.05206586714819628,
+   "log_scale_sd": 0.03378799151533909,
+   "gt_median_log_depth_ratio": -0.09859114069695497,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 7.566643625504162,
+    "scale_aware": 7.453779068877397
+   },
+   "converged": true
+  },
+  {
+   "video": "47333934",
+   "source": "laser",
+   "n_measurements": 38,
+   "n_objects": 8,
+   "n_evaluated": 8,
+   "log_scale": -0.07256573409874745,
+   "log_scale_sd": 0.025582054020082255,
+   "gt_median_log_depth_ratio": -0.033602782236421505,
+   "rejected": {
+    "naive": 8,
+    "scale_aware": 8
+   },
+   "nis_mean": {
+    "naive": 7.454014419718172,
+    "scale_aware": 7.006411399064605
+   },
+   "converged": true
+  },
+  {
+   "video": "47333934",
+   "source": "lidar",
+   "n_measurements": 38,
+   "n_objects": 8,
+   "n_evaluated": 8,
+   "log_scale": -0.06746611264600988,
+   "log_scale_sd": 0.029542022200518044,
+   "gt_median_log_depth_ratio": -0.0333825827689266,
+   "rejected": {
+    "naive": 9,
+    "scale_aware": 9
+   },
+   "nis_mean": {
+    "naive": 5.240229669473394,
+    "scale_aware": 4.922519064028086
+   },
+   "converged": true
+  },
+  {
+   "video": "47333934",
+   "source": "moge",
+   "n_measurements": 38,
+   "n_objects": 8,
+   "n_evaluated": 8,
+   "log_scale": -0.08669584621497671,
+   "log_scale_sd": 0.03227267776161813,
+   "gt_median_log_depth_ratio": -0.04621904099646158,
+   "rejected": {
+    "naive": 8,
+    "scale_aware": 8
+   },
+   "nis_mean": {
+    "naive": 5.160490738989816,
+    "scale_aware": 4.725857387313494
+   },
+   "converged": true
+  },
+  {
+   "video": "47334105",
+   "source": "laser",
+   "n_measurements": 39,
+   "n_objects": 13,
+   "n_evaluated": 8,
+   "log_scale": -0.13740286880835045,
+   "log_scale_sd": 0.02655714024486535,
+   "gt_median_log_depth_ratio": -0.09274147403414709,
+   "rejected": {
+    "naive": 7,
+    "scale_aware": 7
+   },
+   "nis_mean": {
+    "naive": 9.307473010130051,
+    "scale_aware": 7.769066134273537
+   },
+   "converged": true
+  },
+  {
+   "video": "47334105",
+   "source": "lidar",
+   "n_measurements": 39,
+   "n_objects": 13,
+   "n_evaluated": 8,
+   "log_scale": -0.1587988956959723,
+   "log_scale_sd": 0.032383221305343025,
+   "gt_median_log_depth_ratio": -0.10828788698948234,
+   "rejected": {
+    "naive": 9,
+    "scale_aware": 9
+   },
+   "nis_mean": {
+    "naive": 9.514315610105848,
+    "scale_aware": 8.003818960526672
+   },
+   "converged": true
+  },
+  {
+   "video": "47334105",
+   "source": "moge",
+   "n_measurements": 39,
+   "n_objects": 13,
+   "n_evaluated": 8,
+   "log_scale": -0.18428912117574467,
+   "log_scale_sd": 0.0324324152558,
+   "gt_median_log_depth_ratio": -0.09801282759413169,
+   "rejected": {
+    "naive": 8,
+    "scale_aware": 7
+   },
+   "nis_mean": {
+    "naive": 8.100734153299165,
+    "scale_aware": 7.247900257659176
+   },
+   "converged": true
+  },
+  {
+   "video": "47334239",
+   "source": "laser",
+   "n_measurements": 17,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": -0.005768696979655215,
+   "log_scale_sd": 0.05134900775347051,
+   "gt_median_log_depth_ratio": -0.013594448110026034,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 10.326480199453654,
+    "scale_aware": 10.365454510445405
+   },
+   "converged": true
+  },
+  {
+   "video": "47334239",
+   "source": "lidar",
+   "n_measurements": 17,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": -0.009466936861498217,
+   "log_scale_sd": 0.054511098209593024,
+   "gt_median_log_depth_ratio": -0.02040026478110649,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 7.950801810311931,
+    "scale_aware": 7.981057527727137
+   },
+   "converged": true
+  },
+  {
+   "video": "47334239",
+   "source": "moge",
+   "n_measurements": 17,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": 0.0007120028073477251,
+   "log_scale_sd": 0.05929305173813732,
+   "gt_median_log_depth_ratio": -0.00999354919121481,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 8.323599927724667,
+    "scale_aware": 8.37535829266773
+   },
+   "converged": true
+  },
+  {
+   "video": "47334256",
+   "source": "laser",
+   "n_measurements": 12,
+   "n_objects": 9,
+   "n_evaluated": 2,
+   "log_scale": -0.08485610229470215,
+   "log_scale_sd": 0.0867918234109459,
+   "gt_median_log_depth_ratio": -0.15428311089104052,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 13.573773074924182,
+    "scale_aware": 12.976741837329653
+   },
+   "converged": true
+  },
+  {
+   "video": "47334256",
+   "source": "lidar",
+   "n_measurements": 12,
+   "n_objects": 9,
+   "n_evaluated": 2,
+   "log_scale": -0.06665438100415563,
+   "log_scale_sd": 0.0894983734500032,
+   "gt_median_log_depth_ratio": -0.16805563115255934,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 11.788626992276894,
+    "scale_aware": 11.474954030884168
+   },
+   "converged": true
+  },
+  {
+   "video": "47334256",
+   "source": "moge",
+   "n_measurements": 12,
+   "n_objects": 9,
+   "n_evaluated": 2,
+   "log_scale": -0.09089579447850381,
+   "log_scale_sd": 0.0917835427566803,
+   "gt_median_log_depth_ratio": -0.1583618490022401,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 13.817412450628096,
+    "scale_aware": 13.169631718122917
+   },
+   "converged": true
+  },
+  {
+   "video": "47429912",
+   "source": "laser",
+   "n_measurements": 4,
+   "n_objects": 4,
+   "n_evaluated": 0,
+   "log_scale": -1.9975442551114068e-31,
+   "log_scale_sd": 0.1,
+   "gt_median_log_depth_ratio": null,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": null,
+    "scale_aware": null
+   },
+   "converged": true
+  },
+  {
+   "video": "47429912",
+   "source": "lidar",
+   "n_measurements": 4,
+   "n_objects": 4,
+   "n_evaluated": 0,
+   "log_scale": -7.635905479050466e-32,
+   "log_scale_sd": 0.1,
+   "gt_median_log_depth_ratio": null,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": null,
+    "scale_aware": null
+   },
+   "converged": true
+  },
+  {
+   "video": "47429912",
+   "source": "moge",
+   "n_measurements": 4,
+   "n_objects": 4,
+   "n_evaluated": 0,
+   "log_scale": -1.5691413904640694e-31,
+   "log_scale_sd": 0.1,
+   "gt_median_log_depth_ratio": null,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": null,
+    "scale_aware": null
+   },
+   "converged": true
+  },
+  {
+   "video": "47429922",
+   "source": "laser",
+   "n_measurements": 3,
+   "n_objects": 2,
+   "n_evaluated": 1,
+   "log_scale": -0.1665863009810377,
+   "log_scale_sd": 0.09091354072244918,
+   "gt_median_log_depth_ratio": -0.04653404453747609,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": null,
+    "scale_aware": 18.467157676741387
+   },
+   "converged": true
+  },
+  {
+   "video": "47429922",
+   "source": "lidar",
+   "n_measurements": 3,
+   "n_objects": 2,
+   "n_evaluated": 1,
+   "log_scale": -0.1373386666895589,
+   "log_scale_sd": 0.09247993997415457,
+   "gt_median_log_depth_ratio": -0.06247744885383722,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 17.957580251708887,
+    "scale_aware": 15.433268082902368
+   },
+   "converged": true
+  },
+  {
+   "video": "47429922",
+   "source": "moge",
+   "n_measurements": 3,
+   "n_objects": 2,
+   "n_evaluated": 1,
+   "log_scale": -0.12010914766407622,
+   "log_scale_sd": 0.09338188826545389,
+   "gt_median_log_depth_ratio": -0.09720145582635616,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 15.827826714149762,
+    "scale_aware": 13.965748416328665
+   },
+   "converged": true
+  },
+  {
+   "video": "47429971",
+   "source": "laser",
+   "n_measurements": 38,
+   "n_objects": 19,
+   "n_evaluated": 13,
+   "log_scale": -0.15631364987110818,
+   "log_scale_sd": 0.06903792372503116,
+   "gt_median_log_depth_ratio": -0.11982304731696392,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 5
+   },
+   "nis_mean": {
+    "naive": 9.38421865253886,
+    "scale_aware": 8.792842863932503
+   },
+   "converged": true
+  },
+  {
+   "video": "47429971",
+   "source": "lidar",
+   "n_measurements": 38,
+   "n_objects": 19,
+   "n_evaluated": 13,
+   "log_scale": -0.1624350670508603,
+   "log_scale_sd": 0.07284104733363521,
+   "gt_median_log_depth_ratio": -0.07141533348221882,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 8.354423459474773,
+    "scale_aware": 7.801580299884601
+   },
+   "converged": true
+  },
+  {
+   "video": "47429971",
+   "source": "moge",
+   "n_measurements": 38,
+   "n_objects": 19,
+   "n_evaluated": 13,
+   "log_scale": -0.2361654223528757,
+   "log_scale_sd": 0.07178881338190025,
+   "gt_median_log_depth_ratio": -0.07750013035821919,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 8.421633339650484,
+    "scale_aware": 8.360046390728028
+   },
+   "converged": true
+  },
+  {
+   "video": "47429992",
+   "source": "laser",
+   "n_measurements": 15,
+   "n_objects": 6,
+   "n_evaluated": 5,
+   "log_scale": -0.1518597020623891,
+   "log_scale_sd": 0.09119943524437826,
+   "gt_median_log_depth_ratio": -0.07003156616104411,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 11.526645686228898,
+    "scale_aware": 10.581496377976645
+   },
+   "converged": true
+  },
+  {
+   "video": "47429992",
+   "source": "lidar",
+   "n_measurements": 15,
+   "n_objects": 6,
+   "n_evaluated": 5,
+   "log_scale": -0.12134560358574907,
+   "log_scale_sd": 0.09246550278164566,
+   "gt_median_log_depth_ratio": -0.08844686219859975,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 7.6776556882128775,
+    "scale_aware": 7.114339635494822
+   },
+   "converged": true
+  },
+  {
+   "video": "47429992",
+   "source": "moge",
+   "n_measurements": 15,
+   "n_objects": 6,
+   "n_evaluated": 5,
+   "log_scale": -0.19750701641237506,
+   "log_scale_sd": 0.09200651362097213,
+   "gt_median_log_depth_ratio": -0.0682510641061845,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 3
+   },
+   "nis_mean": {
+    "naive": 7.792212920719885,
+    "scale_aware": 11.616666915254763
+   },
+   "converged": true
+  },
+  {
+   "video": "47429998",
+   "source": "laser",
+   "n_measurements": 9,
+   "n_objects": 3,
+   "n_evaluated": 3,
+   "log_scale": -0.024210599202613755,
+   "log_scale_sd": 0.09407117883700061,
+   "gt_median_log_depth_ratio": -0.11364653420038667,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 3.0761279990064248,
+    "scale_aware": 3.0504553006706567
+   },
+   "converged": true
+  },
+  {
+   "video": "47429998",
+   "source": "lidar",
+   "n_measurements": 9,
+   "n_objects": 3,
+   "n_evaluated": 3,
+   "log_scale": -0.03492545112592973,
+   "log_scale_sd": 0.09545467351655965,
+   "gt_median_log_depth_ratio": -0.08873548429565013,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 3.0216203249698816,
+    "scale_aware": 2.9684888425101144
+   },
+   "converged": true
+  },
+  {
+   "video": "47429998",
+   "source": "moge",
+   "n_measurements": 9,
+   "n_objects": 3,
+   "n_evaluated": 3,
+   "log_scale": -0.038068809798228,
+   "log_scale_sd": 0.09667337356562886,
+   "gt_median_log_depth_ratio": -0.08945639237515389,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 6.319953347662891,
+    "scale_aware": 6.280308049274721
+   },
+   "converged": true
+  },
+  {
+   "video": "47430003",
+   "source": "laser",
+   "n_measurements": 4,
+   "n_objects": 3,
+   "n_evaluated": 1,
+   "log_scale": -0.0037761015459279014,
+   "log_scale_sd": 0.09776152493261224,
+   "gt_median_log_depth_ratio": -0.13400026111673868,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 1.202523432983479,
+    "scale_aware": 1.2010258518051018
+   },
+   "converged": true
+  },
+  {
+   "video": "47430003",
+   "source": "lidar",
+   "n_measurements": 4,
+   "n_objects": 3,
+   "n_evaluated": 1,
+   "log_scale": -0.0036290879410774686,
+   "log_scale_sd": 0.09823614741060958,
+   "gt_median_log_depth_ratio": -0.15734724406572934,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 1.5571318334310482,
+    "scale_aware": 1.5557621268843735
+   },
+   "converged": true
+  },
+  {
+   "video": "47430003",
+   "source": "moge",
+   "n_measurements": 4,
+   "n_objects": 3,
+   "n_evaluated": 1,
+   "log_scale": 0.0030618165046881864,
+   "log_scale_sd": 0.09839243867936981,
+   "gt_median_log_depth_ratio": -0.08707516447965116,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 1.9598155989998367,
+    "scale_aware": 1.9588502052275971
+   },
+   "converged": true
+  },
+  {
+   "video": "47430023",
+   "source": "laser",
+   "n_measurements": 21,
+   "n_objects": 10,
+   "n_evaluated": 6,
+   "log_scale": -0.23024274880935852,
+   "log_scale_sd": 0.0539642884194672,
+   "gt_median_log_depth_ratio": -0.13419123563141053,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 10.561392908781654,
+    "scale_aware": 9.169004434782156
+   },
+   "converged": true
+  },
+  {
+   "video": "47430023",
+   "source": "lidar",
+   "n_measurements": 21,
+   "n_objects": 10,
+   "n_evaluated": 6,
+   "log_scale": -0.25059793845882344,
+   "log_scale_sd": 0.05948888493000016,
+   "gt_median_log_depth_ratio": -0.19077442266996408,
+   "rejected": {
+    "naive": 3,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 10.177334680703119,
+    "scale_aware": 8.993643480014667
+   },
+   "converged": true
+  },
+  {
+   "video": "47430023",
+   "source": "moge",
+   "n_measurements": 21,
+   "n_objects": 10,
+   "n_evaluated": 6,
+   "log_scale": -0.20936056583575618,
+   "log_scale_sd": 0.0612984046598842,
+   "gt_median_log_depth_ratio": -0.01787112971127536,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 11.292028096664874,
+    "scale_aware": 9.621644739780075
+   },
+   "converged": true
+  },
+  {
+   "video": "47430033",
+   "source": "laser",
+   "n_measurements": 3,
+   "n_objects": 3,
+   "n_evaluated": 0,
+   "log_scale": -3.5792111601473664e-31,
+   "log_scale_sd": 0.1,
+   "gt_median_log_depth_ratio": null,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": null,
+    "scale_aware": null
+   },
+   "converged": true
+  },
+  {
+   "video": "47430033",
+   "source": "lidar",
+   "n_measurements": 3,
+   "n_objects": 3,
+   "n_evaluated": 0,
+   "log_scale": 8.854246598108737e-32,
+   "log_scale_sd": 0.1,
+   "gt_median_log_depth_ratio": null,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": null,
+    "scale_aware": null
+   },
+   "converged": true
+  },
+  {
+   "video": "47430033",
+   "source": "moge",
+   "n_measurements": 3,
+   "n_objects": 3,
+   "n_evaluated": 0,
+   "log_scale": 3.5018295339240896e-31,
+   "log_scale_sd": 0.1,
+   "gt_median_log_depth_ratio": null,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": null,
+    "scale_aware": null
+   },
+   "converged": true
+  },
+  {
+   "video": "47430038",
+   "source": "laser",
+   "n_measurements": 18,
+   "n_objects": 13,
+   "n_evaluated": 4,
+   "log_scale": -0.08571074036193221,
+   "log_scale_sd": 0.08624447560897201,
+   "gt_median_log_depth_ratio": -0.16511186561908195,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 12.435051982784255,
+    "scale_aware": 12.179143580237602
+   },
+   "converged": true
+  },
+  {
+   "video": "47430038",
+   "source": "lidar",
+   "n_measurements": 18,
+   "n_objects": 13,
+   "n_evaluated": 4,
+   "log_scale": -0.09660517071180177,
+   "log_scale_sd": 0.0889870230155454,
+   "gt_median_log_depth_ratio": -0.16587568370923803,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 6.784216934831181,
+    "scale_aware": 6.255017143843368
+   },
+   "converged": true
+  },
+  {
+   "video": "47430038",
+   "source": "moge",
+   "n_measurements": 18,
+   "n_objects": 13,
+   "n_evaluated": 4,
+   "log_scale": -0.08860168389560613,
+   "log_scale_sd": 0.08986374811486979,
+   "gt_median_log_depth_ratio": -0.11615005959641496,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 4.834188914937803,
+    "scale_aware": 4.402027394687677
+   },
+   "converged": true
+  },
+  {
+   "video": "47430047",
+   "source": "laser",
+   "n_measurements": 1,
+   "n_objects": 1,
+   "n_evaluated": 0,
+   "log_scale": 8.169305688240305e-32,
+   "log_scale_sd": 0.1,
+   "gt_median_log_depth_ratio": null,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": null,
+    "scale_aware": null
+   },
+   "converged": true
+  },
+  {
+   "video": "47430047",
+   "source": "lidar",
+   "n_measurements": 1,
+   "n_objects": 1,
+   "n_evaluated": 0,
+   "log_scale": 5.169691528705299e-32,
+   "log_scale_sd": 0.1,
+   "gt_median_log_depth_ratio": null,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": null,
+    "scale_aware": null
+   },
+   "converged": true
+  },
+  {
+   "video": "47430047",
+   "source": "moge",
+   "n_measurements": 1,
+   "n_objects": 1,
+   "n_evaluated": 0,
+   "log_scale": 4.269268902195397e-32,
+   "log_scale_sd": 0.1,
+   "gt_median_log_depth_ratio": null,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": null,
+    "scale_aware": null
+   },
+   "converged": true
+  },
+  {
+   "video": "47895341",
+   "source": "laser",
+   "n_measurements": 20,
+   "n_objects": 9,
+   "n_evaluated": 7,
+   "log_scale": -0.044213955210842815,
+   "log_scale_sd": 0.022272174961700388,
+   "gt_median_log_depth_ratio": -0.008957745688349027,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 7.604974890408501,
+    "scale_aware": 7.211205649182019
+   },
+   "converged": true
+  },
+  {
+   "video": "47895341",
+   "source": "lidar",
+   "n_measurements": 20,
+   "n_objects": 9,
+   "n_evaluated": 7,
+   "log_scale": -0.0008591926987054085,
+   "log_scale_sd": 0.024482640212555147,
+   "gt_median_log_depth_ratio": -0.007392202155601768,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 7.2440886477496,
+    "scale_aware": 7.419002520731472
+   },
+   "converged": true
+  },
+  {
+   "video": "47895341",
+   "source": "moge",
+   "n_measurements": 20,
+   "n_objects": 9,
+   "n_evaluated": 7,
+   "log_scale": -0.05817665476260704,
+   "log_scale_sd": 0.03820270942643629,
+   "gt_median_log_depth_ratio": -0.05799529164376499,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 6.566250822488386,
+    "scale_aware": 6.44298977117706
+   },
+   "converged": true
+  },
+  {
+   "video": "47895355",
+   "source": "laser",
+   "n_measurements": 110,
+   "n_objects": 18,
+   "n_evaluated": 18,
+   "log_scale": -0.008026111858859663,
+   "log_scale_sd": 0.013890947058595428,
+   "gt_median_log_depth_ratio": -0.09655612990210591,
+   "rejected": {
+    "naive": 27,
+    "scale_aware": 27
+   },
+   "nis_mean": {
+    "naive": 7.3029395507050054,
+    "scale_aware": 7.319888695413755
+   },
+   "converged": true
+  },
+  {
+   "video": "47895355",
+   "source": "lidar",
+   "n_measurements": 110,
+   "n_objects": 18,
+   "n_evaluated": 18,
+   "log_scale": -0.024129455027193627,
+   "log_scale_sd": 0.015780795765369,
+   "gt_median_log_depth_ratio": -0.11547440883573332,
+   "rejected": {
+    "naive": 20,
+    "scale_aware": 20
+   },
+   "nis_mean": {
+    "naive": 6.580993871105546,
+    "scale_aware": 6.563144402057388
+   },
+   "converged": true
+  },
+  {
+   "video": "47895355",
+   "source": "moge",
+   "n_measurements": 110,
+   "n_objects": 18,
+   "n_evaluated": 18,
+   "log_scale": -0.12177628283012759,
+   "log_scale_sd": 0.02162481715536617,
+   "gt_median_log_depth_ratio": -0.13511328294400896,
+   "rejected": {
+    "naive": 20,
+    "scale_aware": 20
+   },
+   "nis_mean": {
+    "naive": 6.342046271313552,
+    "scale_aware": 5.867974321393783
+   },
+   "converged": true
+  },
+  {
+   "video": "47895364",
+   "source": "laser",
+   "n_measurements": 65,
+   "n_objects": 6,
+   "n_evaluated": 6,
+   "log_scale": -0.02937177228508002,
+   "log_scale_sd": 0.023449604962109082,
+   "gt_median_log_depth_ratio": -0.017361004553971757,
+   "rejected": {
+    "naive": 16,
+    "scale_aware": 16
+   },
+   "nis_mean": {
+    "naive": 7.199322660697557,
+    "scale_aware": 7.173952397924763
+   },
+   "converged": true
+  },
+  {
+   "video": "47895364",
+   "source": "lidar",
+   "n_measurements": 65,
+   "n_objects": 6,
+   "n_evaluated": 6,
+   "log_scale": -0.05699934622031304,
+   "log_scale_sd": 0.026039955500013683,
+   "gt_median_log_depth_ratio": -0.028009837915129957,
+   "rejected": {
+    "naive": 10,
+    "scale_aware": 10
+   },
+   "nis_mean": {
+    "naive": 7.57635270403602,
+    "scale_aware": 7.472127607976898
+   },
+   "converged": true
+  },
+  {
+   "video": "47895364",
+   "source": "moge",
+   "n_measurements": 65,
+   "n_objects": 6,
+   "n_evaluated": 6,
+   "log_scale": -0.11970315468695221,
+   "log_scale_sd": 0.033050065409393134,
+   "gt_median_log_depth_ratio": -0.02817432499430599,
+   "rejected": {
+    "naive": 11,
+    "scale_aware": 10
+   },
+   "nis_mean": {
+    "naive": 7.535048810845825,
+    "scale_aware": 7.494202773883888
+   },
+   "converged": true
+  },
+  {
+   "video": "47895552",
+   "source": "laser",
+   "n_measurements": 12,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": 0.0037600998941991386,
+   "log_scale_sd": 0.06337616835217905,
+   "gt_median_log_depth_ratio": -0.05245886107881405,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 5.188117327500702,
+    "scale_aware": 5.324874931379041
+   },
+   "converged": true
+  },
+  {
+   "video": "47895552",
+   "source": "lidar",
+   "n_measurements": 12,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": 0.010935040176999465,
+   "log_scale_sd": 0.06833880868237092,
+   "gt_median_log_depth_ratio": -0.085624369113005,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 5.1535463133724315,
+    "scale_aware": 5.179325320756761
+   },
+   "converged": true
+  },
+  {
+   "video": "47895552",
+   "source": "moge",
+   "n_measurements": 12,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": -0.050242109953428565,
+   "log_scale_sd": 0.07496450094478029,
+   "gt_median_log_depth_ratio": -0.05773235116437582,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 3.9900063952317413,
+    "scale_aware": 3.8765943524282833
+   },
+   "converged": true
+  },
+  {
+   "video": "47895779",
+   "source": "laser",
+   "n_measurements": 2,
+   "n_objects": 2,
+   "n_evaluated": 0,
+   "log_scale": 2.6344979801775624e-32,
+   "log_scale_sd": 0.1,
+   "gt_median_log_depth_ratio": null,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": null,
+    "scale_aware": null
+   },
+   "converged": true
+  },
+  {
+   "video": "47895779",
+   "source": "lidar",
+   "n_measurements": 2,
+   "n_objects": 2,
+   "n_evaluated": 0,
+   "log_scale": 5.85171692204211e-32,
+   "log_scale_sd": 0.1,
+   "gt_median_log_depth_ratio": null,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": null,
+    "scale_aware": null
+   },
+   "converged": true
+  },
+  {
+   "video": "47895779",
+   "source": "moge",
+   "n_measurements": 2,
+   "n_objects": 2,
+   "n_evaluated": 0,
+   "log_scale": 4.352690711806142e-33,
+   "log_scale_sd": 0.1,
+   "gt_median_log_depth_ratio": null,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": null,
+    "scale_aware": null
+   },
+   "converged": true
+  },
+  {
+   "video": "48018367",
+   "source": "laser",
+   "n_measurements": 17,
+   "n_objects": 8,
+   "n_evaluated": 5,
+   "log_scale": -0.0405153098917727,
+   "log_scale_sd": 0.0280152154698459,
+   "gt_median_log_depth_ratio": -0.06155853471521131,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 7.5335320423495435,
+    "scale_aware": 7.240344724301911
+   },
+   "converged": true
+  },
+  {
+   "video": "48018367",
+   "source": "lidar",
+   "n_measurements": 17,
+   "n_objects": 8,
+   "n_evaluated": 5,
+   "log_scale": -0.05541633013011863,
+   "log_scale_sd": 0.03214550884132909,
+   "gt_median_log_depth_ratio": -0.024681897584804713,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 6.094981701953443,
+    "scale_aware": 5.67488445857453
+   },
+   "converged": true
+  },
+  {
+   "video": "48018367",
+   "source": "moge",
+   "n_measurements": 17,
+   "n_objects": 8,
+   "n_evaluated": 5,
+   "log_scale": -0.10653201559697746,
+   "log_scale_sd": 0.04167476871030807,
+   "gt_median_log_depth_ratio": -0.04190013273240187,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 6.030178432429308,
+    "scale_aware": 7.042526878008667
+   },
+   "converged": true
+  },
+  {
+   "video": "48018379",
+   "source": "laser",
+   "n_measurements": 26,
+   "n_objects": 10,
+   "n_evaluated": 7,
+   "log_scale": -0.0687510897865641,
+   "log_scale_sd": 0.02653344123465312,
+   "gt_median_log_depth_ratio": -0.03223689884561581,
+   "rejected": {
+    "naive": 7,
+    "scale_aware": 6
+   },
+   "nis_mean": {
+    "naive": 6.1949876370633,
+    "scale_aware": 7.354208267235551
+   },
+   "converged": true
+  },
+  {
+   "video": "48018379",
+   "source": "lidar",
+   "n_measurements": 26,
+   "n_objects": 10,
+   "n_evaluated": 7,
+   "log_scale": -0.07888077204463725,
+   "log_scale_sd": 0.028749804621128968,
+   "gt_median_log_depth_ratio": -0.05531526376031464,
+   "rejected": {
+    "naive": 6,
+    "scale_aware": 5
+   },
+   "nis_mean": {
+    "naive": 7.714349050830865,
+    "scale_aware": 8.658916196268523
+   },
+   "converged": true
+  },
+  {
+   "video": "48018379",
+   "source": "moge",
+   "n_measurements": 26,
+   "n_objects": 10,
+   "n_evaluated": 7,
+   "log_scale": -0.08427941440419488,
+   "log_scale_sd": 0.035945054805149625,
+   "gt_median_log_depth_ratio": -0.03344913640304963,
+   "rejected": {
+    "naive": 6,
+    "scale_aware": 5
+   },
+   "nis_mean": {
+    "naive": 6.658607131658273,
+    "scale_aware": 7.42736809914709
+   },
+   "converged": true
+  },
+  {
+   "video": "48018559",
+   "source": "laser",
+   "n_measurements": 19,
+   "n_objects": 9,
+   "n_evaluated": 6,
+   "log_scale": 0.0122349598278257,
+   "log_scale_sd": 0.030850964803761306,
+   "gt_median_log_depth_ratio": -0.04029900774565877,
+   "rejected": {
+    "naive": 5,
+    "scale_aware": 5
+   },
+   "nis_mean": {
+    "naive": 2.020503483530675,
+    "scale_aware": 2.0914025816414714
+   },
+   "converged": true
+  },
+  {
+   "video": "48018559",
+   "source": "lidar",
+   "n_measurements": 19,
+   "n_objects": 9,
+   "n_evaluated": 6,
+   "log_scale": 0.030735854909213274,
+   "log_scale_sd": 0.03295747526361866,
+   "gt_median_log_depth_ratio": -0.046267031813529216,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 3.365798677216796,
+    "scale_aware": 3.2939649226853875
+   },
+   "converged": true
+  },
+  {
+   "video": "48018559",
+   "source": "moge",
+   "n_measurements": 19,
+   "n_objects": 9,
+   "n_evaluated": 6,
+   "log_scale": -0.005709550546909892,
+   "log_scale_sd": 0.046851577838436666,
+   "gt_median_log_depth_ratio": -0.08873365991815246,
+   "rejected": {
+    "naive": 4,
+    "scale_aware": 4
+   },
+   "nis_mean": {
+    "naive": 1.9268307325536729,
+    "scale_aware": 1.9553739014816682
+   },
+   "converged": true
+  },
+  {
+   "video": "48018566",
+   "source": "laser",
+   "n_measurements": 6,
+   "n_objects": 3,
+   "n_evaluated": 2,
+   "log_scale": 0.023513321515218264,
+   "log_scale_sd": 0.03413768439379937,
+   "gt_median_log_depth_ratio": -0.013357193727039344,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 5.210265435430986,
+    "scale_aware": 5.03418039842332
+   },
+   "converged": true
+  },
+  {
+   "video": "48018566",
+   "source": "lidar",
+   "n_measurements": 6,
+   "n_objects": 3,
+   "n_evaluated": 2,
+   "log_scale": 0.048520717638165047,
+   "log_scale_sd": 0.036951757807618765,
+   "gt_median_log_depth_ratio": -0.010512777938037562,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 6.980636852462345,
+    "scale_aware": 6.180506527280845
+   },
+   "converged": true
+  },
+  {
+   "video": "48018566",
+   "source": "moge",
+   "n_measurements": 6,
+   "n_objects": 3,
+   "n_evaluated": 2,
+   "log_scale": -0.05454309784519942,
+   "log_scale_sd": 0.04264474824725818,
+   "gt_median_log_depth_ratio": -0.036668118965797296,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 8.994197216295346,
+    "scale_aware": 8.996184240461057
+   },
+   "converged": true
+  },
+  {
+   "video": "48018730",
+   "source": "laser",
+   "n_measurements": 52,
+   "n_objects": 11,
+   "n_evaluated": 10,
+   "log_scale": -0.09443082282456518,
+   "log_scale_sd": 0.015910691924002105,
+   "gt_median_log_depth_ratio": -0.03541932636479753,
+   "rejected": {
+    "naive": 19,
+    "scale_aware": 13
+   },
+   "nis_mean": {
+    "naive": 5.8804253218625195,
+    "scale_aware": 9.058466083185165
+   },
+   "converged": true
+  },
+  {
+   "video": "48018730",
+   "source": "lidar",
+   "n_measurements": 52,
+   "n_objects": 11,
+   "n_evaluated": 10,
+   "log_scale": -0.11514499546042081,
+   "log_scale_sd": 0.018258714405495768,
+   "gt_median_log_depth_ratio": -0.04524021580470169,
+   "rejected": {
+    "naive": 14,
+    "scale_aware": 11
+   },
+   "nis_mean": {
+    "naive": 7.57866012319865,
+    "scale_aware": 8.150335468527231
+   },
+   "converged": true
+  },
+  {
+   "video": "48018730",
+   "source": "moge",
+   "n_measurements": 52,
+   "n_objects": 11,
+   "n_evaluated": 10,
+   "log_scale": -0.1323546494919871,
+   "log_scale_sd": 0.02219641807370258,
+   "gt_median_log_depth_ratio": -0.041962183789564705,
+   "rejected": {
+    "naive": 12,
+    "scale_aware": 11
+   },
+   "nis_mean": {
+    "naive": 7.9782131717440565,
+    "scale_aware": 7.060272054178791
+   },
+   "converged": true
+  },
+  {
+   "video": "48018737",
+   "source": "laser",
+   "n_measurements": 12,
+   "n_objects": 3,
+   "n_evaluated": 3,
+   "log_scale": 0.027892151278976263,
+   "log_scale_sd": 0.06650509786230402,
+   "gt_median_log_depth_ratio": -0.05689290685246681,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 3.719420288181331,
+    "scale_aware": 3.720296342436569
+   },
+   "converged": true
+  },
+  {
+   "video": "48018737",
+   "source": "lidar",
+   "n_measurements": 12,
+   "n_objects": 3,
+   "n_evaluated": 3,
+   "log_scale": 0.0038693192291834756,
+   "log_scale_sd": 0.07776509192105413,
+   "gt_median_log_depth_ratio": -0.0769358980548705,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 3.264708445857442,
+    "scale_aware": 3.288918855132921
+   },
+   "converged": true
+  },
+  {
+   "video": "48018737",
+   "source": "moge",
+   "n_measurements": 12,
+   "n_objects": 3,
+   "n_evaluated": 3,
+   "log_scale": 0.022177884413709336,
+   "log_scale_sd": 0.07452139616141985,
+   "gt_median_log_depth_ratio": -0.05181539157666431,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 5.485434614223416,
+    "scale_aware": 5.498495118326215
+   },
+   "converged": true
+  },
+  {
+   "video": "48458481",
+   "source": "laser",
+   "n_measurements": 10,
+   "n_objects": 3,
+   "n_evaluated": 3,
+   "log_scale": 0.02059785604870907,
+   "log_scale_sd": 0.042224838566437245,
+   "gt_median_log_depth_ratio": -0.04624679749054865,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 5.739780691232829,
+    "scale_aware": 5.842428267234955
+   },
+   "converged": true
+  },
+  {
+   "video": "48458481",
+   "source": "lidar",
+   "n_measurements": 10,
+   "n_objects": 3,
+   "n_evaluated": 3,
+   "log_scale": 0.0018609451530091157,
+   "log_scale_sd": 0.047706602008751244,
+   "gt_median_log_depth_ratio": -0.06326979422233991,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 5.919469701636514,
+    "scale_aware": 6.035675262775007
+   },
+   "converged": true
+  },
+  {
+   "video": "48458481",
+   "source": "moge",
+   "n_measurements": 10,
+   "n_objects": 3,
+   "n_evaluated": 3,
+   "log_scale": 0.031176575300199644,
+   "log_scale_sd": 0.05541346807985499,
+   "gt_median_log_depth_ratio": -0.006164545871599576,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 4.432062281233627,
+    "scale_aware": 4.431813524944545
+   },
+   "converged": true
+  },
+  {
+   "video": "48458656",
+   "source": "laser",
+   "n_measurements": 20,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": -0.024961205847463915,
+   "log_scale_sd": 0.03067064986575162,
+   "gt_median_log_depth_ratio": 0.008976049683411327,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 3.90970832394073,
+    "scale_aware": 3.8698810737138327
+   },
+   "converged": true
+  },
+  {
+   "video": "48458656",
+   "source": "lidar",
+   "n_measurements": 20,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": -0.02754587679024132,
+   "log_scale_sd": 0.03473046484620331,
+   "gt_median_log_depth_ratio": -0.0052167774392030495,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 4.0580897842920844,
+    "scale_aware": 4.0345817481863575
+   },
+   "converged": true
+  },
+  {
+   "video": "48458656",
+   "source": "moge",
+   "n_measurements": 20,
+   "n_objects": 5,
+   "n_evaluated": 5,
+   "log_scale": -0.0449052833773453,
+   "log_scale_sd": 0.043262229675880545,
+   "gt_median_log_depth_ratio": -0.01622519611580682,
+   "rejected": {
+    "naive": 2,
+    "scale_aware": 2
+   },
+   "nis_mean": {
+    "naive": 3.653424637313267,
+    "scale_aware": 3.5692769075171946
+   },
+   "converged": true
+  },
+  {
+   "video": "48458660",
+   "source": "laser",
+   "n_measurements": 10,
+   "n_objects": 6,
+   "n_evaluated": 4,
+   "log_scale": -0.030784307170910984,
+   "log_scale_sd": 0.05084198830459,
+   "gt_median_log_depth_ratio": -0.13833509710072417,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 1
+   },
+   "nis_mean": {
+    "naive": 8.856010035980791,
+    "scale_aware": 8.721320817255842
+   },
+   "converged": true
+  },
+  {
+   "video": "48458660",
+   "source": "lidar",
+   "n_measurements": 10,
+   "n_objects": 6,
+   "n_evaluated": 4,
+   "log_scale": 0.04318992072627856,
+   "log_scale_sd": 0.04671694256872349,
+   "gt_median_log_depth_ratio": -0.15486647063188044,
+   "rejected": {
+    "naive": 1,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 7.96733361930822,
+    "scale_aware": 11.59701159759431
+   },
+   "converged": true
+  },
+  {
+   "video": "48458660",
+   "source": "moge",
+   "n_measurements": 10,
+   "n_objects": 6,
+   "n_evaluated": 4,
+   "log_scale": 0.018798101468658922,
+   "log_scale_sd": 0.054240628317453264,
+   "gt_median_log_depth_ratio": -0.11114650023226497,
+   "rejected": {
+    "naive": 0,
+    "scale_aware": 0
+   },
+   "nis_mean": {
+    "naive": 12.506878912375313,
+    "scale_aware": 12.919964185307272
+   },
+   "converged": true
+  }
+ ],
+ "paired_along_ray_difference_m": {
+  "laser-lidar": {
+   "n": 2475,
+   "median": 0.013131234613058873,
+   "mean": 0.008308031795893706
+  },
+  "laser-moge": {
+   "n": 2475,
+   "median": 0.00797401199332265,
+   "mean": 0.016130988109132147
+  },
+  "lidar-moge": {
+   "n": 2475,
+   "median": -0.0022562403865608593,
+   "mean": 0.007822956313238445
+  }
+ },
+ "source_log_scale_differences": {
+  "laser-lidar": {
+   "by_video": {
+    "41069021": 0.07267575194157819,
+    "41069042": 0.10842110057934609,
+    "41069048": -0.0043880079155416,
+    "41142278": 0.01632695461243963,
+    "42444946": 0.005646183367888025,
+    "42444966": 0.02288041540563296,
+    "42445021": -0.06733721350892402,
+    "42445028": -0.04537801428625099,
+    "42445429": -0.0028791849363495256,
+    "42445991": -0.0783613917648749,
+    "42446038": 0.04310552753930627,
+    "42446100": 0.005136991438093236,
+    "42446156": 0.024827549208582086,
+    "42446163": 0.010127467980097685,
+    "42446517": 0.07931297474427132,
+    "42446527": -0.014584310066113345,
+    "42446533": 0.0033546637193725692,
+    "42446540": 0.03083619706005533,
+    "42897501": 0.013100353689125512,
+    "42897521": -0.006387929805496476,
+    "42897541": -0.0030519637246199487,
+    "42897545": 0.0035739568981954795,
+    "42897552": -1.6639044647321806e-30,
+    "42897561": -0.049442022869487755,
+    "42897599": 0.03709816586674139,
+    "42897647": 0.007035868678922129,
+    "42897688": 0.04753005585852901,
+    "42898811": 0.027773741937167952,
+    "42898818": -0.001862777419462832,
+    "42898849": 0.03162454192376854,
+    "42899461": 0.01705862531981007,
+    "42899611": -0.0461499505594158,
+    "42899619": 0.0022204787021093287,
+    "44358442": -0.008411033046798175,
+    "44358451": 0.006245406602908218,
+    "45260854": 0.08520853885026809,
+    "45260898": -0.03364703683533657,
+    "45260920": -0.0006395331865486041,
+    "45261121": -0.008657071014923641,
+    "45261133": 0.01705870775157456,
+    "45261143": 0.0016437904983493123,
+    "45261179": 0.030830994306009787,
+    "45261575": 0.019434339775894025,
+    "45261588": 0.007725381460655656,
+    "45261615": 0.014371795548849653,
+    "45261631": -0.07661512607997423,
+    "45662921": 0.019443342987576075,
+    "45662942": 0.020483685676761988,
+    "45662970": 0.013332489153873125,
+    "45662981": -0.040999233659149814,
+    "45663113": 0.023047469151609642,
+    "45663149": 0.03612665713852117,
+    "45663164": 0.011260055117201233,
+    "47115452": 0.07665519238170951,
+    "47115469": 0.06560595093530643,
+    "47204552": -0.008772056007814132,
+    "47204559": 0.021804574051248055,
+    "47204573": -0.032021410443694276,
+    "47204605": 0.025809514027204005,
+    "47331068": 0.02484541743180417,
+    "47331262": 0.031401255857704466,
+    "47331319": 0.053419804101972335,
+    "47331336": -1.973706789193628e-31,
+    "47331651": 0.013470052224532153,
+    "47331661": -0.023429201198818146,
+    "47331988": 0.08852135530394335,
+    "47332000": 0.014246666889701831,
+    "47332885": 0.01465391937964073,
+    "47332893": -0.007050010257796122,
+    "47332901": -0.013254778092585935,
+    "47332908": -0.001964916568968772,
+    "47332915": 0.0005086011599324258,
+    "47333440": -0.007250519726587509,
+    "47333452": -0.0077495117037571885,
+    "47333898": 0.006925236070670748,
+    "47333916": -0.02323155877506701,
+    "47333923": -0.02191820201851541,
+    "47333927": -0.04149863008916066,
+    "47333934": -0.005099621452737568,
+    "47334105": 0.02139602688762185,
+    "47334239": 0.003698239881843002,
+    "47334256": -0.01820172129054652,
+    "47429912": -1.2339537072063602e-31,
+    "47429922": -0.02924763429147878,
+    "47429971": 0.00612141717975212,
+    "47429992": -0.030514098476640036,
+    "47429998": 0.010714851923315973,
+    "47430003": -0.00014701360485043285,
+    "47430023": 0.020355189649464922,
+    "47430033": -4.4646358199582405e-31,
+    "47430038": 0.01089443034986956,
+    "47430047": 2.999614159535006e-32,
+    "47895341": -0.04335476251213741,
+    "47895355": 0.016103343168333964,
+    "47895364": 0.02762757393523302,
+    "47895552": -0.007174940282800327,
+    "47895779": -3.217218941864548e-32,
+    "48018367": 0.014901020238345934,
+    "48018379": 0.010129682258073147,
+    "48018559": -0.018500895081387574,
+    "48018566": -0.025007396122946782,
+    "48018730": 0.020714172635855635,
+    "48018737": 0.02402283204979279,
+    "48458481": 0.018736910895699954,
+    "48458656": 0.0025846709427774055,
+    "48458660": -0.07397422789718955
+   },
+   "median": 0.005883800273820072,
+   "mean": 0.005977294487997042
+  },
+  "laser-moge": {
+   "by_video": {
+    "41069021": 0.0923941965648261,
+    "41069042": 0.037878959956100966,
+    "41069048": 0.008856491857966942,
+    "41142278": 0.0027719659411958864,
+    "42444946": 0.07785430072602537,
+    "42444966": 0.012569953661506789,
+    "42445021": -0.033847659334820354,
+    "42445028": -0.013522893470098468,
+    "42445429": 0.01451519990912871,
+    "42445991": -0.018087957148612544,
+    "42446038": -0.017706093802754827,
+    "42446100": 0.025607416290348,
+    "42446156": 0.07674694771268377,
+    "42446163": 0.08297585120282244,
+    "42446517": 0.11978365040122672,
+    "42446527": 0.034430304732684894,
+    "42446533": 0.033360814756007516,
+    "42446540": 0.016941821977396285,
+    "42897501": 0.09422347733737195,
+    "42897521": -0.015058920875071824,
+    "42897541": 0.008651962433118242,
+    "42897545": 0.00796821230640744,
+    "42897552": -6.2528517245704635e-31,
+    "42897561": 0.04078501474185517,
+    "42897599": 0.0599230531561567,
+    "42897647": 0.13296799274940196,
+    "42897688": 0.08354582545585967,
+    "42898811": 0.011734320561520857,
+    "42898818": 0.011061480412768492,
+    "42898849": 0.03649189898803887,
+    "42899461": 0.13991825259853286,
+    "42899611": -0.024205864745388956,
+    "42899619": -0.000825524683503406,
+    "44358442": 0.1510117802016529,
+    "44358451": 0.05189330192001347,
+    "45260854": 0.12943632810411307,
+    "45260898": -0.09956886222478631,
+    "45260920": 0.0439438686755811,
+    "45261121": 0.017810750611329338,
+    "45261133": 0.07923124524492293,
+    "45261143": 0.08291687815439683,
+    "45261179": 0.026883532539813723,
+    "45261575": 0.031603958968463165,
+    "45261588": -0.016407645808356908,
+    "45261615": 0.06634989777405724,
+    "45261631": -0.07016124023045045,
+    "45662921": 0.02351119038572194,
+    "45662942": 0.005495138890452833,
+    "45662970": 0.12346685334200169,
+    "45662981": 0.06561081108036942,
+    "45663113": 0.005228248903708602,
+    "45663149": 0.06671072169397702,
+    "45663164": 0.043137308315556275,
+    "47115452": -0.0460469584444155,
+    "47115469": 0.09793436949374534,
+    "47204552": 0.014435349723638177,
+    "47204559": 0.08137663649329033,
+    "47204573": 0.020076051761912857,
+    "47204605": 0.024462338867857467,
+    "47331068": 0.031442917379315136,
+    "47331262": 0.04499084319180295,
+    "47331319": 0.08440110410903384,
+    "47331336": -2.0283526222399253e-31,
+    "47331651": 0.015675338668632383,
+    "47331661": 0.056085512081984215,
+    "47331988": 0.0559766909375435,
+    "47332000": -0.0013092906570999624,
+    "47332885": 0.10472318885052814,
+    "47332893": 0.0877650818975319,
+    "47332901": 0.045603619894846216,
+    "47332908": 0.06114914772089447,
+    "47332915": 0.09839769780395376,
+    "47333440": -0.03237705562360194,
+    "47333452": 0.09474092205580131,
+    "47333898": -0.019959195044989705,
+    "47333916": -0.018905525969478726,
+    "47333923": -0.026596352175844107,
+    "47333927": 0.05144458794449737,
+    "47333934": 0.014130112116229263,
+    "47334105": 0.046886252367394216,
+    "47334239": -0.00648069978700294,
+    "47334256": 0.006039692183801654,
+    "47429912": -4.284028646473374e-32,
+    "47429922": -0.046477153316961464,
+    "47429971": 0.0798517724817675,
+    "47429992": 0.04564731434998595,
+    "47429998": 0.013858210595614245,
+    "47430003": -0.006837918050616088,
+    "47430023": -0.020882182973602337,
+    "47430033": -7.0810406940714565e-31,
+    "47430038": 0.0028909435336739175,
+    "47430047": 3.9000367860449076e-32,
+    "47895341": 0.013962699551764227,
+    "47895355": 0.11375017097126792,
+    "47895364": 0.09033138240187219,
+    "47895552": 0.05400220984762771,
+    "47895779": 2.1992289089969483e-32,
+    "48018367": 0.06601670570520476,
+    "48018379": 0.015528324617630776,
+    "48018559": 0.017944510374735594,
+    "48018566": 0.07805641936041768,
+    "48018730": 0.03792382666742193,
+    "48018737": 0.005714266865266927,
+    "48458481": -0.010578719251490575,
+    "48458656": 0.019944077529881383,
+    "48458660": -0.049582408639569905
+   },
+   "median": 0.023986764626789704,
+   "mean": 0.032791842918650324
+  },
+  "lidar-moge": {
+   "by_video": {
+    "41069021": 0.019718444623247913,
+    "41069042": -0.07054214062324513,
+    "41069048": 0.013244499773508542,
+    "41142278": -0.013554988671243745,
+    "42444946": 0.07220811735813734,
+    "42444966": -0.01031046174412617,
+    "42445021": 0.03348955417410366,
+    "42445028": 0.03185512081615252,
+    "42445429": 0.017394384845478235,
+    "42445991": 0.06027343461626236,
+    "42446038": -0.0608116213420611,
+    "42446100": 0.020470424852254764,
+    "42446156": 0.05191939850410169,
+    "42446163": 0.07284838322272474,
+    "42446517": 0.040470675656955404,
+    "42446527": 0.04901461479879824,
+    "42446533": 0.030006151036634947,
+    "42446540": -0.013894375082659047,
+    "42897501": 0.08112312364824643,
+    "42897521": -0.008670991069575348,
+    "42897541": 0.01170392615773819,
+    "42897545": 0.0043942554082119605,
+    "42897552": 1.0386192922751344e-30,
+    "42897561": 0.09022703761134292,
+    "42897599": 0.022824887289415313,
+    "42897647": 0.12593212407047982,
+    "42897688": 0.03601576959733066,
+    "42898811": -0.016039421375647095,
+    "42898818": 0.012924257832231324,
+    "42898849": 0.004867357064270328,
+    "42899461": 0.1228596272787228,
+    "42899611": 0.02194408581402684,
+    "42899619": -0.0030460033856127347,
+    "44358442": 0.1594228132484511,
+    "44358451": 0.04564789531710525,
+    "45260854": 0.044227789253844976,
+    "45260898": -0.06592182538944974,
+    "45260920": 0.04458340186212971,
+    "45261121": 0.02646782162625298,
+    "45261133": 0.062172537493348376,
+    "45261143": 0.08127308765604752,
+    "45261179": -0.003947461766196064,
+    "45261575": 0.012169619192569142,
+    "45261588": -0.024133027269012564,
+    "45261615": 0.05197810222520759,
+    "45261631": 0.006453885849523777,
+    "45662921": 0.004067847398145863,
+    "45662942": -0.014988546786309155,
+    "45662970": 0.11013436418812855,
+    "45662981": 0.10661004473951924,
+    "45663113": -0.01781922024790104,
+    "45663149": 0.030584064555455846,
+    "45663164": 0.03187725319835504,
+    "47115452": -0.12270215082612501,
+    "47115469": 0.03232841855843892,
+    "47204552": 0.02320740573145231,
+    "47204559": 0.05957206244204227,
+    "47204573": 0.05209746220560713,
+    "47204605": -0.0013471751593465394,
+    "47331068": 0.006597499947510963,
+    "47331262": 0.013589587334098485,
+    "47331319": 0.030981300007061507,
+    "47331336": -5.4645833046297665e-33,
+    "47331651": 0.0022052864441002296,
+    "47331661": 0.07951471328080237,
+    "47331988": -0.032544664366399856,
+    "47332000": -0.015555957546801794,
+    "47332885": 0.09006926947088742,
+    "47332893": 0.09481509215532802,
+    "47332901": 0.05885839798743216,
+    "47332908": 0.06311406428986324,
+    "47332915": 0.09788909664402133,
+    "47333440": -0.025126535897014433,
+    "47333452": 0.1024904337595585,
+    "47333898": -0.026884431115660454,
+    "47333916": 0.004326032805588284,
+    "47333923": -0.004678150157328698,
+    "47333927": 0.09294321803365803,
+    "47333934": 0.01922973356896683,
+    "47334105": 0.025490225479772366,
+    "47334239": -0.010178939668845942,
+    "47334256": 0.024241413474348175,
+    "47429912": 8.055508425590228e-32,
+    "47429922": -0.017229519025482684,
+    "47429971": 0.07373035530201538,
+    "47429992": 0.07616141282662599,
+    "47429998": 0.0031433586722982715,
+    "47430003": -0.0066909044457656545,
+    "47430023": -0.04123737262306726,
+    "47430033": -2.616404874113216e-31,
+    "47430038": -0.008003486816195643,
+    "47430047": 9.004226265099018e-33,
+    "47895341": 0.057317462063901634,
+    "47895355": 0.09764682780293396,
+    "47895364": 0.06270380846663917,
+    "47895552": 0.06117715013042803,
+    "47895779": 5.416447850861496e-32,
+    "48018367": 0.05111568546685883,
+    "48018379": 0.005398642359557629,
+    "48018559": 0.03644540545612317,
+    "48018566": 0.10306381548336446,
+    "48018730": 0.017209654031566296,
+    "48018737": -0.01830856518452586,
+    "48458481": -0.02931563014719053,
+    "48458656": 0.017359406587103977,
+    "48458660": 0.024391819257619636
+   },
+   "median": 0.0212072553331408,
+   "mean": 0.026814548430653284
+  }
+ },
+ "noise_models": {
+  "laser": {
+   "constants": {
+    "lateral_a": 0.12508685415586684,
+    "lateral_b": 0.00010000000000000009,
+    "ray_a": 0.06916276557167934,
+    "ray_b": 0.00010000000000000009,
+    "size_a": 0.00402949261625377,
+    "size_boundary": 0.2987871089508942,
+    "size_border": 0.1585534393592354,
+    "yaw_sigma": 0.19031454706525347
+   },
+   "units": {
+    "lateral_a": "m",
+    "lateral_b": "m/m",
+    "ray_a": "m",
+    "ray_b": "m/m",
+    "size_a": "m",
+    "size_boundary": "m",
+    "size_border": "m",
+    "yaw_sigma": "rad"
+   },
+   "rounds": 16,
+   "converged": true,
+   "n_measurements": 1797,
+   "n_objects": 570,
+   "n_rejected": 617,
+   "fit": "REML on frame-to-frame scatter; no ground-truth geometry; objects grouped by matched id"
+  },
+  "lidar": {
+   "constants": {
+    "lateral_a": 0.13997251515227238,
+    "lateral_b": 0.00010000000000000009,
+    "ray_a": 0.0808514505929031,
+    "ray_b": 0.00010000366915736426,
+    "size_a": 0.03033385602301204,
+    "size_boundary": 0.3348427036708957,
+    "size_border": 0.14125219572871262,
+    "yaw_sigma": 0.22245925921204746
+   },
+   "units": {
+    "lateral_a": "m",
+    "lateral_b": "m/m",
+    "ray_a": "m",
+    "ray_b": "m/m",
+    "size_a": "m",
+    "size_boundary": "m",
+    "size_border": "m",
+    "yaw_sigma": "rad"
+   },
+   "rounds": 13,
+   "converged": true,
+   "n_measurements": 1924,
+   "n_objects": 593,
+   "n_rejected": 513,
+   "fit": "REML on frame-to-frame scatter; no ground-truth geometry; objects grouped by matched id"
+  },
+  "moge": {
+   "constants": {
+    "lateral_a": 0.1441620221428389,
+    "lateral_b": 0.00010000000000000009,
+    "ray_a": 0.059675214616595175,
+    "ray_b": 0.031238123766565866,
+    "size_a": 0.04487849492530078,
+    "size_boundary": 0.12632829696333342,
+    "size_border": 0.13923065663571824,
+    "yaw_sigma": 0.19274259061365367
+   },
+   "units": {
+    "lateral_a": "m",
+    "lateral_b": "m/m",
+    "ray_a": "m",
+    "ray_b": "m/m",
+    "size_a": "m",
+    "size_boundary": "m",
+    "size_border": "m",
+    "yaw_sigma": "rad"
+   },
+   "rounds": 19,
+   "converged": true,
+   "n_measurements": 1970,
+   "n_objects": 597,
+   "n_rejected": 471,
+   "fit": "REML on frame-to-frame scatter; no ground-truth geometry; objects grouped by matched id"
+  }
+ },
+ "config": {
+  "scale_prior_sigma": 0.1,
+  "gate_prob": 0.997,
+  "min_frames": 2,
+  "labels_dir": "arkitscenes",
+  "detection_counts": {
+   "rows": 16782,
+   "matched": 8144,
+   "false_positive": 8536,
+   "unboxed": 102,
+   "duplicate_matches": 0
+  },
+  "exclude_ambiguous": {
+   "enabled": false
+  }
+ },
+ "runtime_s": 14.55
+}

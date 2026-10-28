@@ -1,0 +1,13 @@
+dataset,qtype,baseline,n,n_scenes,d_nll,d_lo,d_hi
+smartspaces,distance_center,const,3803,12,0.247292,0.174608,0.335961
+smartspaces,distance_center,prop,3803,12,0.360431,0.309368,0.41562
+smartspaces,distance_surface,const,3820,12,0.1931,0.121906,0.271978
+smartspaces,distance_surface,prop,3820,12,0.472947,0.398319,0.550151
+smartspaces,ego_distance,const,4049,12,0.143021,0.0709717,0.210057
+smartspaces,ego_distance,prop,4049,12,0.464413,0.239985,0.681199
+smartspaces,size_height,const,4034,12,0.0911417,0.0387421,0.136995
+smartspaces,size_height,prop,4034,12,0.163304,0.119648,0.211135
+smartspaces,size_longest,const,4050,12,0.28943,0.231763,0.35175
+smartspaces,size_longest,prop,4050,12,0.343124,0.266024,0.422048
+smartspaces,all,const,19756,12,0.192197,0.150945,0.232751
+smartspaces,all,prop,19756,12,0.359699,0.316633,0.403592

@@ -1,0 +1,113 @@
+{
+ "config": {
+  "levels": [
+   0.5,
+   0.8,
+   0.9,
+   0.95
+  ],
+  "ridge_grid": [
+   1.0,
+   10.0,
+   100.0,
+   1000.0,
+   10000.0,
+   100000.0
+  ],
+  "n_jobs": 6,
+  "gross": true,
+  "s0": 0.005,
+  "mondrian": [
+   "qtype",
+   "depth_source"
+  ],
+  "min_cal": 20,
+  "gate_level": 0.9,
+  "epsilon": 0.1,
+  "delta": 0.1,
+  "kappa": 3.0,
+  "min_accept": 30,
+  "min_accept_frac": 0.05,
+  "tau_scales": [
+   1.0,
+   2.0
+  ],
+  "n_bins": 10,
+  "min_scenes": 3,
+  "min_rows": 20,
+  "max_folds": 20,
+  "seed": 0,
+  "n_boot": 2000
+ },
+ "gate_z": 1.6448536269514722,
+ "datasets": [
+  "arkitscenes"
+ ],
+ "n_rows": 3505,
+ "n_labelled": 2850,
+ "inputs": {
+  "arkitscenes": {
+   "qa_auto_cutr_clip.jsonl": {
+    "bytes": 5065649,
+    "sha256": "5acd0d81fd7648762bd3fc1e12f21704741556d7e5ef4080e4ae1c74568a7a36"
+   },
+   "qa_oracle.jsonl": {
+    "bytes": 4086905,
+    "sha256": "f308e4346c7627a3b93af0e3897d5a4badde6d7b08aff9f674e64bbde673c6b3"
+   },
+   "n_auto_only": {
+    "cutr_clip": 0
+   }
+  }
+ },
+ "exclude_ambiguous": {
+  "enabled": false
+ },
+ "cross_fit": {
+  "max_folds": 20,
+  "seed": 0,
+  "rule": "a dataset and question type with at most max_folds scenes is cross-fitted leave one scene out (calibration: leave two out); with more, its scenes are grouped into max_folds folds balanced by row count and the same scheme runs on folds (calibration scores for a test scene come from scenes outside its fold, predicted without both folds)",
+  "grouped": {
+   "arkitscenes/count": {
+    "n_scenes": 101,
+    "n_folds": 20
+   },
+   "arkitscenes/distance_center": {
+    "n_scenes": 42,
+    "n_folds": 20
+   },
+   "arkitscenes/ego_distance": {
+    "n_scenes": 99,
+    "n_folds": 20
+   },
+   "arkitscenes/left_right": {
+    "n_scenes": 27,
+    "n_folds": 20
+   },
+   "arkitscenes/relative_depth": {
+    "n_scenes": 30,
+    "n_folds": 20
+   },
+   "arkitscenes/size_height": {
+    "n_scenes": 99,
+    "n_folds": 20
+   },
+   "arkitscenes/size_longest": {
+    "n_scenes": 99,
+    "n_folds": 20
+   }
+  }
+ },
+ "notes": [
+  "arkitscenes/closest_instance: skipped (1 labelled rows, 1 scenes)",
+  "arkitscenes/count: 101 scenes cross-fitted in 20 folds of 4-6 scenes and 38-39 rows (table folds)",
+  "arkitscenes/distance_center: 42 scenes cross-fitted in 20 folds of 1-4 scenes and 4-15 rows (table folds)",
+  "arkitscenes/ego_distance: 99 scenes cross-fitted in 20 folds of 1-6 scenes and 29-34 rows (table folds)",
+  "arkitscenes/left_right: 27 scenes cross-fitted in 20 folds of 1-2 scenes and 2-8 rows (table folds)",
+  "arkitscenes/relative_depth: 30 scenes cross-fitted in 20 folds of 1-2 scenes and 2-10 rows (table folds)",
+  "arkitscenes/size_height: 99 scenes cross-fitted in 20 folds of 1-6 scenes and 30-34 rows (table folds)",
+  "arkitscenes/size_longest: 99 scenes cross-fitted in 20 folds of 1-6 scenes and 30-34 rows (table folds)"
+ ],
+ "git_commit": "736e56bf38762ee6e630db3ecae05ec2b4cd51af+dirty",
+ "seconds": 411.1
+}

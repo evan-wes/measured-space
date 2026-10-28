@@ -1,0 +1,16 @@
+dataset,qtype,kind,n,wrong_raw,wrong_corrected,mae_raw,mae_corrected
+arkitscenes,distance_center,const,32,0.125,0.125,0.0594883,0.0609698
+arkitscenes,distance_center,prop,32,0.125,0.125,0.0594883,0.0623066
+arkitscenes,distance_center,sigma,32,0.125,0.125,0.0594883,0.0611954
+arkitscenes,ego_distance,const,279,0.046595,0.0430108,0.0470503,0.0431399
+arkitscenes,ego_distance,prop,279,0.046595,0.0430108,0.0470503,0.0459511
+arkitscenes,ego_distance,sigma,279,0.046595,0.0430108,0.0470503,0.0440709
+arkitscenes,size_height,const,281,0.281139,0.238434,0.078528,0.0751446
+arkitscenes,size_height,prop,281,0.281139,0.217082,0.078528,0.073556
+arkitscenes,size_height,sigma,281,0.281139,0.224199,0.078528,0.0729345
+arkitscenes,size_longest,const,279,0.322581,0.318996,0.114314,0.112994
+arkitscenes,size_longest,prop,279,0.322581,0.318996,0.114314,0.11279
+arkitscenes,size_longest,sigma,279,0.322581,0.322581,0.114314,0.112882
+arkitscenes,all,const,871,0.213548,0.197474,0.0792084,0.0764959
+arkitscenes,all,prop,871,0.213548,0.190586,0.0792084,0.0768677
+arkitscenes,all,sigma,871,0.213548,0.19403,0.0792084,0.0760537
