@@ -1,0 +1,58 @@
+dataset,depth_source,phrase,label,n_pairs,share_of_pairs
+arkitscenes,laser,cabinet,shelf,19,0.0785
+arkitscenes,laser,chair,table,6,0.0248
+arkitscenes,laser,table,chair,4,0.0165
+arkitscenes,laser,table,shelf,3,0.0124
+arkitscenes,laser,bed,sofa,2,0.0083
+arkitscenes,laser,bed,table,2,0.0083
+arkitscenes,laser,stove,oven,2,0.0083
+arkitscenes,laser,stool,sofa,1,0.0041
+arkitscenes,laser,stool,chair,1,0.0041
+arkitscenes,laser,table,cabinet,1,0.0041
+arkitscenes,laser,bed,cabinet,1,0.0041
+arkitscenes,laser,stool,table,1,0.0041
+arkitscenes,laser,sofa,table,1,0.0041
+arkitscenes,laser,chair,sofa,1,0.0041
+arkitscenes,lidar,cabinet,shelf,19,0.0785
+arkitscenes,lidar,chair,table,6,0.0248
+arkitscenes,lidar,table,chair,4,0.0165
+arkitscenes,lidar,table,shelf,3,0.0124
+arkitscenes,lidar,bed,sofa,2,0.0083
+arkitscenes,lidar,bed,table,2,0.0083
+arkitscenes,lidar,stove,oven,2,0.0083
+arkitscenes,lidar,stool,sofa,1,0.0041
+arkitscenes,lidar,stool,chair,1,0.0041
+arkitscenes,lidar,table,cabinet,1,0.0041
+arkitscenes,lidar,bed,cabinet,1,0.0041
+arkitscenes,lidar,stool,table,1,0.0041
+arkitscenes,lidar,sofa,table,1,0.0041
+arkitscenes,lidar,chair,sofa,1,0.0041
+arkitscenes,moge,cabinet,shelf,19,0.0785
+arkitscenes,moge,chair,table,6,0.0248
+arkitscenes,moge,table,chair,4,0.0165
+arkitscenes,moge,table,shelf,3,0.0124
+arkitscenes,moge,bed,sofa,2,0.0083
+arkitscenes,moge,bed,table,2,0.0083
+arkitscenes,moge,stove,oven,2,0.0083
+arkitscenes,moge,stool,sofa,1,0.0041
+arkitscenes,moge,stool,chair,1,0.0041
+arkitscenes,moge,table,cabinet,1,0.0041
+arkitscenes,moge,bed,cabinet,1,0.0041
+arkitscenes,moge,stool,table,1,0.0041
+arkitscenes,moge,sofa,table,1,0.0041
+arkitscenes,moge,chair,sofa,1,0.0041
+smartspaces,gt_depth,pallet jack,Forklift,322,0.2909
+smartspaces,moge,pallet jack,Forklift,606,0.0556
+smartspaces,moge,pallet jack,Transporter,280,0.0257
+smartspaces,moge,person,AgilityDigit,108,0.0099
+smartspaces,moge,person,FourierGR1T2,83,0.0076
+smartspaces,moge,forklift,PalletTruck,41,0.0038
+smartspaces,moge,pallet jack,AgilityDigit,20,0.0018
+smartspaces,moge,person,NovaCarter,7,0.0006
+smartspaces,moge,humanoid robot,NovaCarter,4,0.0004
+smartspaces,moge,person,Forklift,2,0.0002
+smartspaces,moge,mobile robot,AgilityDigit,2,0.0002
+smartspaces,moge,humanoid robot,Person,2,0.0002
+smartspaces,moge,forklift,Transporter,2,0.0002
+smartspaces,moge,person,PalletTruck,1,0.0001
+smartspaces,moge,pallet jack,NovaCarter,1,0.0001

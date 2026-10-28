@@ -1,0 +1,143 @@
+{
+ "config": {
+  "levels": [
+   0.5,
+   0.8,
+   0.9,
+   0.95
+  ],
+  "ridge_grid": [
+   1.0,
+   10.0,
+   100.0,
+   1000.0,
+   10000.0,
+   100000.0
+  ],
+  "n_jobs": 6,
+  "gross": true,
+  "s0": 0.005,
+  "mondrian": [
+   "qtype",
+   "depth_source"
+  ],
+  "min_cal": 20,
+  "gate_level": 0.9,
+  "epsilon": 0.1,
+  "delta": 0.1,
+  "kappa": 3.0,
+  "min_accept": 30,
+  "min_accept_frac": 0.05,
+  "tau_scales": [
+   1.0,
+   2.0
+  ],
+  "n_bins": 10,
+  "min_scenes": 3,
+  "min_rows": 20,
+  "max_folds": 20,
+  "seed": 0,
+  "n_boot": 2000,
+  "fold_groups": {
+   "smartspaces": {
+    "MTMC_Tracking_2026/train/Warehouse_000": "layout_0",
+    "MTMC_Tracking_2026/train/Warehouse_002": "layout_0",
+    "MTMC_Tracking_2026/train/Warehouse_004": "layout_0",
+    "MTMC_Tracking_2026/train/Warehouse_006": "layout_0",
+    "MTMC_Tracking_2026/train/Warehouse_010": "layout_1",
+    "MTMC_Tracking_2026/train/Warehouse_011": "layout_1",
+    "MTMC_Tracking_2026/train/Warehouse_012": "layout_2",
+    "MTMC_Tracking_2026/train/Warehouse_013": "layout_2",
+    "MTMC_Tracking_2026/train/Warehouse_014": "layout_2",
+    "MTMC_Tracking_2026/train/Warehouse_015": "layout_2",
+    "MTMC_Tracking_2026/train/Warehouse_016": "layout_2",
+    "MTMC_Tracking_2026/val/Warehouse_020": "layout_0"
+   }
+  }
+ },
+ "gate_z": 1.6448536269514722,
+ "datasets": [
+  "smartspaces"
+ ],
+ "n_rows": 30872,
+ "n_labelled": 20608,
+ "inputs": {
+  "smartspaces": {
+   "qa_auto_sparse4d.jsonl": {
+    "bytes": 41536787,
+    "sha256": "06566ac6acfd87a5bf6c1d0a5379e21cfd19fde3f9ce4f59ea27a3237d57f9e6"
+   },
+   "qa_oracle.jsonl": {
+    "bytes": 48988442,
+    "sha256": "237dc056e69c0cdc5e2ee4e621c938de963830a25e064131332938c55cdacb4b"
+   },
+   "n_auto_only": {
+    "sparse4d": 0
+   }
+  }
+ },
+ "exclude_ambiguous": {
+  "enabled": false
+ },
+ "cross_fit": {
+  "max_folds": 20,
+  "seed": 0,
+  "rule": "a dataset and question type with at most max_folds scenes is cross-fitted leave one scene out (calibration: leave two out); with more, its scenes are grouped into max_folds folds balanced by row count and the same scheme runs on folds (calibration scores for a test scene come from scenes outside its fold, predicted without both folds)",
+  "grouped": {
+   "smartspaces/closest_instance": {
+    "n_scenes": 8,
+    "n_folds": 3
+   },
+   "smartspaces/count": {
+    "n_scenes": 12,
+    "n_folds": 3
+   },
+   "smartspaces/distance_center": {
+    "n_scenes": 12,
+    "n_folds": 3
+   },
+   "smartspaces/distance_surface": {
+    "n_scenes": 12,
+    "n_folds": 3
+   },
+   "smartspaces/ego_distance": {
+    "n_scenes": 12,
+    "n_folds": 3
+   },
+   "smartspaces/left_right": {
+    "n_scenes": 12,
+    "n_folds": 3
+   },
+   "smartspaces/relative_depth": {
+    "n_scenes": 12,
+    "n_folds": 3
+   },
+   "smartspaces/size_height": {
+    "n_scenes": 12,
+    "n_folds": 3
+   },
+   "smartspaces/size_longest": {
+    "n_scenes": 12,
+    "n_folds": 3
+   }
+  }
+ },
+ "notes": [
+  "smartspaces/closest_instance: 8 scenes cross-fitted in 3 explicit fold groups of 1-4 scenes and 18-283 rows (table folds)",
+  "smartspaces/count: 12 scenes cross-fitted in 3 explicit fold groups of 2-5 scenes and 372-545 rows (table folds)",
+  "smartspaces/distance_center: 12 scenes cross-fitted in 3 explicit fold groups of 2-5 scenes and 200-1706 rows (table folds)",
+  "smartspaces/distance_surface: 12 scenes cross-fitted in 3 explicit fold groups of 2-5 scenes and 222-1713 rows (table folds)",
+  "smartspaces/ego_distance: 12 scenes cross-fitted in 3 explicit fold groups of 2-5 scenes and 581-1757 rows (table folds)",
+  "smartspaces/left_right: 12 scenes cross-fitted in 3 explicit fold groups of 2-5 scenes and 156-1672 rows (table folds)",
+  "smartspaces/relative_depth: 12 scenes cross-fitted in 3 explicit fold groups of 2-5 scenes and 175-1686 rows (table folds)",
+  "smartspaces/size_height: 12 scenes cross-fitted in 3 explicit fold groups of 2-5 scenes and 587-1758 rows (table folds)",
+  "smartspaces/size_longest: 12 scenes cross-fitted in 3 explicit fold groups of 2-5 scenes and 577-1750 rows (table folds)"
+ ],
+ "git_commit": "a3ce538390f6a18547e5abd1be5ec89f540aecab+dirty",
+ "seconds": 38.8,
+ "fold_groups": {
+  "path": "configs/smartspaces_layout_groups.json",
+  "sha256": "bb2e3fe632d8e065c4ce50cd6f7466c11f310926b44b1c102ada15b17383b8e5",
+  "rule": "for each dataset in config.fold_groups, every question type is cross-fitted with one fold per group (measured_space.audit.scene_folds), ignoring max_folds: a group's scenes are predicted by a model fitted without the group, and calibrated by the scenes of the other groups, each predicted without both groups; the inner ridge search and the scene-cluster bootstrap stay by scene; assignment in folds.csv"
+ }
+}

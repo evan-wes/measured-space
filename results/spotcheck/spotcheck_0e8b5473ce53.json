@@ -1,0 +1,920 @@
+{
+ "sample_id": "0e8b5473ce53",
+ "seed": 0,
+ "source": "lidar",
+ "population": {
+  "ambiguous": 759,
+  "clear": 1956
+ },
+ "answers": [
+  {
+   "pair_id": "lidar:arkitscenes/47333452/wide/54983.193:4B0IzVsS3NyLwJ5h:1",
+   "view_key": "arkitscenes/47333452/wide/54983.193",
+   "object_id": "4B0IzVsS3NyLwJ5h",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42445028/wide/49615.577:ci0H5NF5BxyC08CN:0",
+   "view_key": "arkitscenes/42445028/wide/49615.577",
+   "object_id": "ci0H5NF5BxyC08CN",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47895779/wide/386987.540:VfBniEbbkMNjJsSV:1",
+   "view_key": "arkitscenes/47895779/wide/386987.540",
+   "object_id": "VfBniEbbkMNjJsSV",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42897561/wide/278948.392:XTBSIozr8JfN3YJa:1",
+   "view_key": "arkitscenes/42897561/wide/278948.392",
+   "object_id": "XTBSIozr8JfN3YJa",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "wrong",
+   "note": "this is a glass table with chairs partly visible through it. the white box is correctly on the table but the cyan box is one of the chairs"
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47895364/wide/100283.583:IXq1OYWr8CeQAHt0:0",
+   "view_key": "arkitscenes/47895364/wide/100283.583",
+   "object_id": "IXq1OYWr8CeQAHt0",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47895552/wide/457728.121:DEz4MzVTdaRWfnaU:0",
+   "view_key": "arkitscenes/47895552/wide/457728.121",
+   "object_id": "DEz4MzVTdaRWfnaU",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/45261615/wide/55016.872:KFkE0Y5ObwIlFkqa:0",
+   "view_key": "arkitscenes/45261615/wide/55016.872",
+   "object_id": "KFkE0Y5ObwIlFkqa",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42898811/wide/167506.172:4hgd4yTAYc4WxXPj:3",
+   "view_key": "arkitscenes/42898811/wide/167506.172",
+   "object_id": "4hgd4yTAYc4WxXPj",
+   "detection": 3,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42897688/wide/479188.862:1cuweCkDZoOgV9Ol:2",
+   "view_key": "arkitscenes/42897688/wide/479188.862",
+   "object_id": "1cuweCkDZoOgV9Ol",
+   "detection": 2,
+   "ambiguous": true,
+   "verdict": "right",
+   "verdict_original": "cant_tell",
+   "note": "this cabinet has two wide drawers and two slightly narrower drawers. the white box is on the combination but the cyan box is just the bottom two drawers"
+  },
+  {
+   "pair_id": "lidar:arkitscenes/45663164/wide/66000.391:nzZNAyHTlOv0qnp2:3",
+   "view_key": "arkitscenes/45663164/wide/66000.391",
+   "object_id": "nzZNAyHTlOv0qnp2",
+   "detection": 3,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42897561/wide/278918.205:j4qT0LSFMtpapdc2:0",
+   "view_key": "arkitscenes/42897561/wide/278918.205",
+   "object_id": "j4qT0LSFMtpapdc2",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47333916/wide/82448.608:v8QAxNNW6wcr5Xvg:0",
+   "view_key": "arkitscenes/47333916/wide/82448.608",
+   "object_id": "v8QAxNNW6wcr5Xvg",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47334256/wide/112038.260:9S2Mn8TndNDf19s9:2",
+   "view_key": "arkitscenes/47334256/wide/112038.260",
+   "object_id": "9S2Mn8TndNDf19s9",
+   "detection": 2,
+   "ambiguous": false,
+   "verdict": "right",
+   "verdict_original": "cant_tell",
+   "note": "the white box is one cabinet door and the cyan box covers the whole cabinet"
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42446533/wide/200408.275:bPDmMP17pGvWcBxK:0",
+   "view_key": "arkitscenes/42446533/wide/200408.275",
+   "object_id": "bPDmMP17pGvWcBxK",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42897521/wide/273994.164:MBbfuJJhe2frlUBk:0",
+   "view_key": "arkitscenes/42897521/wide/273994.164",
+   "object_id": "MBbfuJJhe2frlUBk",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/48018730/wide/1750.424:p9zuJJYF4vrCs40a:1",
+   "view_key": "arkitscenes/48018730/wide/1750.424",
+   "object_id": "p9zuJJYF4vrCs40a",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/45662981/wide/28027.247:lXN13ZhSaHKd7qic:0",
+   "view_key": "arkitscenes/45662981/wide/28027.247",
+   "object_id": "lXN13ZhSaHKd7qic",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47331068/wide/131103.938:sIiW8IHA9Dg7HIoj:1",
+   "view_key": "arkitscenes/47331068/wide/131103.938",
+   "object_id": "sIiW8IHA9Dg7HIoj",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47430023/wide/18904.705:EaUQfD20gymJIN3Y:1",
+   "view_key": "arkitscenes/47430023/wide/18904.705",
+   "object_id": "EaUQfD20gymJIN3Y",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "cant_tell",
+   "note": "the dashed cyan box only covers the very bottom of the chair. the solid cyan box covers the rest of it"
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47331319/wide/179071.515:0LGzqRHDq8vQeUuf:2",
+   "view_key": "arkitscenes/47331319/wide/179071.515",
+   "object_id": "0LGzqRHDq8vQeUuf",
+   "detection": 2,
+   "ambiguous": true,
+   "verdict": "wrong",
+   "note": "the cyan box is on the stool to the left of the one that the white box covers"
+  },
+  {
+   "pair_id": "lidar:arkitscenes/45261133/wide/4142.709:dQMsoJd63QmocfUM:0",
+   "view_key": "arkitscenes/45261133/wide/4142.709",
+   "object_id": "dQMsoJd63QmocfUM",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47430038/wide/20562.573:bjTMBlEoDQizAR29:0",
+   "view_key": "arkitscenes/47430038/wide/20562.573",
+   "object_id": "bjTMBlEoDQizAR29",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/45662970/wide/26115.415:BW8344LMe2RVwUtE:3",
+   "view_key": "arkitscenes/45662970/wide/26115.415",
+   "object_id": "BW8344LMe2RVwUtE",
+   "detection": 3,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47332000/wide/172040.707:SUIeZFHkFgRA56I5:0",
+   "view_key": "arkitscenes/47332000/wide/172040.707",
+   "object_id": "SUIeZFHkFgRA56I5",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47429912/wide/136041.262:hgNaeF4vGsIGtlpc:1",
+   "view_key": "arkitscenes/47429912/wide/136041.262",
+   "object_id": "hgNaeF4vGsIGtlpc",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "cant_tell",
+   "note": "the boxes are on the same object but I can't tell if this is a toilet from the close up or larger image"
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47333440/wide/53811.606:bcSeG5JxJgZkRCUK:1",
+   "view_key": "arkitscenes/47333440/wide/53811.606",
+   "object_id": "bcSeG5JxJgZkRCUK",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42446540/wide/201507.413:nxDXFEHiOOAopz7w:1",
+   "view_key": "arkitscenes/42446540/wide/201507.413",
+   "object_id": "nxDXFEHiOOAopz7w",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47332915/wide/13545.125:Knc7La7Dp91tS7Oa:1",
+   "view_key": "arkitscenes/47332915/wide/13545.125",
+   "object_id": "Knc7La7Dp91tS7Oa",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47204552/wide/3473.827:lAICUT7mZla284wk:5",
+   "view_key": "arkitscenes/47204552/wide/3473.827",
+   "object_id": "lAICUT7mZla284wk",
+   "detection": 5,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/45261121/wide/3471.120:HAdg5cWUG7WrP0RT:4",
+   "view_key": "arkitscenes/45261121/wide/3471.120",
+   "object_id": "HAdg5cWUG7WrP0RT",
+   "detection": 4,
+   "ambiguous": false,
+   "verdict": "right",
+   "verdict_original": "cant_tell",
+   "note": "the white box is just one cabinet door whereas the cyan 3d box contains the whole cabinet"
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47895341/wide/96415.403:tOO2momDzwV2jndj:4",
+   "view_key": "arkitscenes/47895341/wide/96415.403",
+   "object_id": "tOO2momDzwV2jndj",
+   "detection": 4,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47331661/wide/23644.942:a6UD4XhH4J0eSRz8:0",
+   "view_key": "arkitscenes/47331661/wide/23644.942",
+   "object_id": "a6UD4XhH4J0eSRz8",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/44358442/wide/42931.467:AIMSDC2rtjGQgmvs:0",
+   "view_key": "arkitscenes/44358442/wide/42931.467",
+   "object_id": "AIMSDC2rtjGQgmvs",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/45662921/wide/21859.365:ksyc3clJBReikhjo:2",
+   "view_key": "arkitscenes/45662921/wide/21859.365",
+   "object_id": "ksyc3clJBReikhjo",
+   "detection": 2,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47331068/wide/131087.245:sIiW8IHA9Dg7HIoj:0",
+   "view_key": "arkitscenes/47331068/wide/131087.245",
+   "object_id": "sIiW8IHA9Dg7HIoj",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47204552/wide/3374.168:SVOAsRu41cq3Yh9b:0",
+   "view_key": "arkitscenes/47204552/wide/3374.168",
+   "object_id": "SVOAsRu41cq3Yh9b",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/45260854/wide/595.860:2ZvClyJjkRqfCcwg:4",
+   "view_key": "arkitscenes/45260854/wide/595.860",
+   "object_id": "2ZvClyJjkRqfCcwg",
+   "detection": 4,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42897545/wide/276450.058:ojgMzuSNB98T6hrl:0",
+   "view_key": "arkitscenes/42897545/wide/276450.058",
+   "object_id": "ojgMzuSNB98T6hrl",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/48018730/wide/1712.340:BDXd29NwJerqzVY7:0",
+   "view_key": "arkitscenes/48018730/wide/1712.340",
+   "object_id": "BDXd29NwJerqzVY7",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/48458481/wide/111507.690:D1SFMPOoL5tSBfsP:1",
+   "view_key": "arkitscenes/48458481/wide/111507.690",
+   "object_id": "D1SFMPOoL5tSBfsP",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47332893/wide/9203.483:7iKjfJHTwC9Ak3HC:3",
+   "view_key": "arkitscenes/47332893/wide/9203.483",
+   "object_id": "7iKjfJHTwC9Ak3HC",
+   "detection": 3,
+   "ambiguous": true,
+   "verdict": "right",
+   "verdict_original": "cant_tell",
+   "note": "the white box is covering more of the cabinet than the 3d cyan box"
+  },
+  {
+   "pair_id": "lidar:arkitscenes/41069042/wide/3092.602:NB59gmIiC4u5h2Mw:0",
+   "view_key": "arkitscenes/41069042/wide/3092.602",
+   "object_id": "NB59gmIiC4u5h2Mw",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42897545/wide/276452.157:rdzePODXwnS96c8m:0",
+   "view_key": "arkitscenes/42897545/wide/276452.157",
+   "object_id": "rdzePODXwnS96c8m",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47895552/wide/457717.325:sPxldhBp8JRlltqK:1",
+   "view_key": "arkitscenes/47895552/wide/457717.325",
+   "object_id": "sPxldhBp8JRlltqK",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/45261575/wide/77503.879:TvUgscVddlKi5til:1",
+   "view_key": "arkitscenes/45261575/wide/77503.879",
+   "object_id": "TvUgscVddlKi5til",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47333916/wide/82432.315:6aNJLuD0DOOV9gOg:3",
+   "view_key": "arkitscenes/47333916/wide/82432.315",
+   "object_id": "6aNJLuD0DOOV9gOg",
+   "detection": 3,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42446156/wide/79204.479:HVq9ZJhrcdMwwPpI:1",
+   "view_key": "arkitscenes/42446156/wide/79204.479",
+   "object_id": "HVq9ZJhrcdMwwPpI",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/48458660/wide/8271.528:F335L4yRTwSL52xu:4",
+   "view_key": "arkitscenes/48458660/wide/8271.528",
+   "object_id": "F335L4yRTwSL52xu",
+   "detection": 4,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/48018379/wide/390026.508:Ddx1gHgvhdOafdly:1",
+   "view_key": "arkitscenes/48018379/wide/390026.508",
+   "object_id": "Ddx1gHgvhdOafdly",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/41069021/wide/394.907:6wkDEUU2uUskLubg:1",
+   "view_key": "arkitscenes/41069021/wide/394.907",
+   "object_id": "6wkDEUU2uUskLubg",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47429992/wide/16800.658:lOCqO288S2RemcaK:0",
+   "view_key": "arkitscenes/47429992/wide/16800.658",
+   "object_id": "lOCqO288S2RemcaK",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47895341/wide/96434.795:Ru0lW85MBN5vr9Gn:0",
+   "view_key": "arkitscenes/47895341/wide/96434.795",
+   "object_id": "Ru0lW85MBN5vr9Gn",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42897647/wide/478225.635:Tc9IMEmE3O7kGGRr:2",
+   "view_key": "arkitscenes/42897647/wide/478225.635",
+   "object_id": "Tc9IMEmE3O7kGGRr",
+   "detection": 2,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47204573/wide/5049.352:PqNYyHbX4wle1sjO:0",
+   "view_key": "arkitscenes/47204573/wide/5049.352",
+   "object_id": "PqNYyHbX4wle1sjO",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "cant_tell",
+   "note": "The boxes overlap but I cannot tell if this is a chair from the images"
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42446163/wide/79574.204:36BaYrY2vJDuiYgh:14",
+   "view_key": "arkitscenes/42446163/wide/79574.204",
+   "object_id": "36BaYrY2vJDuiYgh",
+   "detection": 14,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/48018367/wide/389485.844:roOQePgcEz17aVWt:0",
+   "view_key": "arkitscenes/48018367/wide/389485.844",
+   "object_id": "roOQePgcEz17aVWt",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/48018379/wide/390036.304:J4yg6zhJpuyuOFOk:1",
+   "view_key": "arkitscenes/48018379/wide/390036.304",
+   "object_id": "J4yg6zhJpuyuOFOk",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/41142278/wide/4056.142:4TLvD6FqkiWi9TC4:2",
+   "view_key": "arkitscenes/41142278/wide/4056.142",
+   "object_id": "4TLvD6FqkiWi9TC4",
+   "detection": 2,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47331988/wide/170746.879:zUvG8ZWhpun1A3Hb:2",
+   "view_key": "arkitscenes/47331988/wide/170746.879",
+   "object_id": "zUvG8ZWhpun1A3Hb",
+   "detection": 2,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47332901/wide/11032.577:llzX7BkWPiRu1nsD:1",
+   "view_key": "arkitscenes/47332901/wide/11032.577",
+   "object_id": "llzX7BkWPiRu1nsD",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47331319/wide/179065.618:VX4qRuBsflIdi6CK:2",
+   "view_key": "arkitscenes/47331319/wide/179065.618",
+   "object_id": "VX4qRuBsflIdi6CK",
+   "detection": 2,
+   "ambiguous": false,
+   "verdict": "right",
+   "verdict_original": "cant_tell",
+   "note": "the white box is covering one section of the cabinet and the 3d box covers the whole thing"
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42446156/wide/79206.578:HVq9ZJhrcdMwwPpI:6",
+   "view_key": "arkitscenes/42446156/wide/79206.578",
+   "object_id": "HVq9ZJhrcdMwwPpI",
+   "detection": 6,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42898818/wide/168182.152:ZDZ1KYPQZU4bvhaE:0",
+   "view_key": "arkitscenes/42898818/wide/168182.152",
+   "object_id": "ZDZ1KYPQZU4bvhaE",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47331262/wide/89976.365:HcyGPkRCnnlPFI66:5",
+   "view_key": "arkitscenes/47331262/wide/89976.365",
+   "object_id": "HcyGPkRCnnlPFI66",
+   "detection": 5,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47204573/wide/5001.772:9YNqe7yoLuQhc7LN:5",
+   "view_key": "arkitscenes/47204573/wide/5001.772",
+   "object_id": "9YNqe7yoLuQhc7LN",
+   "detection": 5,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47333927/wide/84039.565:cbhuZ0tWhS6FoRFm:3",
+   "view_key": "arkitscenes/47333927/wide/84039.565",
+   "object_id": "cbhuZ0tWhS6FoRFm",
+   "detection": 3,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47332908/wide/12166.904:sFiSm4kvmHWuVAzU:3",
+   "view_key": "arkitscenes/47332908/wide/12166.904",
+   "object_id": "sFiSm4kvmHWuVAzU",
+   "detection": 3,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": "the boxes overlap but I can't tell if this is a toilet from the image"
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42897501/wide/270023.063:yVTDrd2B6mFgHNU2:3",
+   "view_key": "arkitscenes/42897501/wide/270023.063",
+   "object_id": "yVTDrd2B6mFgHNU2",
+   "detection": 3,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47331988/wide/170732.285:PYch9gGeq30jB6ID:1",
+   "view_key": "arkitscenes/47331988/wide/170732.285",
+   "object_id": "PYch9gGeq30jB6ID",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47332915/wide/13549.423:XevpAep3YHEDvLww:0",
+   "view_key": "arkitscenes/47332915/wide/13549.423",
+   "object_id": "XevpAep3YHEDvLww",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42446038/wide/347941.928:r8VNXzUFmKenjUbO:3",
+   "view_key": "arkitscenes/42446038/wide/347941.928",
+   "object_id": "r8VNXzUFmKenjUbO",
+   "detection": 3,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/48458660/wide/8255.134:BsqucpwpuW9oCj6Y:0",
+   "view_key": "arkitscenes/48458660/wide/8255.134",
+   "object_id": "BsqucpwpuW9oCj6Y",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/41069048/wide/5021.893:bLzSmksusiWl5HdY:2",
+   "view_key": "arkitscenes/41069048/wide/5021.893",
+   "object_id": "bLzSmksusiWl5HdY",
+   "detection": 2,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42445429/wide/50352.259:eUY8XT4HtuiCG3k0:6",
+   "view_key": "arkitscenes/42445429/wide/50352.259",
+   "object_id": "eUY8XT4HtuiCG3k0",
+   "detection": 6,
+   "ambiguous": true,
+   "verdict": "right",
+   "verdict_original": "cant_tell",
+   "note": "I can't tell what the 3d cyan box is actually covering in this image, but the white box is covering one door of the cabinet and the cyan box seems to cover more of it"
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47430047/wide/21123.326:CH0aNtMeZft0TQsQ:0",
+   "view_key": "arkitscenes/47430047/wide/21123.326",
+   "object_id": "CH0aNtMeZft0TQsQ",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42446540/wide/201486.222:GU4I6JyC7N3caGVJ:1",
+   "view_key": "arkitscenes/42446540/wide/201486.222",
+   "object_id": "GU4I6JyC7N3caGVJ",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47115469/wide/14029.469:tBfwlmGIIrdXrghe:3",
+   "view_key": "arkitscenes/47115469/wide/14029.469",
+   "object_id": "tBfwlmGIIrdXrghe",
+   "detection": 3,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42897599/wide/476414.749:ZGPo4zKUbZr8eUSd:3",
+   "view_key": "arkitscenes/42897599/wide/476414.749",
+   "object_id": "ZGPo4zKUbZr8eUSd",
+   "detection": 3,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42897552/wide/277362.496:9hJCkOHxdeKTGG4S:0",
+   "view_key": "arkitscenes/42897552/wide/277362.496",
+   "object_id": "9hJCkOHxdeKTGG4S",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/45663149/wide/63344.377:MUyKIyB5ULPthGlr:0",
+   "view_key": "arkitscenes/45663149/wide/63344.377",
+   "object_id": "MUyKIyB5ULPthGlr",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "verdict_original": "cant_tell",
+   "note": "This cabinet has a wider base and thinner top portion. the white box covers the whole cabinet and the cyan 3d box covers the thinner top half"
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42898811/wide/167488.779:XDsgW2jozqKPWKwa:1",
+   "view_key": "arkitscenes/42898811/wide/167488.779",
+   "object_id": "XDsgW2jozqKPWKwa",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "right",
+   "verdict_original": "cant_tell",
+   "note": "the white box covers the top surface of a cabinet and the cyan box looks like it covers the whole cabinet"
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42898818/wide/168176.354:DZ83aYHKQV30BOsW:2",
+   "view_key": "arkitscenes/42898818/wide/168176.354",
+   "object_id": "DZ83aYHKQV30BOsW",
+   "detection": 2,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47115469/wide/14043.963:7FZQQuHX4MKqdOhu:1",
+   "view_key": "arkitscenes/47115469/wide/14043.963",
+   "object_id": "7FZQQuHX4MKqdOhu",
+   "detection": 1,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42445991/wide/75309.003:ac8iLoidxa6a2JEi:2",
+   "view_key": "arkitscenes/42445991/wide/75309.003",
+   "object_id": "ac8iLoidxa6a2JEi",
+   "detection": 2,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/41142278/wide/4005.963:zbli3xkSVZlarHhD:0",
+   "view_key": "arkitscenes/41142278/wide/4005.963",
+   "object_id": "zbli3xkSVZlarHhD",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47331651/wide/22938.583:qtHqofcaFAd1N0kx:4",
+   "view_key": "arkitscenes/47331651/wide/22938.583",
+   "object_id": "qtHqofcaFAd1N0kx",
+   "detection": 4,
+   "ambiguous": true,
+   "verdict": "right",
+   "verdict_original": "cant_tell",
+   "note": "the boxes are both on parts of the cabinet but it's not clear if they ar ethe same parts"
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47334105/wide/93043.971:OWTGhVb7p6eQ7k16:4",
+   "view_key": "arkitscenes/47334105/wide/93043.971",
+   "object_id": "OWTGhVb7p6eQ7k16",
+   "detection": 4,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42446533/wide/200408.275:YvxqPFFRgqgpGKpc:2",
+   "view_key": "arkitscenes/42446533/wide/200408.275",
+   "object_id": "YvxqPFFRgqgpGKpc",
+   "detection": 2,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42445021/wide/48903.250:4SmqGy8Hgufqkcoo:0",
+   "view_key": "arkitscenes/42445021/wide/48903.250",
+   "object_id": "4SmqGy8Hgufqkcoo",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/48018559/wide/3380.717:LGHgAg2q8JLK2ZfU:3",
+   "view_key": "arkitscenes/48018559/wide/3380.717",
+   "object_id": "LGHgAg2q8JLK2ZfU",
+   "detection": 3,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/48018566/wide/3888.010:AOlLuEDmZdegek0v:0",
+   "view_key": "arkitscenes/48018566/wide/3888.010",
+   "object_id": "AOlLuEDmZdegek0v",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47429912/wide/136057.655:kI0hYk1B5i9Npz4h:1",
+   "view_key": "arkitscenes/47429912/wide/136057.655",
+   "object_id": "kI0hYk1B5i9Npz4h",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47204605/wide/2419.276:5HIRppZQ8CYCxFgg:2",
+   "view_key": "arkitscenes/47204605/wide/2419.276",
+   "object_id": "5HIRppZQ8CYCxFgg",
+   "detection": 2,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/45261179/wide/2902.905:K6E6dycZC2fGnymL:0",
+   "view_key": "arkitscenes/45261179/wide/2902.905",
+   "object_id": "K6E6dycZC2fGnymL",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/48458656/wide/7639.782:dFyIbJh6IE4FGDuG:0",
+   "view_key": "arkitscenes/48458656/wide/7639.782",
+   "object_id": "dFyIbJh6IE4FGDuG",
+   "detection": 0,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42899461/wide/195879.080:CBdwDOh9spWMJ1pG:2",
+   "view_key": "arkitscenes/42899461/wide/195879.080",
+   "object_id": "CBdwDOh9spWMJ1pG",
+   "detection": 2,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/48018559/wide/3374.420:WAFbhuBd0YtM5juy:1",
+   "view_key": "arkitscenes/48018559/wide/3374.420",
+   "object_id": "WAFbhuBd0YtM5juy",
+   "detection": 1,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/42446517/wide/197425.062:xLR3m8mV38dNIKd6:0",
+   "view_key": "arkitscenes/42446517/wide/197425.062",
+   "object_id": "xLR3m8mV38dNIKd6",
+   "detection": 0,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/45662942/wide/22897.252:uFJrv703I2upjTi3:2",
+   "view_key": "arkitscenes/45662942/wide/22897.252",
+   "object_id": "uFJrv703I2upjTi3",
+   "detection": 2,
+   "ambiguous": true,
+   "verdict": "right",
+   "note": ""
+  },
+  {
+   "pair_id": "lidar:arkitscenes/47333934/wide/85645.619:DcgXVaJ7AvqeMIu8:3",
+   "view_key": "arkitscenes/47333934/wide/85645.619",
+   "object_id": "DcgXVaJ7AvqeMIu8",
+   "detection": 3,
+   "ambiguous": false,
+   "verdict": "right",
+   "note": ""
+  }
+ ]
+}

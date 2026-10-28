@@ -1,0 +1,155 @@
+{
+ "tag": "labels",
+ "config": {
+  "n_refs": [
+   0,
+   5,
+   10,
+   20,
+   40
+  ],
+  "n_draws": 50,
+  "variants": [
+   {
+    "name": "abc_uniform",
+    "scale": true,
+    "bias": true,
+    "quantile": "max",
+    "calibration": "referenced",
+    "sampling": "uniform"
+   },
+   {
+    "name": "abc_stratified",
+    "scale": true,
+    "bias": true,
+    "quantile": "max",
+    "calibration": "referenced",
+    "sampling": "stratified"
+   },
+   {
+    "name": "a_uniform",
+    "scale": true,
+    "bias": false,
+    "quantile": "none",
+    "calibration": "referenced",
+    "sampling": "uniform"
+   },
+   {
+    "name": "ab_uniform",
+    "scale": true,
+    "bias": true,
+    "quantile": "none",
+    "calibration": "referenced",
+    "sampling": "uniform"
+   },
+   {
+    "name": "abc_mix_uniform",
+    "scale": true,
+    "bias": true,
+    "quantile": "mix",
+    "calibration": "referenced",
+    "sampling": "uniform"
+   },
+   {
+    "name": "abc_globalcal_uniform",
+    "scale": true,
+    "bias": true,
+    "quantile": "max",
+    "calibration": "global",
+    "sampling": "uniform"
+   }
+  ],
+  "min_scale_items": 3,
+  "min_bias_items": 5,
+  "mix_prior": 20.0,
+  "max_ref_frac": 0.5,
+  "level": 0.9,
+  "seed": 0
+ },
+ "audit_config": {
+  "levels": [
+   0.5,
+   0.8,
+   0.9,
+   0.95
+  ],
+  "ridge_grid": [
+   1.0,
+   10.0,
+   100.0,
+   1000.0,
+   10000.0,
+   100000.0
+  ],
+  "n_jobs": 8,
+  "gross": true,
+  "s0": 0.005,
+  "mondrian": [
+   "qtype",
+   "depth_source"
+  ],
+  "min_cal": 20,
+  "gate_level": 0.9,
+  "epsilon": 0.1,
+  "delta": 0.1,
+  "kappa": 3.0,
+  "min_accept": 30,
+  "min_accept_frac": 0.05,
+  "tau_scales": [
+   1.0,
+   2.0
+  ],
+  "n_bins": 10,
+  "min_scenes": 3,
+  "min_rows": 20,
+  "seed": 0,
+  "n_boot": 2000
+ },
+ "gate_z": 1.6448536269514722,
+ "datasets": [
+  "arkitscenes",
+  "smartspaces"
+ ],
+ "n_rows": 34446,
+ "inputs": {
+  "arkitscenes": {
+   "qa_auto_laser.jsonl": {
+    "bytes": 549744,
+    "sha256": "7df3b547d36e590b47a4064b59d768d3c35bc819b978b20ea728af2b3e09d0ee"
+   },
+   "qa_auto_lidar.jsonl": {
+    "bytes": 544144,
+    "sha256": "0f053bd278b4ff4fc32d7de473328b4e9923eca5142ae4f7712261de5c7e581a"
+   },
+   "qa_auto_moge.jsonl": {
+    "bytes": 543593,
+    "sha256": "e60f6b6f824e1c1c0fa8e30be2650b9f2182f0706fb4c0ab5371654d7cd68a10"
+   },
+   "qa_oracle.jsonl": {
+    "bytes": 327510,
+    "sha256": "67bb5f43ad5ce391dcfe1b01b7024efe4483eead0616ba9bfc5cdb84bda3b086"
+   }
+  },
+  "smartspaces": {
+   "qa_auto_gt_depth.jsonl": {
+    "bytes": 8933826,
+    "sha256": "f44ef7485121b2ba7283f54c254a4f0ab40ad5b51d794557dde0557b79ece0ce"
+   },
+   "qa_auto_moge.jsonl": {
+    "bytes": 20240658,
+    "sha256": "d1c8458a7d5833e94496bc6e69a3dc2d168f78beafff07d8f16a0acbed5d3155"
+   },
+   "qa_oracle.jsonl": {
+    "bytes": 42352105,
+    "sha256": "e1ae9765e943c51484a6d4f7da1afca8c2012746278c92a3eec42e265a2515b1"
+   }
+  }
+ },
+ "notes": [
+  "arkitscenes/distance_surface: skipped (21 labelled rows, 2 scenes)"
+ ],
+ "git_commit": "2e4316f15bb39f96e4c2cd53d8d4117f70a15e1f+dirty",
+ "predictions": "read from cache",
+ "seconds_fit": 1.8,
+ "seconds_experiment": 78.8
+}

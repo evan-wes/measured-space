@@ -1,0 +1,270 @@
+{
+ "method": {
+  "name": "conformal risk control of the false-negative rate (as published; not new)",
+  "reference": "Angelopoulos, A. N., Bates, S., Fisch, A., Lei, L., Schuster, T. Conformal Risk Control. ICLR 2024. arXiv:2208.02814",
+  "statement": "For exchangeable losses L_i(lambda), non-increasing and right-continuous in lambda, bounded by B, with L_i(lambda_max) <= alpha: lambda_hat = inf{lambda : n/(n+1) R_n(lambda) + B/(n+1) <= alpha} (lambda_max if empty) gives E[L_{n+1}(lambda_hat)] <= alpha (Theorem 1). Here lambda = -t for a score threshold t, lambda_max = the floor t_min, B = 1.",
+  "unit": "scene (frames of one video are not exchangeable)",
+  "evaluation": "leave one scene out: t_hat from the other N - 1 scenes, held-out FNR at it"
+ },
+ "definitions": {
+  "loss": "a scene's FNR at t: share of its population object-views that no box with score >= t covers (2D IoU >= 0.3 with the object's visible 2D box; any box, no one-to-one)",
+  "population": "present: the pipeline's presence (visible 2D box, visible fraction above the presence threshold, from the reference depth); clearly_visible: the question generator's referent thresholds",
+  "fnr_one_to_one": "FNR under the Hungarian 2D pairing of match_detections_2d against every present object (the pipeline's recall); reported, not controlled",
+  "floor_fnr": "a scene's FNR at the CRC floor t_min (the lowest threshold CRC may choose); Theorem 1 assumes it is <= alpha",
+  "box_cap": "a view with max_boxes boxes is truncated at thresholds up to its lowest written score (its cap floor); t_cap is the largest cap floor. Above t_cap the losses are the uncapped labeller's; at or below it they are exact for the capped labeller as run and an upper bound for an uncapped one. truncation=floor: CRC chooses only above t_cap; mark: anywhere, with in_truncated_region and share_views_truncated reported",
+  "feasible": "some threshold met the CRC condition; if not, t_hat = t_min and no guarantee is claimed",
+  "unmatched_to_annotation": "kept boxes with 2D IoU below the threshold against every present annotated object; ARKitScenes annotates 17 furniture classes, so these are not necessarily false",
+  "range": "distance from the camera centre to the ground-truth box centre (m)",
+  "mean_heldout_fnr": "mean over scenes of the held-out FNR at the threshold calibrated on the other scenes. It is at most alpha by construction whenever the mean floor FNR over all scenes is (loso_mean_bounded_by_construction), so it checks the implementation, not exchangeability with new scenes; the spread across scenes is the information",
+  "mean_heldout_fnr_lo/hi": "0.95 percentile bootstrap over scenes (2000 replicates); descriptive only, since the folds share calibration scenes"
+ },
+ "caveats": [
+  "The guarantee is marginal: an expectation over calibration sets and new scenes, every scene weighted equally; single scenes and strata (far, occluded, some classes) can exceed alpha.",
+  "It assumes scenes exchangeable with the calibration scenes (same capture protocol and site population).",
+  "Feasibility needs at least 1/alpha - 1 calibration scenes, and more the more the labeller misses.",
+  "Object-views: an object seen in several views of a video counts once per view."
+ ],
+ "settings": {
+  "alphas": [
+   0.05,
+   0.1,
+   0.2
+  ],
+  "population": "clearly_visible",
+  "min_iou": 0.3,
+  "bound": 1.0,
+  "published_threshold": 0.2,
+  "box2d": "predicted",
+  "max_boxes": 0,
+  "truncation": "mark",
+  "curve_points": 96,
+  "mondrian": [
+   "range",
+   "visible_fraction"
+  ],
+  "n_boot": 2000,
+  "level": 0.95,
+  "seed": 0
+ },
+ "inputs": {
+  "labels": "<data>/outputs/labels_ss12_2d",
+  "predictions": "<data>/outputs/sparse4d_views/rn50_trainable_v2.2",
+  "smartspaces": {
+   "n_shards": 1440,
+   "shards_sha256": "846882c894969ed320db9d7b897f77c95c253756ba651105fe758cabe4530381",
+   "prediction_files": {
+    "MTMC_Tracking_2026/train/Warehouse_000": {
+     "file": "MTMC_Tracking_2026__train__Warehouse_000.jsonl",
+     "sha256": "f2d3aea09a6d683d56d886f0f4e5c57d44828fc9e81060a4b9db2330d85e1628"
+    },
+    "MTMC_Tracking_2026/train/Warehouse_002": {
+     "file": "MTMC_Tracking_2026__train__Warehouse_002.jsonl",
+     "sha256": "ed7e9b19e2f3110a20ab8a44ffed249a8c3daa04bb3f950229fb3f3f803ba1e2"
+    },
+    "MTMC_Tracking_2026/train/Warehouse_004": {
+     "file": "MTMC_Tracking_2026__train__Warehouse_004.jsonl",
+     "sha256": "a1ef9a3d75cd763341496d554c26a21c751e11ba32de19426d8eb8c518e55f29"
+    },
+    "MTMC_Tracking_2026/train/Warehouse_006": {
+     "file": "MTMC_Tracking_2026__train__Warehouse_006.jsonl",
+     "sha256": "86805eb3b5a31df8d7d0e2dca9cb235a0052b2ba545412034a5c50ecf30c004f"
+    },
+    "MTMC_Tracking_2026/train/Warehouse_010": {
+     "file": "MTMC_Tracking_2026__train__Warehouse_010.jsonl",
+     "sha256": "f3e3b2fb2f8161f29e403441517094fecf481e02d4cc0abbc25fa05b1ff006cf"
+    },
+    "MTMC_Tracking_2026/train/Warehouse_011": {
+     "file": "MTMC_Tracking_2026__train__Warehouse_011.jsonl",
+     "sha256": "7b10ba8a5077b7925094c783089d0c297f93bec8f8db91aa5413ea25bf4520df"
+    },
+    "MTMC_Tracking_2026/train/Warehouse_012": {
+     "file": "MTMC_Tracking_2026__train__Warehouse_012.jsonl",
+     "sha256": "d2409fb9e7092dfbb297e04ad74a33ffed557dcc1a8f80543fd72b15c3199cf8"
+    },
+    "MTMC_Tracking_2026/train/Warehouse_013": {
+     "file": "MTMC_Tracking_2026__train__Warehouse_013.jsonl",
+     "sha256": "d05bf18c7ae62a53091706e2564abf71aa0cd058f838543f5e10a0ba21e97463"
+    },
+    "MTMC_Tracking_2026/train/Warehouse_014": {
+     "file": "MTMC_Tracking_2026__train__Warehouse_014.jsonl",
+     "sha256": "8a98851b40620ae6b32a95d5234f0f1d4936d0457eabe1a6d65cae32c16417d1"
+    },
+    "MTMC_Tracking_2026/train/Warehouse_015": {
+     "file": "MTMC_Tracking_2026__train__Warehouse_015.jsonl",
+     "sha256": "30386e2ded5cf5f03de3dcef590ea176fc8cc38012c2ccae4c8601e0f27ac912"
+    },
+    "MTMC_Tracking_2026/train/Warehouse_016": {
+     "file": "MTMC_Tracking_2026__train__Warehouse_016.jsonl",
+     "sha256": "f5c8064f56c25f76ae150769d7a4eb11d635f0d50e8250b3a131aab399250a53"
+    },
+    "MTMC_Tracking_2026/val/Warehouse_020": {
+     "file": "MTMC_Tracking_2026__val__Warehouse_020.jsonl",
+     "sha256": "cab1095c0bfcbe0bb3a597c94e813fe57c164562ac930d584b32b2ba439f7a45"
+    }
+   },
+   "n_views_skipped": 0,
+   "floor": 0.05,
+   "floor_from": "files",
+   "file_score_thresholds": [
+    0.05
+   ],
+   "n_boxes_below_floor": 0,
+   "crc_floor": 0.05
+  }
+ },
+ "outputs": {
+  "per_item": "<data>/outputs/recall_control/ss12_s4d_v22_clearly_visible",
+  "results": "<data>/outputs/recall_control_results/ss12_s4d_v22_clearly_visible"
+ },
+ "git_commit": "bb539a8ae77f2a2af9395e3daf1629cdd869e31e+dirty",
+ "datasets": {
+  "smartspaces": {
+   "dataset": "smartspaces",
+   "population": "clearly_visible",
+   "floor": 0.05,
+   "crc_floor": 0.05,
+   "published_threshold": 0.2,
+   "truncation": {
+    "n_views_capped": 0,
+    "share_views_capped": 0.0,
+    "t_cap": null,
+    "cap_floor_quantiles": null,
+    "crc_floor_above_t_cap": true,
+    "published_share_views_truncated": 0.0
+   },
+   "n_scenes": 12,
+   "n_views": 1440,
+   "n_objects": 24200,
+   "n_scenes_without_population": 0,
+   "n_unusable_boxes": 0,
+   "by_alpha": [
+    {
+     "alpha": 0.05,
+     "n_scenes": 12,
+     "n_cal": 11,
+     "min_cal_scenes_for_feasibility": 19,
+     "mean_heldout_fnr": 0.026980927256983773,
+     "mean_heldout_fnr_lo": 0.01566250317045973,
+     "mean_heldout_fnr_hi": 0.03814564262794699,
+     "heldout_fnr_min": 0.0024293956878226543,
+     "heldout_fnr_q25": 0.0064787865820072,
+     "heldout_fnr_median": 0.02725685238806362,
+     "heldout_fnr_q75": 0.045344016090078064,
+     "heldout_fnr_max": 0.055226824457593686,
+     "share_scenes_above_alpha": 0.25,
+     "pooled_heldout_fnr": 0.02669421487603306,
+     "mean_heldout_fnr_one_to_one": 0.028707719395918024,
+     "share_feasible": 0.0,
+     "mean_floor_fnr": 0.026980927256983773,
+     "loso_mean_bounded_by_construction": true,
+     "share_scenes_floor_above_alpha": 0.25,
+     "threshold_min": 0.05,
+     "threshold_q25": 0.05,
+     "threshold_median": 0.05,
+     "threshold_q75": 0.05,
+     "threshold_max": 0.05,
+     "share_folds_in_truncated_region": 0.0,
+     "share_views_truncated_at_threshold": 0.0,
+     "deploy_threshold": 0.05,
+     "deploy_feasible": false,
+     "deploy_cal_risk": 0.026980927256983773,
+     "deploy_adjusted_risk": 0.1018285482372158,
+     "deploy_in_truncated_region": false,
+     "deploy_share_views_truncated": 0.0,
+     "boxes_per_view": 50.42986111111111,
+     "unmatched_share": 0.5499387212712926,
+     "boxes_per_view_published": 26.916666666666668,
+     "unmatched_share_published": 0.30709494324045405,
+     "mean_fnr_published": 0.04527250557290378,
+     "mean_fnr_one_to_one_published": 0.048945390369691616
+    },
+    {
+     "alpha": 0.1,
+     "n_scenes": 12,
+     "n_cal": 11,
+     "min_cal_scenes_for_feasibility": 9,
+     "mean_heldout_fnr": 0.026980927256983773,
+     "mean_heldout_fnr_lo": 0.01610467456072383,
+     "mean_heldout_fnr_hi": 0.03823818480376994,
+     "heldout_fnr_min": 0.0024293956878226543,
+     "heldout_fnr_q25": 0.0064787865820072,
+     "heldout_fnr_median": 0.02725685238806362,
+     "heldout_fnr_q75": 0.045344016090078064,
+     "heldout_fnr_max": 0.055226824457593686,
+     "share_scenes_above_alpha": 0.0,
+     "pooled_heldout_fnr": 0.02669421487603306,
+     "mean_heldout_fnr_one_to_one": 0.028707719395918024,
+     "share_feasible": 0.0,
+     "mean_floor_fnr": 0.026980927256983773,
+     "loso_mean_bounded_by_construction": true,
+     "share_scenes_floor_above_alpha": 0.0,
+     "threshold_min": 0.05,
+     "threshold_q25": 0.05,
+     "threshold_median": 0.05,
+     "threshold_q75": 0.05,
+     "threshold_max": 0.05,
+     "share_folds_in_truncated_region": 0.0,
+     "share_views_truncated_at_threshold": 0.0,
+     "deploy_threshold": 0.05,
+     "deploy_feasible": false,
+     "deploy_cal_risk": 0.026980927256983773,
+     "deploy_adjusted_risk": 0.1018285482372158,
+     "deploy_in_truncated_region": false,
+     "deploy_share_views_truncated": 0.0,
+     "boxes_per_view": 50.42986111111111,
+     "unmatched_share": 0.5499387212712926,
+     "boxes_per_view_published": 26.916666666666668,
+     "unmatched_share_published": 0.30709494324045405,
+     "mean_fnr_published": 0.04527250557290378,
+     "mean_fnr_one_to_one_published": 0.048945390369691616
+    },
+    {
+     "alpha": 0.2,
+     "n_scenes": 12,
+     "n_cal": 11,
+     "min_cal_scenes_for_feasibility": 4,
+     "mean_heldout_fnr": 0.13895933676047814,
+     "mean_heldout_fnr_lo": 0.06510437497143348,
+     "mean_heldout_fnr_hi": 0.21917711117597083,
+     "heldout_fnr_min": 0.006680838141512299,
+     "heldout_fnr_q25": 0.01825489891761081,
+     "heldout_fnr_median": 0.06707147016368345,
+     "heldout_fnr_q75": 0.2605744349745761,
+     "heldout_fnr_max": 0.38658280922431865,
+     "share_scenes_above_alpha": 0.3333333333333333,
+     "pooled_heldout_fnr": 0.14012396694214876,
+     "mean_heldout_fnr_one_to_one": 0.147463897473167,
+     "share_feasible": 1.0,
+     "mean_floor_fnr": 0.026980927256983773,
+     "loso_mean_bounded_by_construction": true,
+     "share_scenes_floor_above_alpha": 0.0,
+     "threshold_min": 0.80685,
+     "threshold_q25": 0.8082125,
+     "threshold_median": 0.815755,
+     "threshold_q75": 0.84402,
+     "threshold_max": 0.85752,
+     "share_folds_in_truncated_region": 0.0,
+     "share_views_truncated_at_threshold": 0.0,
+     "deploy_threshold": 0.8365,
+     "deploy_feasible": true,
+     "deploy_cal_risk": 0.13332863122442698,
+     "deploy_adjusted_risk": 0.19999565959177876,
+     "deploy_in_truncated_region": false,
+     "deploy_share_views_truncated": 0.0,
+     "boxes_per_view": 22.261111111111113,
+     "unmatched_share": 0.2575492887446968,
+     "boxes_per_view_published": 26.916666666666668,
+     "unmatched_share_published": 0.30709494324045405,
+     "mean_fnr_published": 0.04527250557290378,
+     "mean_fnr_one_to_one_published": 0.048945390369691616
+    }
+   ],
+   "checks": {
+    "alpha_0.05_max_fnr_gap": 0.0,
+    "alpha_0.1_max_fnr_gap": 0.0,
+    "alpha_0.2_max_fnr_gap": 0.0
+   }
+  }
+ },
+ "seconds": 7.7
+}

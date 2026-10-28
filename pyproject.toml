@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "measured-space"
+dynamic = ["version"]
+description = "Calibrated error bars and certified recall for automatically generated metric 3D labels"
+readme = "README.md"
+requires-python = ">=3.12"
+license = { file = "LICENSE" }
+authors = [
+  { name = "evan-wes" }
+]
+classifiers = [
+  "License :: Other/Proprietary License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+]
+dependencies = ["numpy", "scipy", "pandas", "pillow", "pyyaml", "h5py", "opencv-python-headless"]
+
+[project.optional-dependencies]
+vlm = ["torch", "transformers>=5"]
+dev = ["pytest"]
+
+[tool.setuptools.dynamic]
+version = { file = "VERSION" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

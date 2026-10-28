@@ -1,0 +1,16 @@
+dataset,depth_source,min_iou,n_present,n_pairs,recall,n_confused,confusion_rate,n_ambiguous
+arkitscenes,laser,0.2,338,256,0.7574,51,0.1992,146
+arkitscenes,laser,0.3,338,242,0.716,45,0.186,90
+arkitscenes,laser,0.5,338,193,0.571,37,0.1917,27
+arkitscenes,lidar,0.2,338,256,0.7574,51,0.1992,146
+arkitscenes,lidar,0.3,338,242,0.716,45,0.186,90
+arkitscenes,lidar,0.5,338,193,0.571,37,0.1917,27
+arkitscenes,moge,0.2,338,256,0.7574,51,0.1992,146
+arkitscenes,moge,0.3,338,242,0.716,45,0.186,90
+arkitscenes,moge,0.5,338,193,0.571,37,0.1917,27
+smartspaces,gt_depth,0.2,1157,1109,0.9585,324,0.2922,311
+smartspaces,gt_depth,0.3,1157,1107,0.9568,322,0.2909,307
+smartspaces,gt_depth,0.5,1157,911,0.7874,317,0.348,1
+smartspaces,moge,0.2,20098,10982,0.5464,1172,0.1067,1658
+smartspaces,moge,0.3,20098,10894,0.542,1159,0.1064,1121
+smartspaces,moge,0.5,20098,10019,0.4985,1056,0.1054,196

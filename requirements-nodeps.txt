@@ -1,0 +1,6 @@
+# Install with: pip install --no-deps -r requirements-nodeps.txt
+# Packages whose declared dependencies (gradio, torchvision, trimesh, ...) are not needed for inference and
+# would change the environment. MoGe is pinned to the last commit before its v3 rewrite (MoGe-2 inference);
+# utils3d is the commit that MoGe pins.
+moge @ git+https://github.com/microsoft/MoGe.git@925b8ed835a7a9cdb7578ba15c658a0afc969030
+utils3d @ git+https://github.com/EasternJournalist/utils3d.git@3fab839f0be9931dac7c8488eb0e1600c236e183

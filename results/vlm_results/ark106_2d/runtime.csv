@@ -1,0 +1,4 @@
+model,n,latency_mean_s,latency_median_s,latency_p95_s,latency_total_s,new_tokens_mean,image_tokens_mean,truncated_rate,forced_rate,max_new_tokens
+cosmos-reason2-8b,202,11.1669,12.1574,20.1196,2255.7142,660.1535,1230.0000,0.4158,0.4109,1024
+qwen3-vl-8b,202,0.4367,0.4922,0.5326,88.2230,11.5644,1230.0000,0.0000,0.0000,128
+qwen3-vl-8b+blind,202,0.2318,0.2794,0.2991,46.8299,12.2426,0.0000,0.0000,0.0000,128

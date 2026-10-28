@@ -1,0 +1,16 @@
+{
+ "smartspaces": {
+  "MTMC_Tracking_2026/train/Warehouse_000": "layout_0",
+  "MTMC_Tracking_2026/train/Warehouse_002": "layout_0",
+  "MTMC_Tracking_2026/train/Warehouse_004": "layout_0",
+  "MTMC_Tracking_2026/train/Warehouse_006": "layout_0",
+  "MTMC_Tracking_2026/train/Warehouse_010": "layout_1",
+  "MTMC_Tracking_2026/train/Warehouse_011": "layout_1",
+  "MTMC_Tracking_2026/train/Warehouse_012": "layout_2",
+  "MTMC_Tracking_2026/train/Warehouse_013": "layout_2",
+  "MTMC_Tracking_2026/train/Warehouse_014": "layout_2",
+  "MTMC_Tracking_2026/train/Warehouse_015": "layout_2",
+  "MTMC_Tracking_2026/train/Warehouse_016": "layout_2",
+  "MTMC_Tracking_2026/val/Warehouse_020": "layout_0"
+ }
+}

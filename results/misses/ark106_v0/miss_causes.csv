@@ -1,0 +1,7 @@
+labeller,source,dataset,population,n_present,n_missed,n_no_detection,n_unboxed,n_assignment,share_no_detection,share_unboxed,share_assignment
+v0,laser,arkitscenes,present,4088,1374,1238,0,136,0.901019,0,0.0989811
+v0,laser,arkitscenes,clearly_visible,796,103,84,0,19,0.815534,0,0.184466
+v0,lidar,arkitscenes,present,4088,1373,1238,0,135,0.901675,0,0.0983248
+v0,lidar,arkitscenes,clearly_visible,796,103,84,0,19,0.815534,0,0.184466
+v0,moge,arkitscenes,present,4088,1373,1238,0,135,0.901675,0,0.0983248
+v0,moge,arkitscenes,clearly_visible,796,103,84,0,19,0.815534,0,0.184466
