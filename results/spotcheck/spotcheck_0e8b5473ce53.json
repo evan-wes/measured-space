@@ -85,7 +85,8 @@
    "object_id": "1cuweCkDZoOgV9Ol",
    "detection": 2,
    "ambiguous": true,
-   "verdict": "cant_tell",
+   "verdict": "right",
+   "verdict_original": "cant_tell",
    "note": "this cabinet has two wide drawers and two slightly narrower drawers. the white box is on the combination but the cyan box is just the bottom two drawers"
   },
   {
@@ -121,7 +122,8 @@
    "object_id": "9S2Mn8TndNDf19s9",
    "detection": 2,
    "ambiguous": false,
-   "verdict": "cant_tell",
+   "verdict": "right",
+   "verdict_original": "cant_tell",
    "note": "the white box is one cabinet door and the cyan box covers the whole cabinet"
   },
   {
@@ -274,7 +276,8 @@
    "object_id": "HAdg5cWUG7WrP0RT",
    "detection": 4,
    "ambiguous": false,
-   "verdict": "cant_tell",
+   "verdict": "right",
+   "verdict_original": "cant_tell",
    "note": "the white box is just one cabinet door whereas the cyan 3d box contains the whole cabinet"
   },
   {
@@ -373,7 +376,8 @@
    "object_id": "7iKjfJHTwC9Ak3HC",
    "detection": 3,
    "ambiguous": true,
-   "verdict": "cant_tell",
+   "verdict": "right",
+   "verdict_original": "cant_tell",
    "note": "the white box is covering more of the cabinet than the 3d cyan box"
   },
   {
@@ -553,7 +557,8 @@
    "object_id": "VX4qRuBsflIdi6CK",
    "detection": 2,
    "ambiguous": false,
-   "verdict": "cant_tell",
+   "verdict": "right",
+   "verdict_original": "cant_tell",
    "note": "the white box is covering one section of the cabinet and the 3d box covers the whole thing"
   },
   {
@@ -670,7 +675,8 @@
    "object_id": "eUY8XT4HtuiCG3k0",
    "detection": 6,
    "ambiguous": true,
-   "verdict": "cant_tell",
+   "verdict": "right",
+   "verdict_original": "cant_tell",
    "note": "I can't tell what the 3d cyan box is actually covering in this image, but the white box is covering one door of the cabinet and the cyan box seems to cover more of it"
   },
   {
@@ -724,7 +730,8 @@
    "object_id": "MUyKIyB5ULPthGlr",
    "detection": 0,
    "ambiguous": true,
-   "verdict": "cant_tell",
+   "verdict": "right",
+   "verdict_original": "cant_tell",
    "note": "This cabinet has a wider base and thinner top portion. the white box covers the whole cabinet and the cyan 3d box covers the thinner top half"
   },
   {
@@ -733,7 +740,8 @@
    "object_id": "XDsgW2jozqKPWKwa",
    "detection": 1,
    "ambiguous": false,
-   "verdict": "cant_tell",
+   "verdict": "right",
+   "verdict_original": "cant_tell",
    "note": "the white box covers the top surface of a cabinet and the cyan box looks like it covers the whole cabinet"
   },
   {
@@ -778,7 +786,8 @@
    "object_id": "qtHqofcaFAd1N0kx",
    "detection": 4,
    "ambiguous": true,
-   "verdict": "cant_tell",
+   "verdict": "right",
+   "verdict_original": "cant_tell",
    "note": "the boxes are both on parts of the cabinet but it's not clear if they ar ethe same parts"
   },
   {

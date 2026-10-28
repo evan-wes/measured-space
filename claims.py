@@ -549,20 +549,28 @@ def _a2_consistency(r: Path) -> Values:
             "band_lo": float(s0["nees_lower"]), "band_hi": float(s0["nees_upper"])}
 
 
-def _spotcheck(r: Path) -> dict:
-    """The manual spot check's export.
+SPOTCHECK_BASELINE = "0e8b5473ce53"
+"""str: sample id of the manual spot check of the baseline's (iPad LiDAR) pairs."""
+SPOTCHECK_CUBIFY = "4e824803ceb4"
+"""str: sample id of the manual spot check of Cubify + SAM 3's pairs."""
+
+
+def _spotcheck(r: Path, sample: str = SPOTCHECK_BASELINE) -> dict:
+    """A manual spot check's export.
 
     Parameters
     ----------
     r : pathlib.Path
         Results folder.
+    sample : str, default :data:`SPOTCHECK_BASELINE`
+        Sample id of the export.
 
     Returns
     -------
     dict
         The parsed export.
     """
-    return json.loads((r / "spotcheck/spotcheck_0e8b5473ce53.json").read_text())
+    return json.loads((r / f"spotcheck/spotcheck_{sample}.json").read_text())
 
 
 def _a3_ambiguous(r: Path) -> Values:
@@ -577,18 +585,44 @@ def _a3_exclude(r: Path) -> Values:
             "without": pct(gate(r, "audit_ark106_cutr_sam3_noamb", "categorical", "logistic", 1)["accept_yield"])}
 
 
-def _a3_spot(r: Path) -> Values:
-    """The manual spot check: wrong pairs among decided ones, their Wilson interval, and the undecided cards."""
-    answers = _spotcheck(r)["answers"]
+def _spot(r: Path, sample: str, part_of: tuple[int, ...]) -> Values:
+    """A manual spot check: wrong pairs among decided ones, their Wilson interval, and the undecided cards.
+
+    Parameters
+    ----------
+    r : pathlib.Path
+        Results folder.
+    sample : str
+        Sample id of the export.
+    part_of : tuple of int
+        Cards (1-based positions in the export) whose notes put the label on the right object at another level of
+        detail; they are counted as right.
+
+    Returns
+    -------
+    dict
+        Pairs, wrong, decided, wrong share and its interval (percent), undecided cards, part-of cards marked right.
+    """
+    answers = _spotcheck(r, sample)["answers"]
     decided = [a for a in answers if a["verdict"] in ("right", "wrong")]
     wrong = [a for a in decided if a["verdict"] == "wrong"]
     lo, hi = wilson(len(wrong), len(decided))
-    part_of = (9, 13, 30, 41, 61, 74, 80, 81, 86)              # card = 1-based position in the export
     return {"pairs": float(len(answers)), "wrong": float(len(wrong)), "decided": float(len(decided)),
             "wrong_pct": pct(len(wrong) / len(decided)), "ci_lo": pct(lo), "ci_hi": pct(hi),
-            "wrong_all_ambiguous": float(all(a["ambiguous"] for a in wrong)),
             "undecided": float(sum(a["verdict"] == "cant_tell" for a in answers)),
-            "part_of_cards_undecided": float(sum(answers[c - 1]["verdict"] == "cant_tell" for c in part_of))}
+            "part_of_right": float(sum(answers[c - 1]["verdict"] == "right" for c in part_of))}
+
+
+def _a3_spot(r: Path) -> Values:
+    """The baseline's spot check, and whether every wrong pair was flagged ambiguous."""
+    answers = _spotcheck(r)["answers"]
+    return {**_spot(r, SPOTCHECK_BASELINE, (9, 13, 30, 41, 61, 74, 80, 81, 86)),
+            "wrong_all_ambiguous": float(all(a["ambiguous"] for a in answers if a["verdict"] == "wrong"))}
+
+
+def _a3_spot_cubify(r: Path) -> Values:
+    """Cubify + SAM 3's spot check."""
+    return _spot(r, SPOTCHECK_CUBIFY, (2, 13, 19, 75, 85, 88, 97))
 
 
 def _a4_coverage(r: Path) -> Values:
@@ -901,11 +935,17 @@ CLAIMS: tuple[Claim, ...] = (
     Claim("A3.2", "A3", "Excluding ambiguous pairs raises Cubify + SAM 3 categorical acceptance from 21% to 44%.",
           {"with": "21", "without": "44"},
           ("audit_ark106_cutr_sam3/gate.csv", "audit_ark106_cutr_sam3_noamb/gate.csv"), AUDIT, _a3_exclude),
-    Claim("A3.3", "A3", "Manual spot check of 100 pairs: 2 of 88 decided pairs on a different object (2.3%, 95% CI "
-          "0.6-7.9%), both flagged ambiguous; 12 undecided, including the 9 part-of cards.",
-          {"pairs": "100", "wrong": "2", "decided": "88", "wrong_pct": "2.3", "ci_lo": "0.6", "ci_hi": "7.9",
-           "wrong_all_ambiguous": "True", "undecided": "12", "part_of_cards_undecided": "9"},
+    Claim("A3.3", "A3", "Manual spot check of 100 baseline pairs: 2 of 97 decided pairs on a different object (2.1%, "
+          "95% CI 0.6-7.2%), both flagged ambiguous; the 9 part-of cards counted as right; 3 undecided.",
+          {"pairs": "100", "wrong": "2", "decided": "97", "wrong_pct": "2.1", "ci_lo": "0.6", "ci_hi": "7.2",
+           "wrong_all_ambiguous": "True", "undecided": "3", "part_of_right": "9"},
           ("spotcheck/spotcheck_0e8b5473ce53.json",), "scripts/make_viewer.py --summarize-answers", _a3_spot),
+    Claim("A3.4", "A3", "Manual spot check of 100 Cubify + SAM 3 pairs: none of 98 decided pairs on a different object "
+          "(95% CI 0-3.8%); the 7 part-of cards counted as right; 2 undecided.",
+          {"pairs": "100", "wrong": "0", "decided": "98", "wrong_pct": "0", "ci_lo": "0", "ci_hi": "3.8",
+           "undecided": "2", "part_of_right": "7"},
+          ("spotcheck/spotcheck_4e824803ceb4.json",), "scripts/make_viewer.py --summarize-answers",
+          _a3_spot_cubify),
     Claim("A4.1", "A4", "Held-out 90% intervals cover 0.90-0.91 of labels for every labeller.",
           {"lo": "0.90", "hi": "0.91"}, ("audit_*/coverage.csv",), AUDIT, _a4_coverage),
     Claim("A4.2", "A4", "Per-label spread keeps coverage at 0.87-0.95 across easy and hard labels; a constant width "
