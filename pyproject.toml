@@ -5,8 +5,18 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "measured-space"
 dynamic = ["version"]
-description = "Calibrated, physically validated uncertainty for metric 3D grounding labels"
+description = "Calibrated error bars and certified recall for automatically generated metric 3D labels"
+readme = "README.md"
 requires-python = ">=3.12"
+license = { file = "LICENSE" }
+authors = [
+  { name = "evan-wes" }
+]
+classifiers = [
+  "License :: Other/Proprietary License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.12",
+]
 dependencies = ["numpy", "scipy", "pandas", "pillow", "pyyaml", "h5py", "opencv-python-headless"]
 
 [project.optional-dependencies]
