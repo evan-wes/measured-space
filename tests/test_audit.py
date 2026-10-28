@@ -902,3 +902,60 @@ def test_error_figure_draws_every_source(capsys: pytest.CaptureFixture[str]) -> 
     assert len(styles) == len(figures.SOURCE_STYLE)                            # colour + marker unique per source
     assert "mystery" in capsys.readouterr().err
     figures.plt.close(fig)
+
+
+# --------------------------------------------------------------------------------------------------------
+# Saved calibration predictions: they reproduce the conformal quantiles and the gate's thresholds exactly
+# --------------------------------------------------------------------------------------------------------
+
+
+def test_saved_calibration_reproduces_quantiles_and_gate_thresholds(hetero: AuditResult, tmp_path: Path) -> None:
+    """Read back, the saved leave-two-out predictions give every test row's quantile and every gate ``lam``.
+
+    The quantile table holds, for each test row's cell, exactly the quantiles :func:`conformal_calibrate` gave
+    it, and a cell for every depth source of every test scene and question type. Joining the saved predictions
+    with the pair table and rerunning Learn-then-Test per test scene reproduces the gate's thresholds bit for
+    bit, for every numeric model kind and tolerance multiple. Writing them changes no other output file.
+
+    Parameters
+    ----------
+    hetero : AuditResult
+        The shared synthetic audit.
+    tmp_path : pathlib.Path
+        Output folder.
+    """
+    write = _script("run_audit").write_tables
+    write(hetero, tmp_path / "with", None)
+    bare = AuditResult(hetero.pairs, hetero.numeric, hetero.categorical, hetero.gate, hetero.tables, hetero.notes)
+    write(bare, tmp_path / "without", None)
+    before = sorted(p.relative_to(tmp_path / "without") for p in (tmp_path / "without").rglob("*") if p.is_file())
+    for rel in before:
+        assert (tmp_path / "with" / rel).read_bytes() == (tmp_path / "without" / rel).read_bytes(), rel
+    added = {p.name for p in (tmp_path / "with").iterdir()} - {p.name for p in (tmp_path / "without").iterdir()}
+    assert added == {"calibration_numeric.csv.gz", "calibration_quantiles.csv.gz", "calibration.json"}
+
+    cal = pd.read_csv(tmp_path / "with" / "calibration_numeric.csv.gz")
+    quantiles = pd.read_csv(tmp_path / "with" / "calibration_quantiles.csv.gz")
+    assert set(cal["kind"]) == set(audit_module.NUMERIC_KINDS)
+    test = hetero.numeric.merge(quantiles.rename(columns={"test_scene": "scene"}),
+                                on=["dataset", "kind", "scene", "qtype", "depth_source"], suffixes=("", "_saved"))
+    assert len(test) == len(hetero.numeric)
+    for col in ("q50", "q80", "q90", "q95", "n_cal", "cal_cell"):
+        assert np.array_equal(test[col].to_numpy(), test[f"{col}_saved"].to_numpy()), col
+    per_group = quantiles.groupby(["kind", "test_scene", "qtype"])["depth_source"].nunique()
+    assert (per_group == hetero.pairs["depth_source"].nunique()).all()
+
+    config = FAST
+    cols = ["dataset", "scene", "qtype", "depth_source", "e", "tau", "tau_hat"]
+    joined = pd.concat([cal, hetero.pairs.loc[cal["row"].to_numpy(), cols].reset_index(drop=True)], axis=1)
+    assert not (joined["scene"] == joined["test_scene"]).any()
+    thresholds = hetero.tables["gate_thresholds"]
+    thresholds = thresholds[thresholds["answer_kind"] == "numeric"]
+    for tau_scale in config.tau_scales:
+        score, wrong = audit_module.gate_scores(joined, "numeric", config.gate_z, tau_scale)
+        for _, rec in thresholds[thresholds["tau_scale"] == tau_scale].iterrows():
+            mine = ((joined["kind"] == rec["kind"]) & (joined["test_scene"] == rec["scene"])).to_numpy()
+            lam, info = ltt_threshold(score[mine], wrong[mine], config.epsilon, config.delta,
+                                      min_accept=config.min_accept, min_accept_frac=config.min_accept_frac,
+                                      max_threshold=config.kappa)
+            assert lam == rec["lam"] and info["n_cal"] == rec["n_cal"]

@@ -12,7 +12,9 @@ Outputs:
 
 - ``<data root>/outputs/audit/`` (or ``--out``; with ``--exclude-ambiguous`` the default is
   ``<data root>/outputs/audit_exclude_ambiguous/``): per-item tables (``pairs.csv``, ``numeric.csv``,
-  ``categorical.csv``, ``gate.csv``) that the figures are drawn from, a copy of every aggregate table, and
+  ``categorical.csv``, ``gate.csv``) that the figures are drawn from, a copy of every aggregate table, the numeric
+  leave-two-out calibration predictions and per-test-scene conformal quantiles (``calibration_numeric.csv.gz``,
+  ``calibration_quantiles.csv.gz``, described by ``calibration.json``; :func:`write_calibration`), and
   ``accepted_ids.json``: ``{"settings": {...}, "accepted": {dataset: {"auto_<depth source>": [item ids]}}}``, the
   labels the primary gate accepted (numeric: feature model at the question's tolerance; categorical: logistic
   p(correct); thresholds certified by Learn-then-Test on held-out scenes), for scoring models on the accepted
@@ -190,6 +192,58 @@ def write_tables(result: AuditResult, out: Path, results: Path | None) -> None:
         folder.mkdir(parents=True, exist_ok=True)
         for name, frame in result.tables.items():
             frame.to_csv(folder / f"{name}.csv", index=False, float_format="%.6g")
+    write_calibration(result, out)
+
+
+CALIBRATION_FILES: dict[str, str] = {"predictions": "calibration_numeric.csv.gz",
+                                     "quantiles": "calibration_quantiles.csv.gz", "record": "calibration.json"}
+"""dict: the files :func:`write_calibration` writes to the per-item folder."""
+
+
+def write_calibration(result: AuditResult, out: Path) -> dict[str, Any] | None:
+    """Write the numeric leave-two-out calibration predictions and per-test-scene conformal quantiles (per item).
+
+    These are what the conformal step and the gate computed but the other outputs do not keep: for every test
+    scene, the calibration items' predictions from models that saw neither the test scene's fold nor the item's
+    own fold, and the quantiles that give the test scene's answers their ``half*``. Floats are written at full
+    precision (shortest round-trip representation), so reading them back reproduces the gate's calibration
+    scores exactly; gzip with a fixed header time, so equal content gives equal bytes. Nothing is written when
+    nothing numeric was modelled. The other outputs are not touched.
+
+    Parameters
+    ----------
+    result : AuditResult
+        The audit (its ``calibration`` and ``quantiles``).
+    out : pathlib.Path
+        Per-item output folder (exists).
+
+    Returns
+    -------
+    dict or None
+        The record written to ``calibration.json`` (files, columns, row counts, the rule), or None if nothing
+        was written.
+    """
+    if not len(result.calibration):
+        return None
+    gzip = {"method": "gzip", "compresslevel": 6, "mtime": 0}
+    result.calibration.to_csv(out / CALIBRATION_FILES["predictions"], index=False, compression=gzip)
+    result.quantiles.to_csv(out / CALIBRATION_FILES["quantiles"], index=False, compression=gzip)
+    record = {
+        "files": CALIBRATION_FILES,
+        "predictions": {"columns": list(result.calibration.columns), "n_rows": int(len(result.calibration)),
+                        "kinds": sorted(result.calibration["kind"].astype(str).unique()),
+                        "rule": "one row per numeric calibration item and test scene: the leave-two-out prediction "
+                                "(measured_space.audit.cross_fit) of a model fitted without the test scene's fold "
+                                "and the item's own fold; row indexes pairs.csv (0-based); mu, sigma, sigma_g in m"},
+        "quantiles": {"columns": list(result.quantiles.columns), "n_rows": int(len(result.quantiles)),
+                      "rule": "per dataset, kind, test scene and Mondrian cell (question type, depth source): the "
+                              "split-conformal quantile of |e - mu| / sigma over that test scene's calibration "
+                              "items (measured_space.audit.conformal_quantile_table); cells with fewer than "
+                              "min_cal scores use the question type pooled over depth sources (cal_cell "
+                              "'pooled'); an answer's half<L> is q<L> * sigma"},
+        "float_format": "shortest round-trip (full float64 precision)"}
+    (out / CALIBRATION_FILES["record"]).write_text(dumps(record))
+    return record
 
 
 def cross_fit_record(result: AuditResult, config: AuditConfig) -> dict[str, Any]:

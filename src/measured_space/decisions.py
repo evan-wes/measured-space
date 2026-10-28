@@ -44,20 +44,36 @@ outputs (``pairs.csv``, ``numeric.csv``, ``gate.csv``, ``folds.csv``) and refits
    certified rule, the uncertified "interval excludes ``t``" rule (``lambda = 1``), accepting every decision, and
    the fixed-tolerance gate applied to the same decisions.
 
-**Calibration caveat.** The audit saved one out-of-scene prediction per answer (``numeric.csv``), not its
-leave-two-out calibration predictions. Calibration decisions for a test scene are therefore other folds' test
-predictions: each comes from a model whose training data included the test scene's fold, and its ``half90``
-from a conformal quantile whose calibration scores included that fold. The test scene's own answers never enter
-its calibration set, but the certificate is approximate in this respect; an exact one needs the audit's
-leave-two-out predictions. As in the audit, items are treated as independent and scenes as exchangeable, so
-Wilson intervals and binomial bounds are optimistic for items that share a scene.
+6. **Exact calibration** (:func:`calibration_answers`, :func:`direct_margin_halfwidth_exact`). An audit run
+   since the calibration predictions are saved (``calibration_numeric.csv.gz``, ``calibration_quantiles.csv.gz``)
+   holds, per test scene, the leave-two-out prediction of every calibration item (a model fitted without the
+   test scene's fold and the item's own) and the conformal quantiles that give the test scene's answers their
+   ``half90``. Calibration decisions for a test scene are then rebuilt from them: ``mu`` and ``sigma`` of the
+   leave-two-out model, the half-width ``q90 * sigma`` with the test scene's quantile for the item's cell, so a
+   calibration decision is made exactly as one of the test scene's own (:func:`certify`'s exact mode; margins
+   likewise). For a question type with no answer of the test scene in any depth source, nothing of that type ever
+   saw the scene, and its calibration decisions are the other scenes' test decisions. One data reuse remains: the
+   per-cell quantile that scales every calibration decision's error bar is computed from those same items'
+   scores (one scalar per cell).
+7. **Second opinion** (:func:`attach_witness`, :func:`second_opinion_score`, :func:`apply_witness_rule`). A
+   witness labeller that answers the same question id must make the same call, and the decision's score is the
+   larger of the two labellers' scores; certified by the same Learn-then-Test on the same calibration decisions
+   (exact when both audits saved their calibration predictions).
+
+**Calibration caveat (approximate mode).** An audit folder written before the calibration predictions were saved
+holds one out-of-scene prediction per answer (``numeric.csv``) only. Calibration decisions for a test scene are
+then other folds' test predictions: each comes from a model whose training data included the test scene's fold,
+and its ``half90`` from a conformal quantile whose calibration scores included that fold. The test scene's own
+answers never enter its calibration set, but the certificate is approximate in this respect. As in the audit,
+items are treated as independent and scenes as exchangeable, so Wilson intervals and binomial bounds are
+optimistic for items that share a scene.
 """
 
 from __future__ import annotations
 
 import math
 import zlib
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -402,6 +418,25 @@ def two_sided(c: ArrayLike, t: ArrayLike, ref: ArrayLike, half: ArrayLike) -> tu
 
 # Answer columns carried into every single-answer decision table.
 _DECISION_KEEP = ["row", "id", "dataset", "scene", "qtype", "fold", "fixed_accept", "c", "ref", "half"]
+_TEST_SCENE = "test_scene"       # column of calibration answers and decisions: the test scene they calibrate
+
+
+def _keep(frame: pd.DataFrame, columns: Sequence[str]) -> list[str]:
+    """Columns to carry into a decision table, plus ``test_scene`` when the frame holds calibration answers.
+
+    Parameters
+    ----------
+    frame : pandas.DataFrame
+        Answers (:func:`answer_table`) or calibration answers (:func:`calibration_answers`).
+    columns : sequence of str
+        The columns every decision table carries.
+
+    Returns
+    -------
+    list of str
+        ``columns``, then ``test_scene`` if ``frame`` has it.
+    """
+    return [*columns, *([_TEST_SCENE] if _TEST_SCENE in frame.columns else [])]
 
 
 def threshold_decisions(answers: pd.DataFrame,
@@ -419,17 +454,18 @@ def threshold_decisions(answers: pd.DataFrame,
     Returns
     -------
     pandas.DataFrame
-        One row per answer and threshold: ``row, id, dataset, scene, qtype, fold, fixed_accept, c, ref, half``,
-        ``threshold`` and ``t`` (both the threshold, m), ``call`` (``c > t``), ``truth`` (``ref > t``),
-        ``wrong`` and ``score`` (:func:`two_sided`).
+        One row per answer and threshold: ``row, id, dataset, scene, qtype, fold, fixed_accept, c, ref, half``
+        (and ``test_scene`` for :func:`calibration_answers`), ``threshold`` and ``t`` (both the threshold, m),
+        ``call`` (``c > t``), ``truth`` (``ref > t``), ``wrong`` and ``score`` (:func:`two_sided`).
     """
+    keep = _keep(answers, _DECISION_KEEP)
     parts = []
     for (dataset, qtype), g in answers.groupby(["dataset", "qtype"], sort=True):
         for t in thresholds.get(str(dataset), {}).get(str(qtype), ()):
-            part = g[_DECISION_KEEP].assign(threshold=float(t), t=float(t))
+            part = g[keep].assign(threshold=float(t), t=float(t))
             parts.append(part)
     if not parts:
-        return pd.DataFrame(columns=[*_DECISION_KEEP, "threshold", "t", "call", "truth", "wrong", "score"])
+        return pd.DataFrame(columns=[*keep, "threshold", "t", "call", "truth", "wrong", "score"])
     out = pd.concat(parts, ignore_index=True)
     out["call"], out["wrong"], out["score"] = two_sided(out["c"], out["t"], out["ref"], out["half"])
     out["truth"] = out["ref"].to_numpy(float) > out["t"].to_numpy(float)
@@ -452,8 +488,8 @@ def sweep_decisions(answers: pd.DataFrame, us: Sequence[float] = SWEEP_U) -> pd.
     Returns
     -------
     pandas.DataFrame
-        One row per answer and offset: the columns of :func:`threshold_decisions` without ``threshold``, plus
-        ``u`` and ``u_abs``.
+        One row per answer and offset: the columns of :func:`threshold_decisions` without ``threshold`` (with
+        ``test_scene`` for calibration answers), plus ``u`` and ``u_abs``.
 
     Raises
     ------
@@ -462,11 +498,12 @@ def sweep_decisions(answers: pd.DataFrame, us: Sequence[float] = SWEEP_U) -> pd.
     """
     if any(u == 0 for u in us):
         raise ValueError("sweep offsets must be non-zero")
+    keep = _keep(answers, _DECISION_KEEP)
     usable = answers[answers["ref"].to_numpy(float) > 0]
-    parts = [usable[_DECISION_KEEP].assign(u=float(u), u_abs=abs(float(u)),
-                                           t=usable["ref"].to_numpy(float) * (1.0 + float(u))) for u in us]
+    parts = [usable[keep].assign(u=float(u), u_abs=abs(float(u)),
+                                 t=usable["ref"].to_numpy(float) * (1.0 + float(u))) for u in us]
     if not parts or not len(usable):
-        return pd.DataFrame(columns=[*_DECISION_KEEP, "u", "u_abs", "t", "call", "truth", "wrong", "score"])
+        return pd.DataFrame(columns=[*keep, "u", "u_abs", "t", "call", "truth", "wrong", "score"])
     out = pd.concat(parts, ignore_index=True)
     out["call"], out["wrong"], out["score"] = two_sided(out["c"], out["t"], out["ref"], out["half"])
     out["truth"] = out["ref"].to_numpy(float) > out["t"].to_numpy(float)
@@ -523,7 +560,8 @@ def margin_pairs(answers: pd.DataFrame, referents: Mapping[str, Sequence[str]],
     Parameters
     ----------
     answers : pandas.DataFrame
-        :func:`answer_table` output.
+        :func:`answer_table` output, or :func:`calibration_answers` (pairs are then formed within each test
+        scene's calibration answers and carry ``test_scene``).
     referents : mapping of str to sequence of str
         Question id to the ids of its referent objects (from the label folder's question records).
     qtypes : sequence of str, default :data:`MARGIN_QTYPES`
@@ -553,7 +591,7 @@ def margin_pairs(answers: pd.DataFrame, referents: Mapping[str, Sequence[str]],
               "n_multi_referent": int(objects.map(lambda o: o is not None and len(o) != 1).sum())}
     keep = objects.map(lambda o: o is not None and len(o) == 1).to_numpy(dtype=bool)
     subset = subset[keep].assign(object=objects[keep].map(lambda o: str(o[0])))
-    view = ["dataset", "scene", "camera_id", "frame", "qtype"]
+    view = _keep(subset, ["dataset", "scene", "camera_id", "frame", "qtype"])
     cols = [*view, "id", "object", "value", "ref", "e", "mu", "sigma", "half", "fold", "fixed_accept"]
     merged = subset[cols].merge(subset[cols], on=view, suffixes=("_a", "_b"))
     merged = merged[merged["id_a"] < merged["id_b"]]
@@ -637,11 +675,11 @@ def margin_decisions(pairs: pd.DataFrame, fit_margin: float = 0.1,
     Returns
     -------
     pandas.DataFrame
-        One row per pair and decision: ``dataset, scene, qtype, fold, fixed_accept, decision, threshold``
-        (0 or ``fit_margin``, m), ``call``, ``truth``, ``wrong`` and ``score`` (``h_direct / |c_m - t|`` in the
-        decision's orientation; :func:`two_sided`).
+        One row per pair and decision: ``dataset, scene, qtype, fold, fixed_accept`` (and ``test_scene`` for
+        calibration pairs), ``decision, threshold`` (0 or ``fit_margin``, m), ``call``, ``truth``, ``wrong`` and
+        ``score`` (``h_direct / |c_m - t|`` in the decision's orientation; :func:`two_sided`).
     """
-    keep = ["dataset", "scene", "qtype", "fold", "fixed_accept"]
+    keep = _keep(pairs, ["dataset", "scene", "qtype", "fold", "fixed_accept"])
     parts = []
     c, m, h = (pairs[k].to_numpy(float) for k in ("c_m", "m", "h_direct"))
     sign = pairs[keep].assign(decision="sign", threshold=0.0)
@@ -664,14 +702,26 @@ def margin_decisions(pairs: pd.DataFrame, fit_margin: float = 0.1,
 
 def certify(decisions: pd.DataFrame, fold_of: Mapping[tuple[str, str, str], int], epsilon: float, delta: float, *,
             pool_cols: Sequence[str] = (), min_accept: int = AuditConfig.min_accept,
-            min_accept_frac: float = AuditConfig.min_accept_frac,
-            max_threshold: float = NEVER) -> tuple[BoolArray, Array, pd.DataFrame]:
+            min_accept_frac: float = AuditConfig.min_accept_frac, max_threshold: float = NEVER,
+            calibration: pd.DataFrame | None = None,
+            exact: Collection[tuple[str, str, str]] | None = None) -> tuple[BoolArray, Array, pd.DataFrame]:
     """Accept decisions whose score is at most a per-scene threshold certified by Learn-then-Test.
 
-    Within each pool (``pool_cols``), for every test scene ``S``, the calibration decisions are those of the
-    pool's other scenes outside ``S``'s fold: for a decision of question type ``q``, outside the fold that
-    ``S`` has for ``q`` (scene ``S`` alone if ``S`` has no answer of type ``q``). The audit's
-    :func:`~measured_space.audit.ltt_threshold` then picks ``lambda`` so that
+    **Approximate** (``calibration`` None): within each pool (``pool_cols``), for every test scene ``S``, the
+    calibration decisions are those of the pool's other scenes outside ``S``'s fold: for a decision of question
+    type ``q``, outside the fold that ``S`` has for ``q`` (scene ``S`` alone if ``S`` has no answer of type
+    ``q``). They are those scenes' own test decisions, so their predictions come from models that saw ``S``'s
+    fold.
+
+    **Exact** (``calibration`` given, built from the audit's saved leave-two-out predictions by
+    :func:`calibration_answers`): for a question type ``q`` whose group the audit cross-fitted with ``S`` in it
+    (``(dataset, q, S)`` in ``exact``), the calibration decisions of ``S`` are ``calibration``'s rows with
+    ``test_scene == S``: items outside ``S``'s fold predicted by models that saw neither ``S``'s fold nor their
+    own. For a question type whose group does not hold ``S`` (``S`` has no answer of that type in any depth
+    source, so no model or quantile of that group ever saw ``S``), they are the pool's own test decisions of
+    that type, as in the approximate mode.
+
+    Either way the audit's :func:`~measured_space.audit.ltt_threshold` then picks ``lambda`` so that
     ``P(wrong | score <= lambda) <= epsilon`` at confidence ``1 - delta`` (if calibration and test decisions are
     i.i.d.).
 
@@ -693,6 +743,12 @@ def certify(decisions: pd.DataFrame, fold_of: Mapping[tuple[str, str, str], int]
         ... and at least this share of them.
     max_threshold : float, default :data:`NEVER`
         Candidates above this are not tested (with the default, an infinite score is never accepted).
+    calibration : pandas.DataFrame, optional
+        Calibration decisions of the exact mode: ``test_scene, dataset, score, wrong`` and the ``pool_cols``
+        (decisions built from :func:`calibration_answers`). None: the approximate mode.
+    exact : collection of tuple, optional
+        ``(dataset, qtype, test scene)`` groups that ``calibration`` covers (:func:`exact_groups`); required
+        with ``calibration``.
 
     Returns
     -------
@@ -703,7 +759,13 @@ def certify(decisions: pd.DataFrame, fold_of: Mapping[tuple[str, str, str], int]
     thresholds : pandas.DataFrame
         One row per pool and test scene: the pool keys, ``scene``, ``lam`` and the
         :func:`~measured_space.audit.ltt_threshold` info (``n_cal``, ``n_tested``, ``n_accepted_cal``,
-        ``err_accepted_cal``, ``p_value``).
+        ``err_accepted_cal``, ``p_value``); in the exact mode also ``n_cal_exact`` (from ``calibration``) and
+        ``n_cal_own`` (own test decisions of question types whose group does not hold the scene).
+
+    Raises
+    ------
+    ValueError
+        If ``calibration`` is given without ``exact``.
     """
     n = len(decisions)
     lam = np.full(n, -np.inf)
@@ -715,6 +777,17 @@ def certify(decisions: pd.DataFrame, fold_of: Mapping[tuple[str, str, str], int]
     fold = decisions["fold"].to_numpy(dtype=np.int64)
     groups: dict[Any, NDArray[np.intp]] = (decisions.groupby(list(pool_cols), sort=True, dropna=False).indices
                                            if pool_cols else {(): np.arange(n)})
+    if calibration is not None and exact is None:
+        raise ValueError("exact calibration needs the groups it covers (exact)")
+    cal_groups: dict[tuple[Any, ...], NDArray[np.intp]] = {}
+    exact_set = set(exact or ())
+    if calibration is not None:
+        c_score = calibration["score"].to_numpy(dtype=np.float64)
+        c_wrong = calibration["wrong"].to_numpy(dtype=np.float64)
+        c_data = calibration["dataset"].astype(str).to_numpy()
+        by = calibration.assign(**{_TEST_SCENE: calibration[_TEST_SCENE].astype(str)}).groupby(
+            [*pool_cols, _TEST_SCENE], sort=False, dropna=False).indices
+        cal_groups = {(k if isinstance(k, tuple) else (k,)): v for k, v in by.items()}
     rows: list[dict[str, Any]] = []
     for key, gidx in groups.items():
         key_t = key if isinstance(key, tuple) else (key,)
@@ -724,12 +797,23 @@ def certify(decisions: pd.DataFrame, fold_of: Mapping[tuple[str, str, str], int]
         for s in np.unique(g_scene):
             test = g_scene == s
             d = g_data[test][0]
-            fold_s = np.array([fold_of.get((d, str(q), str(s)), -1) for q in g_quniq], dtype=np.int64)[g_qcode]
-            cal = (g_fold != fold_s) & (g_scene != s) & (g_data == d)
-            value, info = ltt_threshold(g_score[cal], g_wrong[cal], epsilon, delta, min_accept=min_accept,
+            extra: dict[str, int] = {}
+            if calibration is None:
+                fold_s = np.array([fold_of.get((d, str(q), str(s)), -1) for q in g_quniq], dtype=np.int64)[g_qcode]
+                cal = (g_fold != fold_s) & (g_scene != s) & (g_data == d)
+                cal_score, cal_wrong = g_score[cal], g_wrong[cal]
+            else:
+                covered = np.array([(d, str(q), str(s)) in exact_set for q in g_quniq], dtype=bool)[g_qcode]
+                own = ~covered & (g_scene != s) & (g_data == d)
+                cidx = cal_groups.get((*key_t, str(s)), np.array([], dtype=np.intp))
+                cidx = cidx[c_data[cidx] == d]
+                cal_score = np.concatenate([c_score[cidx], g_score[own]])
+                cal_wrong = np.concatenate([c_wrong[cidx], g_wrong[own]])
+                extra = {"n_cal_exact": int(len(cidx)), "n_cal_own": int(own.sum())}
+            value, info = ltt_threshold(cal_score, cal_wrong, epsilon, delta, min_accept=min_accept,
                                         min_accept_frac=min_accept_frac, max_threshold=max_threshold)
             lam[gidx[test]] = value
-            rows.append({**dict(zip(pool_cols, key_t)), "scene": s, "lam": value, **info})
+            rows.append({**dict(zip(pool_cols, key_t)), "scene": s, "lam": value, **info, **extra})
     return score <= lam, lam, pd.DataFrame(rows)
 
 
@@ -924,7 +1008,8 @@ def standard_rules(epsilons: Sequence[float], *, accept_all: str = "accept_all")
 
 
 def apply_rules(decisions: pd.DataFrame, fold_of: Mapping[tuple[str, str, str], int], config: DecisionConfig,
-                pool_cols: Sequence[str], *, one_sided: bool = False) -> tuple[pd.DataFrame, pd.DataFrame]:
+                pool_cols: Sequence[str], *, one_sided: bool = False, calibration: pd.DataFrame | None = None,
+                exact: Collection[tuple[str, str, str]] | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
     """Add every rule's acceptance column to one labeller's decisions.
 
     Parameters
@@ -940,6 +1025,10 @@ def apply_rules(decisions: pd.DataFrame, fold_of: Mapping[tuple[str, str, str], 
         Calibration pools (see :func:`certify`).
     one_sided : bool, default False
         One-sided decisions: the no-check baseline and the fixed gate accept outside calls only.
+    calibration : pandas.DataFrame, optional
+        Exact-mode calibration decisions (see :func:`certify`); None: approximate.
+    exact : collection of tuple, optional
+        The groups ``calibration`` covers (:func:`exact_groups`).
 
     Returns
     -------
@@ -953,7 +1042,8 @@ def apply_rules(decisions: pd.DataFrame, fold_of: Mapping[tuple[str, str, str], 
     tables = []
     for k, eps in enumerate(config.epsilons):
         accept, lam, thr = certify(out, fold_of, eps, config.delta, pool_cols=pool_cols,
-                                   min_accept=config.min_accept, min_accept_frac=config.min_accept_frac)
+                                   min_accept=config.min_accept, min_accept_frac=config.min_accept_frac,
+                                   calibration=calibration, exact=exact)
         out[f"accept_eps{k}"], out[f"lam_eps{k}"] = accept, lam
         tables.append(thr.assign(epsilon=eps))
     score = out["score"].to_numpy(float)
@@ -967,3 +1057,388 @@ def apply_rules(decisions: pd.DataFrame, fold_of: Mapping[tuple[str, str, str], 
     else:
         out["accept_fixed"] = fixed
     return out, pd.concat(tables, ignore_index=True) if tables else pd.DataFrame()
+
+
+# ============================================================================================================
+# 6. Exact calibration from the audit's saved leave-two-out predictions
+# ============================================================================================================
+
+
+CALIBRATION_MODES: tuple[str, ...] = ("exact", "approximate")
+"""tuple of str: how calibration decisions were built: from the audit's saved leave-two-out predictions, or from
+other folds' test predictions (audit folders that did not save them)."""
+
+
+def exact_groups(quantiles: pd.DataFrame, kind: str = "sigma") -> set[tuple[str, str, str]]:
+    """The groups the audit calibrated with leave-two-out predictions: every test scene of every question type.
+
+    Parameters
+    ----------
+    quantiles : pandas.DataFrame
+        The audit's saved per-test-scene conformal quantiles (``calibration_quantiles.csv.gz``: ``dataset,
+        kind, test_scene, qtype``).
+    kind : str, default "sigma"
+        Error model.
+
+    Returns
+    -------
+    set of tuple of str
+        ``(dataset, qtype, test scene)`` for every scene the audit cross-fitted in that question type's group
+        (any depth source).
+    """
+    q = quantiles[quantiles["kind"] == kind]
+    return set(zip(q["dataset"].astype(str), q["qtype"].astype(str), q["test_scene"].astype(str)))
+
+
+def calibration_answers(answers: pd.DataFrame, predictions: pd.DataFrame, quantiles: pd.DataFrame, *,
+                        level: float = 0.9, kind: str = "sigma") -> pd.DataFrame:
+    """Each test scene's calibration answers, rebuilt from the audit's saved leave-two-out predictions.
+
+    For test scene ``S`` and a calibration item (an answer of this labeller in a scene outside ``S``'s fold),
+    ``mu`` and ``sigma`` are the prediction of the model fitted without ``S``'s fold and the item's own fold,
+    and the half-width is ``q * sigma`` with ``q`` the quantile that ``S``'s own answers of the item's Mondrian
+    cell (question type, depth source) get: so the calibration answer has its error bar exactly as an answer of
+    ``S`` would. ``c = value - mu``; the reference, the id and the view are the item's.
+
+    Parameters
+    ----------
+    answers : pandas.DataFrame
+        :func:`answer_table` output (one labeller, one depth source).
+    predictions : pandas.DataFrame
+        The audit's ``calibration_numeric.csv.gz``: ``kind, test_scene, row, mu, sigma`` (row indexes
+        ``pairs.csv``).
+    quantiles : pandas.DataFrame
+        The audit's ``calibration_quantiles.csv.gz``: ``dataset, kind, test_scene, qtype, depth_source`` and
+        ``q<level>``.
+    level : float, default 0.9
+        Coverage level of the error bar.
+    kind : str, default "sigma"
+        Error model (the one ``answers`` came from).
+
+    Returns
+    -------
+    pandas.DataFrame
+        ``test_scene`` followed by :func:`answer_table`'s columns, one row per test scene and calibration
+        answer of this depth source, sorted by test scene and row; ``mu, sigma, half, c`` are the leave-two-out
+        ones (m; ``half`` is ``inf`` where the quantile is).
+
+    Raises
+    ------
+    KeyError
+        If ``quantiles`` lacks the level's column.
+    ValueError
+        If a calibration item lies in its test scene or in the test scene's fold, or has no quantile.
+    """
+    tag = f"q{int(round(100 * level))}"
+    if tag not in quantiles.columns:
+        raise KeyError(f"quantile table lacks {tag}")
+    pred = predictions.loc[predictions["kind"] == kind, ["test_scene", "row", "mu", "sigma"]]
+    pred = pred.assign(test_scene=pred["test_scene"].astype(str), row=pred["row"].astype(np.int64))
+    cal = pred.merge(answers.drop(columns=["mu", "sigma", "half", "c"]), on="row", how="inner",
+                     validate="many_to_one")
+    q = quantiles.loc[quantiles["kind"] == kind, ["dataset", "test_scene", "qtype", "depth_source", tag]]
+    q = q.assign(test_scene=q["test_scene"].astype(str), depth_source=q["depth_source"].astype(str))
+    cal = cal.merge(q, on=["dataset", "test_scene", "qtype", "depth_source"], how="left", validate="many_to_one")
+    if cal[tag].isna().any():
+        raise ValueError(f"{int(cal[tag].isna().sum())} calibration answers have no quantile for their cell")
+    if (cal["scene"] == cal["test_scene"]).any():
+        raise ValueError("a calibration answer lies in its own test scene")
+    fold_of = fold_lookup(answers)
+    test_fold = np.array([fold_of.get(k, -1) for k in zip(cal["dataset"].astype(str), cal["qtype"].astype(str),
+                                                          cal["test_scene"])], dtype=np.int64)
+    if (test_fold == cal["fold"].to_numpy(dtype=np.int64)).any():
+        raise ValueError("a calibration answer lies in its test scene's fold")
+    sigma = cal["sigma"].to_numpy(float)
+    half = cal[tag].to_numpy(float) * sigma
+    cal["half"] = np.where(np.isnan(half), np.inf, half)
+    cal["c"] = cal["value"].to_numpy(float) - cal["mu"].to_numpy(float)
+    cal = cal[[_TEST_SCENE, *answers.columns]]
+    return cal.sort_values([_TEST_SCENE, "row"], kind="stable").reset_index(drop=True)
+
+
+def check_test_halfwidths(answers: pd.DataFrame, quantiles: pd.DataFrame, *, level: float = 0.9,
+                          kind: str = "sigma") -> dict[str, Any]:
+    """Check that the saved quantiles are the ones that gave the test answers their half-widths.
+
+    Parameters
+    ----------
+    answers : pandas.DataFrame
+        :func:`answer_table` output (``half`` and ``sigma`` as the audit wrote them, 6 significant digits).
+    quantiles : pandas.DataFrame
+        The audit's saved quantile table.
+    level : float, default 0.9
+        Coverage level.
+    kind : str, default "sigma"
+        Error model.
+
+    Returns
+    -------
+    dict
+        ``n`` (finite answers compared), ``max_rel_diff`` of ``half`` against ``q * sigma``, ``n_missing``
+        (answers whose cell is not in the table) and ``n_infinite_agree`` (answers whose half-width and
+        ``q * sigma`` are both infinite).
+    """
+    tag = f"q{int(round(100 * level))}"
+    q = quantiles.loc[quantiles["kind"] == kind, ["dataset", "test_scene", "qtype", "depth_source", tag]]
+    q = q.assign(scene=q["test_scene"].astype(str), depth_source=q["depth_source"].astype(str))
+    m = answers.merge(q.drop(columns=["test_scene"]), on=["dataset", "scene", "qtype", "depth_source"], how="left")
+    expected = m[tag].to_numpy(float) * m["sigma"].to_numpy(float)
+    half = m["half"].to_numpy(float)
+    ok = np.isfinite(expected) & np.isfinite(half)
+    rel = np.abs(half[ok] - expected[ok]) / np.maximum(np.abs(expected[ok]), 1e-12)
+    return {"n": int(ok.sum()), "max_rel_diff": float(rel.max()) if ok.any() else math.nan,
+            "n_missing": int(m[tag].isna().sum()),
+            "n_infinite_agree": int((~np.isfinite(expected) & ~np.isfinite(half)).sum())}
+
+
+def direct_margin_halfwidth_exact(pairs: pd.DataFrame, cal_pairs: pd.DataFrame,
+                                  level: float = 0.9) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Direct margin error bars calibrated on leave-two-out margins: the exact counterpart of
+    :func:`direct_margin_halfwidth`.
+
+    For test scene ``S`` and question type ``q``, the ``level`` quantile of ``|e_m - mu_m| / s_m`` is taken over
+    ``cal_pairs`` with ``test_scene == S``: margins in scenes outside ``S``'s fold whose ``mu`` and ``sigma`` come
+    from models that saw neither ``S``'s fold nor the margin's. Test pairs of ``S`` get ``q * s_m``; so does each
+    calibration pair of ``S`` (with its own leave-two-out ``s_m``), as ``S``'s own margins would.
+
+    Parameters
+    ----------
+    pairs : pandas.DataFrame
+        :func:`margin_pairs` of the test answers.
+    cal_pairs : pandas.DataFrame
+        :func:`margin_pairs` of :func:`calibration_answers` (with ``test_scene``).
+    level : float, default 0.9
+        Nominal coverage.
+
+    Returns
+    -------
+    pairs : pandas.DataFrame
+        ``pairs`` plus ``q_direct`` (``inf`` with too few calibration pairs), ``h_direct`` (m) and
+        ``n_cal_direct``.
+    cal_pairs : pandas.DataFrame
+        ``cal_pairs`` plus the same columns, from its test scene's quantile.
+    """
+    score = (np.abs(cal_pairs["e_m"].to_numpy(float) - cal_pairs["mu_m"].to_numpy(float))
+             / cal_pairs["s_m"].to_numpy(float))
+    keys = cal_pairs.assign(**{_TEST_SCENE: cal_pairs[_TEST_SCENE].astype(str)}).groupby(
+        ["dataset", "qtype", _TEST_SCENE], sort=True).indices
+    quantile = {(str(k[0]), str(k[1]), str(k[2])): (conformal_quantile(score[idx], level), len(idx))
+                for k, idx in keys.items()}
+
+    def attach(frame: pd.DataFrame, scene_col: str) -> pd.DataFrame:
+        """Add the direct quantile, half-width and calibration count of each pair's test scene.
+
+        Parameters
+        ----------
+        frame : pandas.DataFrame
+            Margin pairs (``dataset, qtype, s_m`` and ``scene_col``).
+        scene_col : str
+            Column naming the test scene whose quantile applies.
+
+        Returns
+        -------
+        pandas.DataFrame
+            ``frame`` plus ``q_direct``, ``h_direct`` and ``n_cal_direct``.
+        """
+        found = [quantile.get((str(d), str(q), str(s)), (math.inf, 0))
+                 for d, q, s in zip(frame["dataset"], frame["qtype"], frame[scene_col])]
+        q_direct = np.array([f[0] for f in found], dtype=np.float64)
+        return frame.assign(q_direct=q_direct, h_direct=q_direct * frame["s_m"].to_numpy(float),
+                            n_cal_direct=np.array([f[1] for f in found], dtype=np.int64))
+
+    return attach(pairs, "scene"), attach(cal_pairs, _TEST_SCENE)
+
+
+# ============================================================================================================
+# 7. A second opinion: a witness labeller's answer to the same question
+# ============================================================================================================
+
+
+def complete_calibration_answers(answers: pd.DataFrame, cal_answers: pd.DataFrame,
+                                 exact: Collection[tuple[str, str, str]]) -> tuple[pd.DataFrame,
+                                                                                    set[tuple[str, str, str]]]:
+    """Every test scene's whole calibration set as rows: :func:`certify`'s exact mode written out.
+
+    For a test scene ``S`` and a question type whose group holds ``S`` (``(dataset, qtype, S)`` in ``exact``),
+    the rows are ``cal_answers``' (leave-two-out); for any other question type they are the other scenes' own
+    test answers, copied with ``test_scene = S``. Calibrating with these rows and every group marked exact is
+    the same as :func:`certify`'s exact mode; written out, a per-test-scene quantity (a witness's answer) can be
+    attached to every calibration row.
+
+    Parameters
+    ----------
+    answers : pandas.DataFrame
+        :func:`answer_table` output.
+    cal_answers : pandas.DataFrame
+        :func:`calibration_answers` output for the same labeller.
+    exact : collection of tuple
+        :func:`exact_groups` of the audit.
+
+    Returns
+    -------
+    calibration : pandas.DataFrame
+        ``cal_answers``' columns, the copied own answers appended.
+    covered : set of tuple
+        ``(dataset, qtype, S)`` for every test scene ``S`` of ``answers`` and every question type: pass it as
+        :func:`certify`'s ``exact`` with decisions built from ``calibration``.
+    """
+    exact_set = set(exact)
+    qtypes = sorted(answers["qtype"].astype(str).unique())
+    parts = [cal_answers]
+    covered: set[tuple[str, str, str]] = set()
+    for d, s in answers[["dataset", "scene"]].drop_duplicates().astype(str).itertuples(index=False):
+        covered.update((d, q, s) for q in qtypes)
+        missing = [q for q in qtypes if (d, q, s) not in exact_set]
+        own = answers[(answers["dataset"] == d) & answers["qtype"].isin(missing) & (answers["scene"] != s)]
+        if len(own):
+            parts.append(own.assign(**{_TEST_SCENE: s})[[_TEST_SCENE, *answers.columns]])
+    return pd.concat(parts, ignore_index=True), covered
+
+
+def attach_witness(decisions: pd.DataFrame, witness: pd.DataFrame,
+                   witness_cal: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Add a witness labeller's bias-corrected answer and error bar to each decision, by question id.
+
+    Test decisions get the witness's own out-of-scene test answer. Calibration decisions (with ``test_scene``)
+    get, when ``witness_cal`` holds one, the witness's leave-two-out answer for that test scene (from a model
+    that saw neither the test scene's fold nor the item's, with the test scene's quantile); otherwise the
+    witness's test answer, which then never saw the test scene either: the test scene is outside the witness's
+    group of that question type, or the item shares the test scene's fold so the witness's model held both out.
+
+    Parameters
+    ----------
+    decisions : pandas.DataFrame
+        One labeller's decisions with ``id`` (and ``test_scene`` for calibration decisions).
+    witness : pandas.DataFrame
+        The witness's :func:`answer_table` (``id, c, half, ref``), one answer per question id.
+    witness_cal : pandas.DataFrame, optional
+        The witness's :func:`calibration_answers` (``test_scene, id, c, half``).
+
+    Returns
+    -------
+    pandas.DataFrame
+        ``decisions`` (index reset) plus ``c_w``, ``half_w``, ``ref_w`` (m; NaN where the witness did not answer)
+        and ``witness_from`` (``"leave_two_out"``, ``"test"`` or ``"none"``).
+
+    Raises
+    ------
+    ValueError
+        If the witness has two answers to one question id.
+    """
+    w = witness[["id", "c", "half", "ref"]].rename(columns={"c": "c_w", "half": "half_w", "ref": "ref_w"})
+    if w["id"].duplicated().any():
+        raise ValueError("the witness answers a question id twice")
+    out = decisions.reset_index(drop=True).merge(w, on="id", how="left", validate="many_to_one")
+    source = np.where(out["c_w"].isna(), "none", "test").astype(object)
+    if witness_cal is not None and _TEST_SCENE in out.columns:
+        wc = witness_cal[[_TEST_SCENE, "id", "c", "half"]].assign(**{_TEST_SCENE: witness_cal[_TEST_SCENE].astype(str)})
+        found = out[[_TEST_SCENE, "id"]].assign(**{_TEST_SCENE: out[_TEST_SCENE].astype(str)}).merge(
+            wc, on=[_TEST_SCENE, "id"], how="left", validate="many_to_one")
+        use = found["c"].notna().to_numpy()
+        out.loc[use, "c_w"] = found.loc[use, "c"].to_numpy()
+        out.loc[use, "half_w"] = found.loc[use, "half"].to_numpy()
+        source[use] = "leave_two_out"
+    out["witness_from"] = source
+    return out
+
+
+def second_opinion_score(decisions: pd.DataFrame, *, one_sided: bool = False) -> Array:
+    """Score of a decision checked by a witness: infinite unless both calls agree, else the larger of two scores.
+
+    Two-sided: ``max(half / |c - t|, half_w / |c_w - t|)`` when ``c > t`` and ``c_w > t`` agree. One-sided
+    (clearances): both calls must be outside (``c > t`` and ``c_w > t``), score ``max(half / (c - t),
+    half_w / (c_w - t))``. A decision the witness did not answer, or with an undefined score, gets ``inf`` and
+    is never accepted. ``score <= 1`` means both error bars exclude ``t`` on the same side.
+
+    Parameters
+    ----------
+    decisions : pandas.DataFrame
+        Decisions with ``c, t, half`` and the witness's ``c_w, half_w`` (:func:`attach_witness`); m.
+    one_sided : bool, default False
+        Clearance decisions (only outside calls).
+
+    Returns
+    -------
+    numpy.ndarray of float, shape (n,)
+        The scores.
+    """
+    c, t, half, c_w, half_w = (decisions[k].to_numpy(dtype=np.float64) for k in ("c", "t", "half", "c_w", "half_w"))
+    if one_sided:
+        agree = (c > t) & (c_w > t)
+        gap, gap_w = c - t, c_w - t
+    else:
+        agree = (c > t) == (c_w > t)
+        gap, gap_w = np.abs(c - t), np.abs(c_w - t)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        own = np.where(gap > 0, half / gap, np.inf)
+        other = np.where(gap_w > 0, half_w / gap_w, np.inf)
+        score = np.where(agree & np.isfinite(c_w), np.maximum(own, other), np.inf)
+    return np.where(np.isnan(score), np.inf, score)
+
+
+def witness_rules(epsilons: Sequence[float], *, accept_all: str = "accept_all") -> list[Rule]:
+    """The rules of the second-opinion comparison.
+
+    Parameters
+    ----------
+    epsilons : sequence of float
+        Certified bounds (columns ``accept_eps<k>`` / ``accept_wit_eps<k>``, ``k`` the position).
+    accept_all : str, default "accept_all"
+        Column of the no-check baseline.
+
+    Returns
+    -------
+    list of Rule
+        ``certified`` and ``second_opinion`` (per epsilon), ``interval`` (``score <= 1``),
+        ``second_opinion_interval`` (both error bars exclude ``t`` on the same side, uncertified) and
+        ``accept_all``.
+    """
+    rules = [Rule("certified", f"accept_eps{k}", float(eps), f"lam_eps{k}") for k, eps in enumerate(epsilons)]
+    rules += [Rule("second_opinion", f"accept_wit_eps{k}", float(eps), f"lam_wit_eps{k}")
+              for k, eps in enumerate(epsilons)]
+    return rules + [Rule("interval", "accept_interval"), Rule("second_opinion_interval", "accept_wit_interval"),
+                    Rule("accept_all", accept_all)]
+
+
+def apply_witness_rule(decisions: pd.DataFrame, fold_of: Mapping[tuple[str, str, str], int], config: DecisionConfig,
+                       pool_cols: Sequence[str], *, one_sided: bool = False, calibration: pd.DataFrame | None = None,
+                       exact: Collection[tuple[str, str, str]] | None = None) -> pd.DataFrame:
+    """Add the second-opinion rule's columns: its score, the certified acceptance per epsilon and the interval rule.
+
+    Certification is :func:`certify`'s with the second-opinion score in place of the labeller's own, on the same
+    calibration decisions (with the witness attached, see :func:`attach_witness`).
+
+    Parameters
+    ----------
+    decisions : pandas.DataFrame
+        Test decisions with the witness attached and the single-labeller rules applied (:func:`apply_rules`).
+    fold_of : mapping
+        ``(dataset, qtype, scene) -> fold`` (approximate mode).
+    config : DecisionConfig
+        Epsilons, delta and the Learn-then-Test settings.
+    pool_cols : sequence of str
+        Calibration pools.
+    one_sided : bool, default False
+        Clearance decisions.
+    calibration : pandas.DataFrame, optional
+        Calibration decisions with the witness attached (exact mode).
+    exact : collection of tuple, optional
+        The groups ``calibration`` covers.
+
+    Returns
+    -------
+    pandas.DataFrame
+        A copy with ``score_wit``, ``accept_wit_eps<k>``, ``lam_wit_eps<k>`` and ``accept_wit_interval`` added.
+    """
+    out = decisions.copy()
+    out["score_wit"] = second_opinion_score(out, one_sided=one_sided)
+    scored = out.assign(score=out["score_wit"])
+    cal = (calibration.assign(score=second_opinion_score(calibration, one_sided=one_sided))
+           if calibration is not None else None)
+    for k, eps in enumerate(config.epsilons):
+        accept, lam, _ = certify(scored, fold_of, eps, config.delta, pool_cols=pool_cols,
+                                 min_accept=config.min_accept, min_accept_frac=config.min_accept_frac,
+                                 calibration=cal, exact=exact)
+        out[f"accept_wit_eps{k}"], out[f"lam_wit_eps{k}"] = accept, lam
+    out["accept_wit_interval"] = out["score_wit"].to_numpy(float) <= 1.0
+    return out

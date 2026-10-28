@@ -16,11 +16,23 @@ this reads the audit's per-item tables and runs :mod:`measured_space.decisions`:
   of three 90 % error bars of the margin, and the "A greater than B" and "A smaller than B by at least 0.1 m"
   decisions gated with the directly calibrated one.
 
+- **Second opinion** (``--witness LABELLER=WITNESS``, defaults :data:`DEFAULT_WITNESSES`). Part A again, with a
+  decision accepted only when a witness labeller answering the same question id makes the same call; score the
+  larger of the two labellers' scores, certified by the same Learn-then-Test (``witness.csv``).
+
+**Calibration.** An audit folder that holds its saved leave-two-out calibration predictions
+(``calibration.json``, written by ``scripts/run_audit.py`` since they are saved) is calibrated exactly: each test
+scene's calibration decisions are rebuilt from predictions that never saw its fold
+(:func:`measured_space.decisions.calibration_answers`). An older folder falls back to the approximate mode
+(other folds' test predictions). The mode is recorded per labeller and part in ``summary.json`` and in every
+table's ``calibration`` column.
+
 Outputs (aggregates only) in ``--results``, which must not exist or must be empty (nothing is ever overwritten):
 ``decision_gate.csv``, ``sweep.csv``, ``safety.csv``, ``margin_intervals.csv``, ``margin_gate.csv``,
-``summary.json`` (inputs with checksums, thresholds, settings, assumptions, notes, git commit, seconds) and the
-figure ``decision_sweep.pdf`` / ``.png`` (certified accepted share against ``|u|`` per labeller, handheld and
-warehouse panels, with the fixed-tolerance gate's share dashed).
+``witness.csv`` (when a second opinion ran), ``summary.json`` (inputs with checksums, thresholds, settings,
+assumptions, calibration modes, notes, git commit, seconds) and the figure ``decision_sweep.pdf`` / ``.png``
+(certified accepted share against ``|u|`` per labeller, handheld and warehouse panels, with the fixed-tolerance
+gate's share dashed).
 
 Usage (from the repository root)::
 
@@ -28,6 +40,8 @@ Usage (from the repository root)::
     python scripts/run_decision_analysis.py --results <new folder> \\
         --audits cutr_sam3=audit_ark106_cutr_sam3 --audits sparse4d_v22=audit_ss12_sparse4d_v22
     python scripts/run_decision_analysis.py --results <new folder> --audits 2d_lidar=audit_ark106_2d:lidar
+    python scripts/run_decision_analysis.py --results <new folder> --witness 2d_lidar=cutr_sam3   # second opinion
+    python scripts/run_decision_analysis.py --results <new folder> --skip-witness
 
 ``--audits NAME=FOLDER[:SOURCE]``: ``FOLDER`` relative to ``<data root>/outputs`` unless absolute; ``SOURCE`` is
 the depth source to keep (required when the audit has several).
@@ -40,6 +54,7 @@ import dataclasses
 import hashlib
 import inspect
 import json
+import math
 import sys
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -67,7 +82,14 @@ DEFAULT_AUDITS: tuple[str, ...] = (
 """tuple of str: the labellers analysed by default (``NAME=FOLDER[:SOURCE]``, folders under ``<data root>/outputs``)."""
 
 OUTPUT_TABLES: tuple[str, ...] = ("decision_gate", "sweep", "safety", "margin_intervals", "margin_gate")
-"""tuple of str: the CSV tables written to ``--results``."""
+"""tuple of str: the CSV tables written to ``--results`` (plus ``witness`` when a second opinion ran)."""
+
+DEFAULT_WITNESSES: tuple[str, ...] = ("2d_lidar=cutr_sam3", "cutr_sam3=2d_lidar", "cutr_clip=2d_lidar",
+                                      "2d_moge=sparse4d_v22")
+"""tuple of str: default ``LABELLER=WITNESS`` pairs of the second-opinion rule (used when both are analysed)."""
+
+WITNESS_PARTS: tuple[str, ...] = ("threshold", "sweep", "safety")
+"""tuple of str: the part-A analyses the second-opinion rule is reported for."""
 
 FIGURE = "decision_sweep"
 """str: file stem of the figure."""
@@ -83,11 +105,9 @@ ASSUMPTIONS: tuple[str, ...] = (
     "Truth is the reference value value - e. A decision with c exactly at the threshold (infinite score) is never "
     "accepted.",
     "Calibration decisions for a test scene come from scenes outside its fold (per question type, the audit's "
-    "folds, recomputed and checked against folds.csv where recorded). They are those scenes' own out-of-scene test "
-    "predictions: the audit did not save its leave-two-out calibration predictions, so a calibration decision's mu "
-    "and sigma come from a model whose training data included the test scene's fold, and its half90 from a "
-    "conformal quantile whose calibration scores included that fold. The test scene's own answers never calibrate "
-    "it, but the Learn-then-Test certificate is approximate in this respect.",
+    "folds, recomputed and checked against folds.csv where recorded); the test scene's own answers never calibrate "
+    "it. How their predictions were obtained is recorded per labeller and part (summary.json 'calibration', and "
+    "the tables' 'calibration' column): 'exact' or 'approximate', as described under 'calibration_modes'.",
     "Learn-then-Test is the audit's procedure and settings (fixed-sequence binomial tests on a geometric grid; "
     "min_accept 30, min_accept_frac 0.05). Items are treated as independent and scenes as exchangeable, as in the "
     "audit; Wilson intervals and binomial bounds are optimistic for items that share a scene, so the scene-cluster "
@@ -106,9 +126,30 @@ ASSUMPTIONS: tuple[str, ...] = (
     "different single-referent objects (referents from the label folder's qa_oracle.jsonl, found by the audit's "
     "recorded checksums), oriented by question id (hashes: unrelated to the values). Direct calibration is split "
     "conformal on |e_m - (mu_A - mu_B)| / sqrt(sigma_A^2 + sigma_B^2) over pairs of the same question type outside "
-    "the test scene's fold, with the same calibration caveat as above.",
+    "the test scene's fold, exact or approximate as the labeller's calibration mode. The sum and quadrature error "
+    "bars use only the audit's own half90 of the test answers and do not depend on the mode.",
 )
 """tuple of str: assumptions recorded in ``summary.json``."""
+
+CALIBRATION_NOTES: dict[str, str] = {
+    "exact": "The audit folder holds its leave-two-out calibration predictions (calibration_numeric.csv.gz) and "
+             "per-test-scene conformal quantiles (calibration_quantiles.csv.gz). For a test scene S and a question "
+             "type whose group holds S, each calibration decision uses mu and sigma from a model fitted without S's "
+             "fold and the item's own fold, and the half-width q90 * sigma with q90 the quantile that S's own "
+             "answers of the item's cell (question type, depth source) get; margins likewise, with the direct "
+             "quantile of S taken over leave-two-out margins. For a question type with no answer of S in any depth "
+             "source, no model or quantile of that type saw S, and its calibration decisions are the other scenes' "
+             "own test decisions. So no calibration decision for S comes from a model or a quantile that saw S's "
+             "fold. One data reuse remains: the per-cell quantile that scales every calibration decision's error bar "
+             "is computed from those same calibration items' scores (one scalar per cell), as the conformal step "
+             "of the audit computes it for the test scene.",
+    "approximate": "The audit folder does not hold its leave-two-out calibration predictions. Calibration "
+                   "decisions for a test scene are other folds' own out-of-scene test predictions: a calibration "
+                   "decision's mu and sigma come from a model whose training data included the test scene's fold, "
+                   "and its half90 from a conformal quantile whose calibration scores included that fold. The "
+                   "Learn-then-Test certificate is approximate in this respect."}
+"""dict: what each calibration mode (:data:`measured_space.decisions.CALIBRATION_MODES`) means, for ``summary.json``."""
+
 
 
 @dataclass(frozen=True)
@@ -196,6 +237,11 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
     p.add_argument("--n-boot", type=int, default=dec.DecisionConfig.n_boot, help="scene-cluster bootstrap replicates")
     p.add_argument("--seed", type=int, default=dec.DecisionConfig.seed, help="bootstrap seed")
     p.add_argument("--skip-margins", action="store_true", help="skip part B (margins between two answers)")
+    p.add_argument("--witness", action="append", default=None, metavar="LABELLER=WITNESS",
+                   help="second-opinion rule: certify LABELLER's part-A decisions only where WITNESS (another "
+                        "analysed labeller) answers the same question id with the same call (repeatable; default: "
+                        f"{' '.join(DEFAULT_WITNESSES)}, those whose labellers are both analysed)")
+    p.add_argument("--skip-witness", action="store_true", help="skip the second-opinion rule")
     return p.parse_args(argv)
 
 
@@ -430,9 +476,137 @@ def read_audit(audit: AuditSpec) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFra
     return pairs, numeric, gate, folds, summary, files
 
 
+def read_calibration(folder: Path) -> tuple[pd.DataFrame, pd.DataFrame, dict[str, Any]] | None:
+    """The audit's saved leave-two-out calibration predictions and quantiles, if it wrote them.
+
+    Parameters
+    ----------
+    folder : pathlib.Path
+        The audit's per-item folder.
+
+    Returns
+    -------
+    tuple or None
+        ``(predictions, quantiles, files)``: ``calibration_numeric.csv.gz`` (kind ``sigma`` rows: ``kind,
+        test_scene, row, mu, sigma``), ``calibration_quantiles.csv.gz`` and the three files' ``{"bytes",
+        "sha256"}`` records; None when ``calibration.json`` is absent (an audit written before they were saved).
+
+    Raises
+    ------
+    FileNotFoundError
+        If ``calibration.json`` names a file that is missing.
+    """
+    record_path = folder / "calibration.json"
+    if not record_path.is_file():
+        return None
+    names = json.loads(record_path.read_text())["files"]
+    predictions = pd.read_csv(folder / names["predictions"], usecols=["kind", "test_scene", "row", "mu", "sigma"],
+                              dtype={"test_scene": str, "kind": str})
+    predictions = predictions[predictions["kind"] == "sigma"].reset_index(drop=True)
+    quantiles = pd.read_csv(folder / names["quantiles"], dtype={"test_scene": str, "kind": str,
+                                                                "depth_source": str})
+    files = {name: file_record(folder / name) for name in sorted(names.values())}
+    return predictions, quantiles, files
+
+
+@dataclass
+class Labeller:
+    """One labeller's answers, folds and calibration, read from its audit folder.
+
+    Attributes
+    ----------
+    audit : AuditSpec
+        The labeller.
+    answers : pandas.DataFrame
+        :func:`measured_space.decisions.answer_table` of its depth source.
+    fold_of : dict
+        ``(dataset, qtype, scene) -> fold``.
+    dataset : str
+        Its dataset.
+    source : str
+        Its depth source.
+    summary : dict
+        The audit's ``summary.json``.
+    files : dict
+        Input file name to ``{"bytes", "sha256"}`` (with the calibration files when read).
+    folds : pandas.DataFrame or None
+        The audit's ``folds.csv``.
+    checked : list of str
+        Groups whose recomputed folds matched the record.
+    mode : str
+        ``"exact"`` (the audit saved its calibration predictions) or ``"approximate"``.
+    cal_answers : pandas.DataFrame or None
+        :func:`measured_space.decisions.calibration_answers` (exact mode only).
+    exact : set of tuple or None
+        :func:`measured_space.decisions.exact_groups` (exact mode only).
+    calibration : dict
+        The calibration record for ``summary.json`` (mode, note, counts and the half-width check).
+    """
+
+    audit: AuditSpec
+    answers: pd.DataFrame
+    fold_of: dict[tuple[str, str, str], int]
+    dataset: str
+    source: str
+    summary: dict[str, Any]
+    files: dict[str, Any]
+    folds: pd.DataFrame | None
+    checked: list[str]
+    mode: str
+    cal_answers: pd.DataFrame | None
+    exact: set[tuple[str, str, str]] | None
+    calibration: dict[str, Any]
+
+
+def load_labeller(audit: AuditSpec, config: dec.DecisionConfig) -> Labeller:
+    """Read a labeller's audit: its answers, folds and, when saved, its exact calibration answers.
+
+    Parameters
+    ----------
+    audit : AuditSpec
+        The labeller.
+    config : DecisionConfig
+        The error bar's level.
+
+    Returns
+    -------
+    Labeller
+        Everything the analyses need.
+
+    Raises
+    ------
+    ValueError
+        If the audit holds more than one dataset.
+    """
+    pairs, numeric, gate, folds, summary, files = read_audit(audit)
+    audit_cfg = summary.get("config", {})
+    max_folds, seed = audit_cfg.get("max_folds", 20), audit_cfg.get("seed", 0)
+    answers, checked = dec.answer_table(pairs, numeric, gate, source=audit.source, level=config.level,
+                                        max_folds=max_folds, seed=seed, recorded_folds=folds)
+    datasets = sorted(answers["dataset"].unique())
+    if len(datasets) != 1:
+        raise ValueError(f"{audit.name}: expected one dataset, got {datasets}")
+    saved = read_calibration(audit.folder)
+    mode = "exact" if saved is not None else "approximate"
+    cal_answers: pd.DataFrame | None = None
+    exact: set[tuple[str, str, str]] | None = None
+    calibration: dict[str, Any] = {"mode": mode, "note": CALIBRATION_NOTES[mode]}
+    if saved is not None:
+        predictions, quantiles, cal_files = saved
+        files.update(cal_files)
+        exact = dec.exact_groups(quantiles)
+        cal_answers = dec.calibration_answers(answers, predictions, quantiles, level=config.level)
+        calibration.update(n_calibration_answers=int(len(cal_answers)),
+                           n_exact_groups=len({(d, q, s) for d, q, s in exact if q in set(answers["qtype"])}),
+                           test_halfwidth_check=dec.check_test_halfwidths(answers, quantiles, level=config.level))
+    return Labeller(audit, answers, dec.fold_lookup(answers), datasets[0], str(answers["depth_source"].iloc[0]),
+                    summary, files, folds, checked, mode, cal_answers, exact, calibration)
+
+
 def analyse_labeller(audit: AuditSpec, thresholds: Mapping[str, Mapping[str, Sequence[float]]],
                      config: dec.DecisionConfig, *, skip_margins: bool, label_override: Path | None,
-                     log: Callable[[str], None] = print) -> tuple[dict[str, pd.DataFrame], dict[str, Any]]:
+                     log: Callable[[str], None] = print,
+                     lab: Labeller | None = None) -> tuple[dict[str, pd.DataFrame], dict[str, Any]]:
     """Run every analysis on one labeller.
 
     Parameters
@@ -449,47 +623,82 @@ def analyse_labeller(audit: AuditSpec, thresholds: Mapping[str, Mapping[str, Seq
         Label root for part B instead of the default (see :func:`find_label_folder`).
     log : callable, default print
         Receives progress messages.
+    lab : Labeller, optional
+        The labeller already read (:func:`load_labeller`); read here if None.
 
     Returns
     -------
     tables : dict of str to pandas.DataFrame
         The report tables of :data:`OUTPUT_TABLES` (margin tables empty when part B is skipped).
     record : dict
-        Inputs, counts and notes for ``summary.json``.
+        Inputs, counts, the calibration record (mode per part and the calibration decisions' sources) and notes
+        for ``summary.json``.
 
     Raises
     ------
     ValueError
-        If the audit holds more than one dataset.
+        If the audit holds more than one dataset (when it is read here, :func:`load_labeller`).
     """
     started = time.time()
-    pairs, numeric, gate, folds, summary, files = read_audit(audit)
+    lab = lab if lab is not None else load_labeller(audit, config)
+    answers, fold_of, dataset, source = lab.answers, lab.fold_of, lab.dataset, lab.source
+    summary, files, folds, checked = lab.summary, lab.files, lab.folds, lab.checked
+    cal_answers, exact, mode = lab.cal_answers, lab.exact, lab.mode
     audit_cfg = summary.get("config", {})
-    max_folds, seed = audit_cfg.get("max_folds", 20), audit_cfg.get("seed", 0)
-    answers, checked = dec.answer_table(pairs, numeric, gate, source=audit.source, level=config.level,
-                                        max_folds=max_folds, seed=seed, recorded_folds=folds)
-    datasets = sorted(answers["dataset"].unique())
-    if len(datasets) != 1:
-        raise ValueError(f"{audit.name}: expected one dataset, got {datasets}")
-    dataset, source = datasets[0], str(answers["depth_source"].iloc[0])
-    fold_of = dec.fold_lookup(answers)
     boot = config.bootstrap()
     family = config.pool == "family"
     notes: list[str] = []
     missing_thr = sorted(set(answers["qtype"]) - set(thresholds.get(dataset, {})))
     if missing_thr:
         notes.append(f"no thresholds for {missing_thr}: left out of part A")
-    log(f"{audit.name}: {len(answers)} answers ({dataset}, source {source}) from {audit.folder}")
+    log(f"{audit.name}: {len(answers)} answers ({dataset}, source {source}) from {audit.folder}; "
+        f"calibration {mode}")
+    calibration: dict[str, Any] = dict(lab.calibration)
+    built: dict[str, dict[str, int]] = {}
+
+    def calibrate(decisions: pd.DataFrame, cal_decisions: pd.DataFrame | None, pools: list[str], part: str,
+                  **kwargs: Any) -> pd.DataFrame:
+        """Apply every rule to one part's decisions, in this labeller's calibration mode, and count the sources.
+
+        Parameters
+        ----------
+        decisions : pandas.DataFrame
+            The part's test decisions.
+        cal_decisions : pandas.DataFrame or None
+            Its calibration decisions in the exact mode (None: approximate).
+        pools : list of str
+            Calibration pool columns.
+        part : str
+            Part name: its table in :data:`OUTPUT_TABLES`.
+        **kwargs : Any
+            Passed to :func:`measured_space.decisions.apply_rules` (``one_sided``).
+
+        Returns
+        -------
+        pandas.DataFrame
+            The decisions with every rule's columns.
+        """
+        out, thr = dec.apply_rules(decisions, fold_of, config, pools, calibration=cal_decisions, exact=exact,
+                                   **kwargs)
+        primary = thr[thr["epsilon"] == config.epsilons[0]] if len(thr) else thr
+        built[part] = {"n_test_scene_pools": int(len(primary)), "n_cal": int(primary["n_cal"].sum()) if len(thr)
+                       else 0}
+        if "n_cal_exact" in primary:
+            built[part].update(n_cal_exact=int(primary["n_cal_exact"].sum()),
+                               n_cal_own=int(primary["n_cal_own"].sum()))
+        return out
 
     # Part A: fixed thresholds
     rules = dec.standard_rules(config.epsilons)
     a = dec.threshold_decisions(answers, thresholds)
-    a, _ = dec.apply_rules(a, fold_of, config, ["qtype", "threshold"] if family else [])
+    a_cal = dec.threshold_decisions(cal_answers, thresholds) if cal_answers is not None else None
+    a = calibrate(a, a_cal, ["qtype", "threshold"] if family else [], "decision_gate")
     gate_table = dec.rule_table(_with_all(a, qtype="all", threshold=np.nan), ["qtype", "threshold"], rules, boot)
 
     # Sweep: thresholds relative to the reference
     sw = dec.sweep_decisions(answers)
-    sw, _ = dec.apply_rules(sw, fold_of, config, ["qtype", "u_abs"] if family else ["u_abs"])
+    sw_cal = dec.sweep_decisions(cal_answers) if cal_answers is not None else None
+    sw = calibrate(sw, sw_cal, ["qtype", "u_abs"] if family else ["u_abs"], "sweep")
     sw_all = _with_all(sw, qtype="all")
     sweep_table = pd.concat([dec.rule_table(sw_all, ["qtype", "u_abs", "u"], rules, boot),
                              dec.rule_table(sw_all.assign(u=np.nan), ["qtype", "u_abs", "u"], rules, boot)],
@@ -499,7 +708,8 @@ def analyse_labeller(audit: AuditSpec, thresholds: Mapping[str, Mapping[str, Seq
     sd = dec.safety_decisions(answers, thresholds)
     safety_table = pd.DataFrame()
     if len(sd):
-        sd, _ = dec.apply_rules(sd, fold_of, config, ["qtype", "threshold"] if family else [], one_sided=True)
+        sd_cal = dec.safety_decisions(cal_answers, thresholds) if cal_answers is not None else None
+        sd = calibrate(sd, sd_cal, ["qtype", "threshold"] if family else [], "safety", one_sided=True)
         safety_table = dec.rule_table(_with_all(sd, qtype="all", threshold=np.nan), ["qtype", "threshold"],
                                       dec.standard_rules(config.epsilons, accept_all="accept_outside"), boot,
                                       inside="inside")
@@ -525,17 +735,27 @@ def analyse_labeller(audit: AuditSpec, thresholds: Mapping[str, Mapping[str, Seq
             if counts["n_no_referents"]:
                 notes.append(f"part B: {counts['n_no_referents']} answers had no question record")
             if len(pairs_m):
-                pairs_m = dec.direct_margin_halfwidth(pairs_m, config.level)
+                md_cal: pd.DataFrame | None = None
+                if cal_answers is not None:
+                    cal_pairs, _ = dec.margin_pairs(cal_answers, referents)
+                    pairs_m, cal_pairs = dec.direct_margin_halfwidth_exact(pairs_m, cal_pairs, config.level)
+                    md_cal = dec.margin_decisions(cal_pairs, config.fit_margin)
+                    record_b["n_calibration_pairs"] = int(len(cal_pairs))
+                else:
+                    pairs_m = dec.direct_margin_halfwidth(pairs_m, config.level)
                 margin_intervals = dec.margin_interval_table(_with_all(pairs_m, qtype="all"), ["qtype"], boot)
                 md = dec.margin_decisions(pairs_m, config.fit_margin)
-                md, _ = dec.apply_rules(md, fold_of, config, ["decision", "qtype"] if family else ["decision"])
+                md = calibrate(md, md_cal, ["decision", "qtype"] if family else ["decision"], "margin_gate")
                 margin_gate = dec.rule_table(_with_all(md, qtype="all"), ["decision", "qtype"], rules, boot)
             else:
                 notes.append("part B: no pairs")
 
     tables = {"decision_gate": gate_table, "sweep": sweep_table, "safety": safety_table,
               "margin_intervals": margin_intervals, "margin_gate": margin_gate}
-    tables = {k: _label(v, audit, dataset, source) if len(v) else v for k, v in tables.items()}
+    tables = {k: _label(v, audit, dataset, source).assign(calibration=mode) if len(v) else v
+              for k, v in tables.items()}
+    calibration["parts"] = {part: mode for part, table in tables.items() if len(table)}
+    calibration["calibration_decisions"] = built
     record = {"folder": str(audit.folder), "source": source, "dataset": dataset,
               "setting": dec.SETTING.get(dataset, dataset), "files": files,
               "audit_git_commit": summary.get("git_commit"),
@@ -548,8 +768,157 @@ def analyse_labeller(audit: AuditSpec, thresholds: Mapping[str, Mapping[str, Seq
               "n_answers": {str(k): int(v) for k, v in answers.groupby("qtype").size().items()},
               "n_scenes": int(answers["scene"].nunique()),
               "n_decisions": {"threshold": int(len(a)), "sweep": int(len(sw)), "safety": int(len(sd))},
-              "part_b": record_b, "notes": notes, "seconds": round(time.time() - started, 1)}
+              "part_b": record_b, "calibration": calibration, "notes": notes,
+              "seconds": round(time.time() - started, 1)}
     return tables, record
+
+
+# --------------------------------------------------------------------------------------------------------
+# Second opinion: a witness labeller
+# --------------------------------------------------------------------------------------------------------
+
+
+def analyse_witness(a: Labeller, b: Labeller, thresholds: Mapping[str, Mapping[str, Sequence[float]]],
+                    config: dec.DecisionConfig,
+                    log: Callable[[str], None] = print) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """The second-opinion rule for labeller ``a`` witnessed by ``b``, next to ``a``'s single-labeller rules.
+
+    For each part-A analysis (:data:`WITNESS_PARTS`), ``a``'s decisions get ``b``'s answer to the same question
+    id (:func:`measured_space.decisions.attach_witness`) and are certified with the second-opinion score
+    (:func:`measured_space.decisions.apply_witness_rule`) on the same calibration decisions as ``a``'s own rule.
+    Exact when both audits saved their calibration predictions: ``a``'s calibration decisions for a test scene
+    are its leave-two-out ones (:func:`measured_space.decisions.complete_calibration_answers`) and ``b``'s
+    answer to each is ``b``'s leave-two-out answer for that test scene where ``b`` has one, else ``b``'s test
+    answer (which then never saw the test scene); otherwise approximate (test predictions of both).
+
+    Parameters
+    ----------
+    a : Labeller
+        The labeller whose decisions are certified.
+    b : Labeller
+        The witness.
+    thresholds : mapping
+        ``{dataset: {qtype: thresholds in m}}``.
+    config : DecisionConfig
+        Settings.
+    log : callable, default print
+        Receives progress messages.
+
+    Returns
+    -------
+    table : pandas.DataFrame
+        :func:`measured_space.decisions.rule_table` rows (rules of
+        :func:`measured_space.decisions.witness_rules`) with ``labeller, setting, dataset, source, witness,
+        witness_source, part, scope`` (``all``: every decision of ``a``; ``witnessed``: those ``b`` answered),
+        the part's keys (``qtype``, ``threshold`` or ``u_abs``) and ``calibration``.
+    record : dict
+        Counts, the shared-question check and the calibration mode, for ``summary.json``.
+
+    Raises
+    ------
+    ValueError
+        If the two labellers audit different datasets.
+    """
+    if a.dataset != b.dataset:
+        raise ValueError(f"witness {b.audit.name} audits {b.dataset}, not {a.dataset}")
+    mode = "exact" if a.mode == "exact" and b.mode == "exact" else "approximate"
+    family = config.pool == "family"
+    boot = config.bootstrap()
+    shared = a.answers.merge(b.answers[["id", "ref"]], on="id", suffixes=("", "_w"))
+    record: dict[str, Any] = {
+        "labeller": a.audit.name, "witness": b.audit.name, "witness_source": b.source, "calibration": mode,
+        "n_answers": int(len(a.answers)), "n_witnessed": int(len(shared)),
+        "n_witnessed_scenes": int(shared["scene"].nunique()),
+        "ref_max_abs_diff": float(np.abs(shared["ref"] - shared["ref_w"]).max()) if len(shared) else math.nan,
+        "rule": "second_opinion: score inf unless the witness answers the question id and its call (c_w > t; "
+                "one-sided: both outside) agrees with the labeller's, else max(half / |c - t|, half_w / |c_w - t|); "
+                "certified per test scene by the same Learn-then-Test on the same calibration decisions",
+        "calibration_note": "exact: the labeller's calibration decisions for a test scene are its leave-two-out ones "
+                            "(own test decisions for question types whose group lacks the scene), and the witness's "
+                            "answer to each is its leave-two-out answer for that test scene where it has one, else "
+                            "its test answer, which then never saw the test scene either (the scene is outside the "
+                            "witness's group of that type, or shares the witness fold of the item's scene, so the "
+                            "witness model held both out); approximate: test predictions of both labellers"}
+    cal_rows: pd.DataFrame | None = None
+    covered: set[tuple[str, str, str]] | None = None
+    if mode == "exact" and a.cal_answers is not None and a.exact is not None:
+        cal_rows, covered = dec.complete_calibration_answers(a.answers, a.cal_answers, a.exact)
+    builders: dict[str, tuple[Callable[[pd.DataFrame], pd.DataFrame], list[str], bool]] = {
+        "threshold": (lambda x: dec.threshold_decisions(x, thresholds), ["qtype", "threshold"] if family else [],
+                      False),
+        "sweep": (dec.sweep_decisions, ["qtype", "u_abs"] if family else ["u_abs"], False),
+        "safety": (lambda x: dec.safety_decisions(x, thresholds), ["qtype", "threshold"] if family else [], True)}
+    tables, sources = [], {}
+    for part in WITNESS_PARTS:
+        build, pools, one_sided = builders[part]
+        decisions = build(a.answers)
+        if not len(decisions):
+            continue
+        decisions = dec.attach_witness(decisions, b.answers)
+        cal = None
+        if cal_rows is not None:
+            cal = dec.attach_witness(build(cal_rows), b.answers, b.cal_answers)
+            sources[part] = {str(k): int(v) for k, v in cal["witness_from"].value_counts().items()}
+        decisions, _ = dec.apply_rules(decisions, a.fold_of, config, pools, one_sided=one_sided, calibration=cal,
+                                       exact=covered)
+        decisions = dec.apply_witness_rule(decisions, a.fold_of, config, pools, one_sided=one_sided,
+                                           calibration=cal, exact=covered)
+        witnessed = decisions["c_w"].notna().to_numpy()
+        frame = pd.concat([decisions.assign(scope="all"), decisions[witnessed].assign(scope="witnessed")],
+                          ignore_index=True)
+        rules = dec.witness_rules(config.epsilons, accept_all="accept_outside" if one_sided else "accept_all")
+        if part == "sweep":
+            table = dec.rule_table(_with_all(frame, qtype="all"), ["scope", "qtype", "u_abs"], rules, boot)
+        else:
+            table = dec.rule_table(_with_all(frame, qtype="all", threshold=np.nan), ["scope", "qtype", "threshold"],
+                                   rules, boot, inside="inside" if one_sided else None)
+        tables.append(table.assign(part=part))
+    record["calibration_witness_from"] = sources
+    out = pd.concat(tables, ignore_index=True) if tables else pd.DataFrame()
+    if len(out):
+        out = _label(out, a.audit, a.dataset, a.source)
+        out.insert(4, "witness", b.audit.name)
+        out.insert(5, "witness_source", b.source)
+        out = out.assign(calibration=mode)
+    log(f"{a.audit.name} witnessed by {b.audit.name}: {record['n_witnessed']} of {record['n_answers']} answers; "
+        f"calibration {mode}")
+    return out, record
+
+
+def witness_pairs(given: Sequence[str] | None, names: Sequence[str]) -> tuple[list[tuple[str, str]], list[str]]:
+    """The ``LABELLER=WITNESS`` pairs to analyse.
+
+    Parameters
+    ----------
+    given : sequence of str or None
+        ``--witness`` values; None uses :data:`DEFAULT_WITNESSES` where both labellers are analysed.
+    names : sequence of str
+        The analysed labellers.
+
+    Returns
+    -------
+    pairs : list of tuple of str
+        ``(labeller, witness)``.
+    notes : list of str
+        Default pairs left out because a labeller is not analysed.
+
+    Raises
+    ------
+    ValueError
+        If a given pair is malformed, pairs a labeller with itself, or names a labeller that is not analysed.
+    """
+    pairs, notes = [], []
+    for text in (given if given is not None else DEFAULT_WITNESSES):
+        a, sep, b = text.partition("=")
+        if not sep or not a or not b or a == b:
+            raise ValueError(f"expected LABELLER=WITNESS with two different names, got {text!r}")
+        if a not in names or b not in names:
+            if given is not None:
+                raise ValueError(f"--witness {text!r} names a labeller that is not analysed ({list(names)})")
+            notes.append(f"default witness pair {text} skipped: not both analysed")
+            continue
+        pairs.append((a, b))
+    return pairs, notes
 
 
 # --------------------------------------------------------------------------------------------------------
@@ -656,6 +1025,44 @@ def headline(tables: Mapping[str, pd.DataFrame], epsilons: Sequence[float]) -> l
     return out
 
 
+def witness_headline(table: pd.DataFrame, epsilons: Sequence[float]) -> list[dict[str, Any]]:
+    """Per witness pair: the single-labeller and second-opinion rules on the fixed-threshold decisions.
+
+    Parameters
+    ----------
+    table : pandas.DataFrame
+        The ``witness`` table (may be empty).
+    epsilons : sequence of float
+        The certified bounds.
+
+    Returns
+    -------
+    list of dict
+        One record per labeller and witness (part ``threshold``, scope ``all``, pooled over question types and
+        thresholds): accepted share and wrong-decision rate of ``certified`` and ``second_opinion`` at each
+        epsilon, ``interval`` and ``second_opinion_interval``.
+    """
+    if not len(table):
+        return []
+    pooled = table[(table["part"] == "threshold") & (table["scope"] == "all") & (table["qtype"] == "all")]
+    out = []
+    for (name, witness), g in pooled.groupby(["labeller", "witness"], sort=False):
+        row: dict[str, Any] = {"labeller": name, "witness": witness, "n_decisions": int(g["n"].iloc[0])}
+        for rule in ("certified", "second_opinion"):
+            for eps in epsilons:
+                r = g[(g["rule"] == rule) & np.isclose(g["epsilon"], eps)]
+                if len(r):
+                    row[f"{rule}_eps{eps:g}_accept_share"] = float(r["accept_share"].iloc[0])
+                    row[f"{rule}_eps{eps:g}_wrong_rate"] = float(r["wrong_rate"].iloc[0])
+        for rule in ("interval", "second_opinion_interval"):
+            r = g[g["rule"] == rule]
+            if len(r):
+                row[f"{rule}_accept_share"] = float(r["accept_share"].iloc[0])
+                row[f"{rule}_wrong_rate"] = float(r["wrong_rate"].iloc[0])
+        out.append(row)
+    return out
+
+
 def main(argv: list[str] | None = None) -> int:
     """Run the decision analysis on every labeller and write its tables, summary and figure.
 
@@ -695,11 +1102,14 @@ def main(argv: list[str] | None = None) -> int:
                                 seed=args.seed)
     thresholds = load_thresholds(args.thresholds)
 
+    pairs_w, witness_notes = ([], []) if args.skip_witness else witness_pairs(args.witness, names)
     parts: dict[str, list[pd.DataFrame]] = {name: [] for name in OUTPUT_TABLES}
     records: dict[str, Any] = {}
+    labellers: dict[str, Labeller] = {}
     for audit in audits:
+        labellers[audit.name] = load_labeller(audit, config)
         tables, record = analyse_labeller(audit, thresholds, config, skip_margins=args.skip_margins,
-                                          label_override=overrides.get(audit.name))
+                                          label_override=overrides.get(audit.name), lab=labellers[audit.name])
         for name, frame in tables.items():
             if len(frame):
                 parts[name].append(frame)
@@ -707,6 +1117,14 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{audit.name}: done in {record['seconds']} s; notes: {record['notes']}", flush=True)
     out = {name: pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
            for name, frames in parts.items()}
+    witness_records: list[dict[str, Any]] = []
+    if pairs_w:
+        frames = []
+        for a, b in pairs_w:
+            frame, record = analyse_witness(labellers[a], labellers[b], thresholds, config)
+            frames.append(frame)
+            witness_records.append(record)
+        out["witness"] = pd.concat(frames, ignore_index=True)
 
     args.results.mkdir(parents=True, exist_ok=True)
     written = []
@@ -725,7 +1143,13 @@ def main(argv: list[str] | None = None) -> int:
         "config": dataclasses.asdict(config),
         "ltt_growth": inspect.signature(ltt_threshold).parameters["growth"].default,
         "primary_epsilon": config.epsilons[0],
-        "skip_margins": bool(args.skip_margins), "assumptions": list(ASSUMPTIONS), "headline": heads,
+        "skip_margins": bool(args.skip_margins), "assumptions": list(ASSUMPTIONS),
+        "calibration": {name: rec["calibration"]["parts"] for name, rec in records.items()},
+        "witness": {"pairs": witness_records, "notes": witness_notes, "skipped": bool(args.skip_witness),
+                    "headline": witness_headline(out.get("witness", pd.DataFrame()), config.epsilons)},
+        "calibration_modes": {m: CALIBRATION_NOTES[m] for m in sorted({rec["calibration"]["mode"]
+                                                                      for rec in records.values()})},
+        "headline": heads,
         "outputs": written, "git_commit": git_commit(), "seconds": round(time.time() - started, 1)}
     (args.results / "summary.json").write_text(dumps(summary))
     pd.set_option("display.width", 200)

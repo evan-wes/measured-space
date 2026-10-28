@@ -6,6 +6,7 @@ import hashlib
 import importlib.util
 import json
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 from types import ModuleType
 
@@ -14,7 +15,7 @@ import pandas as pd
 import pytest
 
 from measured_space import decisions as dec
-from measured_space.audit import NUMERIC_QTYPES, AuditConfig, fold_table
+from measured_space.audit import NUMERIC_QTYPES, AuditConfig, fold_table, scene_folds
 
 
 def _script(name: str) -> ModuleType:
@@ -371,7 +372,7 @@ def test_parse_audit_spec() -> None:
 
 
 def _write_audit(root: Path, suffix: str, dataset: str, source: str, *, n_scenes: int = 5, n_views: int = 4,
-                 n_objects: int = 3, max_folds: int = 20, seed: int = 0) -> Path:
+                 n_objects: int = 3, max_folds: int = 20, seed: int = 0, cal_shift: float | None = None) -> Path:
     """Write a small synthetic audit folder and the label folder it read.
 
     Parameters
@@ -390,6 +391,9 @@ def _write_audit(root: Path, suffix: str, dataset: str, source: str, *, n_scenes
         The audit's ``max_folds``; below ``n_scenes`` a ``tables/folds.csv`` is written.
     seed : int, default 0
         Random seed.
+    cal_shift : float, optional
+        If given, also write the saved leave-two-out calibration files (:func:`_write_calibration`), every
+        calibration prediction's ``mu`` set to this value (m; 0 reproduces the test predictions).
 
     Returns
     -------
@@ -440,7 +444,48 @@ def _write_audit(root: Path, suffix: str, dataset: str, source: str, *, n_scenes
     summary = {"config": {"max_folds": max_folds, "seed": 0, "epsilon": 0.1, "delta": 0.1},
                "inputs": {dataset: {**inputs, "n_auto_only": {source: 0}}}, "git_commit": "synthetic"}
     (audit / "summary.json").write_text(json.dumps(summary))
+    if cal_shift is not None:
+        _write_calibration(audit, numeric_df[numeric_df["kind"] == "sigma"], max_folds, cal_shift)
     return audit
+
+
+def _write_calibration(audit: Path, numeric: pd.DataFrame, max_folds: int, shift: float) -> None:
+    """Write saved leave-two-out calibration files shaped like ``scripts/run_audit.py``'s.
+
+    Every row of a question type is a calibration item of every test scene outside its fold, predicted with
+    the test prediction's ``sigma`` and ``mu = shift``; each test scene's quantile is ``half90 / sigma``, so with
+    ``shift = 0`` the calibration answers are the test answers.
+
+    Parameters
+    ----------
+    audit : pathlib.Path
+        The audit folder.
+    numeric : pandas.DataFrame
+        Its kind ``sigma`` rows (``row, dataset, scene, qtype, depth_source, sigma, half90``).
+    max_folds : int
+        The audit's ``max_folds``.
+    shift : float
+        ``mu`` of every calibration prediction, m.
+    """
+    predictions, quantiles = [], []
+    for (dataset, qtype), g in numeric.groupby(["dataset", "qtype"]):
+        fold_of = scene_folds(g["scene"], max_folds, 0)
+        fold = g["scene"].map(fold_of).to_numpy()
+        for test_scene, f in fold_of.items():
+            cal = g[fold != f]
+            predictions.append(pd.DataFrame({"kind": "sigma", "test_scene": test_scene, "row": cal["row"],
+                                             "mu": shift, "sigma": cal["sigma"], "pi": 0.0, "sigma_g": 1.0,
+                                             "ridge": 1.0}))
+            for source, c in cal.groupby("depth_source"):
+                q90 = float(c["half90"].iloc[0] / c["sigma"].iloc[0])
+                quantiles.append({"dataset": dataset, "kind": "sigma", "test_scene": test_scene, "qtype": qtype,
+                                  "depth_source": source, "n_cal": len(c), "cal_cell": "full", "q50": q90 / 2,
+                                  "q80": q90 * 0.8, "q90": q90, "q95": q90 * 1.2})
+    files = {"predictions": "calibration_numeric.csv.gz", "quantiles": "calibration_quantiles.csv.gz",
+             "record": "calibration.json"}
+    pd.concat(predictions, ignore_index=True).to_csv(audit / files["predictions"], index=False)
+    pd.DataFrame(quantiles).to_csv(audit / files["quantiles"], index=False)
+    (audit / files["record"]).write_text(json.dumps({"files": files}))
 
 
 def test_script_end_to_end_on_synthetic_audits(tmp_path: Path) -> None:
@@ -471,3 +516,262 @@ def test_script_end_to_end_on_synthetic_audits(tmp_path: Path) -> None:
     assert (pooled["accept_share"] == 1.0).all()
     with pytest.raises(FileExistsError):                                       # never written into twice
         main(["--audits", f"hand={hand}:lidar", "--results", str(results)])
+
+
+# ------------------------------------------------------------------------------------------- exact calibration
+
+
+def _leave_two_out(answers: pd.DataFrame, *, shift: float = 0.0,
+                   q90: Mapping[str, float] | None = None) -> tuple[pd.DataFrame, pd.DataFrame]:
+    """Saved leave-two-out predictions and quantiles for synthetic answers (every item, every other fold).
+
+    Parameters
+    ----------
+    answers : pandas.DataFrame
+        :func:`_answers`-like answers (``row, dataset, scene, qtype, depth_source, sigma, half, fold``).
+    shift : float, default 0.0
+        ``mu`` of every calibration prediction, m (0: the test predictions').
+    q90 : mapping of str to float, optional
+        Quantile per test scene; default ``half / sigma`` of the answers, so the error bars are the test ones.
+
+    Returns
+    -------
+    predictions, quantiles : pandas.DataFrame
+        Shaped like the audit's ``calibration_numeric.csv.gz`` and ``calibration_quantiles.csv.gz``.
+    """
+    predictions, quantiles = [], []
+    for (dataset, qtype), g in answers.groupby(["dataset", "qtype"]):
+        for scene, f in g.drop_duplicates("scene")[["scene", "fold"]].itertuples(index=False):
+            cal = g[g["fold"] != f]
+            predictions.append(pd.DataFrame({"kind": "sigma", "test_scene": scene, "row": cal["row"], "mu": shift,
+                                             "sigma": cal["sigma"]}))
+            q = (q90 or {}).get(scene, float(g["half"].iloc[0] / g["sigma"].iloc[0]))
+            quantiles.append({"dataset": dataset, "kind": "sigma", "test_scene": scene, "qtype": qtype,
+                              "depth_source": "lidar", "q90": q})
+    return pd.concat(predictions, ignore_index=True), pd.DataFrame(quantiles)
+
+
+def test_calibration_answers_rebuild_each_test_scenes_error_bars() -> None:
+    """Calibration answers take the leave-two-out mu and sigma and their test scene's quantile, never its fold."""
+    answers = _answers(n_scenes=6, per_scene=10)
+    answers.loc[answers["scene"] == "s1", "fold"] = 0                     # s0 and s1 share fold 0
+    predictions, quantiles = _leave_two_out(answers, shift=0.02, q90={"s0": 3.0})
+    cal = dec.calibration_answers(answers, predictions, quantiles)
+    assert len(cal) == 2 * 40 + 4 * 50 and not (cal["scene"] == cal["test_scene"]).any()
+    assert set(cal.loc[cal["test_scene"] == "s0", "scene"]) == {"s2", "s3", "s4", "s5"}
+    np.testing.assert_allclose(cal["c"], cal["value"] - 0.02)
+    np.testing.assert_allclose(cal.loc[cal["test_scene"] == "s0", "half"], 3.0 * 0.05)
+    np.testing.assert_allclose(cal.loc[cal["test_scene"] == "s2", "half"], 0.1)
+    assert dec.exact_groups(quantiles) == {("arkitscenes", "size_height", f"s{i}") for i in range(6)}
+    check = dec.check_test_halfwidths(answers, quantiles)
+    assert check["n_missing"] == 0 and check["max_rel_diff"] == pytest.approx(1 / 3)   # s0: 3 sigma, not 2
+    s0_rows = answers.loc[answers["scene"] == "s0", "row"]
+    s0_item = predictions[(predictions["test_scene"] == "s2") & predictions["row"].isin(s0_rows)].iloc[:1]
+    leak = pd.concat([predictions, s0_item.assign(test_scene="s1")], ignore_index=True)
+    with pytest.raises(ValueError, match="fold"):                         # s0's row calibrating its fold-mate s1
+        dec.calibration_answers(answers, leak, quantiles)
+
+
+def test_exact_certify_equals_approximate_when_the_predictions_agree() -> None:
+    """With leave-two-out predictions equal to the test ones, the exact mode certifies the same thresholds."""
+    answers = _answers(n_scenes=8, per_scene=40, error_sd=0.06)
+    answers.loc[answers["scene"] == "s1", "fold"] = 0
+    thresholds = {"arkitscenes": {"size_height": (0.6, 1.2)}}
+    decisions = dec.threshold_decisions(answers, thresholds)
+    predictions, quantiles = _leave_two_out(answers)
+    cal = dec.threshold_decisions(dec.calibration_answers(answers, predictions, quantiles), thresholds)
+    fold_of = dec.fold_lookup(answers)
+    accept, lam, thr = dec.certify(decisions, fold_of, 0.1, 0.1)
+    accept_x, lam_x, thr_x = dec.certify(decisions, fold_of, 0.1, 0.1, calibration=cal,
+                                         exact=dec.exact_groups(quantiles))
+    np.testing.assert_array_equal(lam, lam_x)
+    np.testing.assert_array_equal(accept, accept_x)
+    assert (thr_x["n_cal_own"] == 0).all() and (thr_x["n_cal_exact"] == thr["n_cal"]).all()
+    with pytest.raises(ValueError, match="exact"):
+        dec.certify(decisions, fold_of, 0.1, 0.1, calibration=cal)
+
+
+def test_exact_certify_reads_its_own_test_scenes_calibration_and_falls_back_per_type() -> None:
+    """Each test scene is certified on its own calibration rows; a type whose group lacks it uses test answers."""
+    answers = _answers(n_scenes=8, per_scene=40)
+    thresholds = {"arkitscenes": {"size_height": (1.0,), "size_longest": (1.0,)}}
+    decisions = dec.threshold_decisions(answers, thresholds).assign(wrong=False)
+    predictions, quantiles = _leave_two_out(answers)
+    cal = dec.threshold_decisions(dec.calibration_answers(answers, predictions, quantiles), thresholds)
+    cal["wrong"] = cal["test_scene"] == "s0"                            # only s0's calibration set is all wrong
+    exact = dec.exact_groups(quantiles)
+    accept, lam, _ = dec.certify(decisions, dec.fold_lookup(answers), 0.1, 0.1, calibration=cal, exact=exact)
+    s0 = (decisions["scene"] == "s0").to_numpy()
+    assert np.isneginf(lam[s0]).all() and np.isfinite(lam[~s0]).all() and accept[~s0].mean() > 0.9
+
+    other = _answers(n_scenes=3, per_scene=40, seed=2).assign(qtype="size_longest", row=lambda f: f["row"] + 1000,
+                                                              scene=lambda f: "t" + f["scene"])
+    both = pd.concat([answers, other], ignore_index=True)
+    decisions = dec.threshold_decisions(both, thresholds).assign(wrong=False)
+    _, _, thr = dec.certify(decisions, dec.fold_lookup(both), 0.1, 0.1, calibration=cal.assign(wrong=False),
+                            exact=exact)
+    by_scene = thr.set_index("scene")
+    assert by_scene.loc["s0", "n_cal_own"] == 120 and by_scene.loc["s0", "n_cal_exact"] == 280
+    assert by_scene.loc["ts0", "n_cal_own"] == 80 + 320                 # no exact group holds ts0
+
+
+def test_exact_direct_margin_matches_the_approximate_one_when_the_predictions_agree() -> None:
+    """Leave-two-out margins equal to the test ones give the approximate direct half-widths."""
+    answers, referents = _pair_answers()
+    pairs, _ = dec.margin_pairs(answers, referents)
+    predictions, quantiles = _leave_two_out(answers)
+    cal_pairs, _ = dec.margin_pairs(dec.calibration_answers(answers, predictions, quantiles), referents)
+    exact, cal_pairs = dec.direct_margin_halfwidth_exact(pairs, cal_pairs, 0.9)
+    approx = dec.direct_margin_halfwidth(pairs, 0.9)
+    np.testing.assert_allclose(exact["h_direct"], approx["h_direct"])
+    np.testing.assert_array_equal(exact["n_cal_direct"], approx["n_cal_direct"])
+    assert set(cal_pairs["test_scene"]) == set(pairs["scene"]) and np.isfinite(cal_pairs["h_direct"]).all()
+
+
+def test_script_uses_saved_calibration_and_records_the_mode(tmp_path: Path) -> None:
+    """Audits with saved calibration run exact (same tables when it agrees, different when it does not).
+
+    Part A's tables agree with the approximate run when the saved predictions equal the test ones (here every
+    scene has the same quantile). The margin gate need not: its exact calibration margins take the test scene's
+    direct quantile, the approximate ones their own scene's.
+
+    Parameters
+    ----------
+    tmp_path : pathlib.Path
+        Pytest's temporary folder.
+    """
+    main = _decision_script().main
+    plain = _write_audit(tmp_path / "plain", "hand", "arkitscenes", "lidar", max_folds=3)
+    same = _write_audit(tmp_path / "same", "hand", "arkitscenes", "lidar", max_folds=3, cal_shift=0.0)
+    shifted = _write_audit(tmp_path / "shift", "hand", "arkitscenes", "lidar", max_folds=3, cal_shift=0.4)
+    tables = {}
+    for name, audit in (("plain", plain), ("same", same), ("shift", shifted)):
+        assert main(["--audits", f"hand={audit}:lidar", "--results", str(tmp_path / f"out_{name}"),
+                     "--n-boot", "20"]) == 0
+        summary = json.loads((tmp_path / f"out_{name}" / "summary.json").read_text())
+        mode = "approximate" if name == "plain" else "exact"
+        assert set(summary["calibration"]["hand"].values()) == {mode} and list(summary["calibration_modes"]) == [mode]
+        assert summary["inputs"]["hand"]["calibration"]["mode"] == mode
+        tables[name] = {t: pd.read_csv(tmp_path / f"out_{name}" / f"{t}.csv") for t in ("decision_gate", "sweep",
+                                                                                         "margin_gate")}
+        assert all((frame["calibration"] == mode).all() for frame in tables[name].values())
+    check = json.loads((tmp_path / "out_same" / "summary.json").read_text())["inputs"]["hand"]["calibration"]
+    assert check["test_halfwidth_check"]["max_rel_diff"] < 1e-12
+    for t, frame in tables["plain"].items():
+        if t == "margin_gate":
+            continue
+        pd.testing.assert_frame_equal(frame.drop(columns="calibration"),
+                                      tables["same"][t].drop(columns="calibration"), rtol=1e-9)
+    pick = [(frame["qtype"] == "all") & (frame["rule"] == "certified") & (frame["epsilon"] == 0.1)
+            for frame in (tables["plain"]["decision_gate"], tables["shift"]["decision_gate"])]
+    assert (tables["shift"]["decision_gate"].loc[pick[1], "accept_share"].iloc[0]
+            < tables["plain"]["decision_gate"].loc[pick[0], "accept_share"].iloc[0])
+
+
+# ------------------------------------------------------------------------------------------- second opinion
+
+
+def test_second_opinion_score_needs_agreeing_calls_and_takes_the_larger_score() -> None:
+    """Agreeing calls score the larger of the two; disagreeing or unwitnessed decisions are never accepted."""
+    frame = pd.DataFrame({"c": [1.5, 1.5, 1.5, 0.5, 1.5], "t": 1.0, "half": [0.1, 0.1, 0.1, 0.1, 0.1],
+                          "c_w": [1.2, 0.8, np.nan, 0.9, 1.0], "half_w": [0.1, 0.1, np.nan, 0.05, 0.1]})
+    two = dec.second_opinion_score(frame)
+    np.testing.assert_allclose(two[[0, 3]], [0.5, 0.5])                 # max(0.1 / 0.5, 0.1 / 0.2); max(0.2, 0.5)
+    assert np.isinf(two[[1, 2, 4]]).all()                               # disagree; no witness; witness at t
+    one = dec.second_opinion_score(frame, one_sided=True)
+    assert one[0] == pytest.approx(0.5) and np.isinf(one[1:]).all()    # row 3: both inside, never accepted
+
+
+def test_attach_witness_prefers_leave_two_out_answers_for_calibration_decisions() -> None:
+    """Test decisions get the witness's test answer; calibration ones its leave-two-out answer when it has one."""
+    answers = _answers(n_scenes=4, per_scene=5)
+    witness = answers.assign(c=answers["c"] + 0.5, half=0.2)
+    decisions = dec.threshold_decisions(answers, {"arkitscenes": {"size_height": (1.0,)}})
+    test = dec.attach_witness(decisions, witness)
+    np.testing.assert_allclose(test["c_w"], test["c"] + 0.5)
+    assert (test["witness_from"] == "test").all()
+    cal_rows = dec.calibration_answers(answers, *_leave_two_out(answers))
+    witness_cal = cal_rows[cal_rows["test_scene"] == "s0"].assign(c=-9.0, half=0.3)
+    cal = dec.attach_witness(dec.threshold_decisions(cal_rows, {"arkitscenes": {"size_height": (1.0,)}}),
+                             witness, witness_cal)
+    s0 = (cal["test_scene"] == "s0").to_numpy()
+    assert (cal.loc[s0, "c_w"] == -9.0).all() and (cal.loc[s0, "witness_from"] == "leave_two_out").all()
+    assert (cal.loc[~s0, "witness_from"] == "test").all()
+    with pytest.raises(ValueError, match="twice"):
+        dec.attach_witness(decisions, pd.concat([witness, witness.iloc[:1]]))
+
+
+def test_complete_calibration_copies_own_answers_only_for_types_outside_the_scenes_group() -> None:
+    """Written-out calibration rows certify exactly as the exact mode with its per-type fallback."""
+    answers = _answers(n_scenes=6, per_scene=30, error_sd=0.06)
+    other = _answers(n_scenes=3, per_scene=30, seed=2).assign(qtype="size_longest", row=lambda f: f["row"] + 1000)
+    both = pd.concat([answers, other], ignore_index=True)
+    predictions, quantiles = _leave_two_out(answers)
+    cal_answers = dec.calibration_answers(both, predictions, quantiles)
+    exact = dec.exact_groups(quantiles)
+    rows, covered = dec.complete_calibration_answers(both, cal_answers, exact)
+    s5 = rows[rows["test_scene"] == "s5"]
+    assert set(s5.loc[s5["qtype"] == "size_longest", "scene"]) == {"s0", "s1", "s2"}   # own answers, s5 has none
+    assert len(rows) == len(cal_answers) + 3 * 90 + 3 * 60
+    thresholds = {"arkitscenes": {"size_height": (0.6, 1.2), "size_longest": (0.6, 1.2)}}
+    decisions = dec.threshold_decisions(both, thresholds)
+    fold_of = dec.fold_lookup(both)
+    _, lam, _ = dec.certify(decisions, fold_of, 0.1, 0.1, calibration=dec.threshold_decisions(cal_answers, thresholds),
+                            exact=exact)
+    _, lam_rows, _ = dec.certify(decisions, fold_of, 0.1, 0.1, calibration=dec.threshold_decisions(rows, thresholds),
+                                 exact=covered)
+    np.testing.assert_array_equal(lam, lam_rows)
+
+
+def test_second_opinion_rule_accepts_less_and_refuses_a_contrary_witness() -> None:
+    """A witness can only remove acceptances; one that always calls the other side removes them all."""
+    answers = _answers(n_scenes=8, per_scene=60, error_sd=0.08, half=0.15)
+    thresholds = {"arkitscenes": {"size_height": (0.9,)}}
+    config = dec.DecisionConfig(n_boot=20)
+    fold_of = dec.fold_lookup(answers)
+    good = answers.assign(c=answers["ref"], half=0.15)
+    contrary = answers.assign(c=2.0 * 0.9 - answers["c"], half=0.15)    # mirrored about t = 0.9: the opposite call
+    for witness, expect_any in ((good, True), (contrary, False)):
+        decisions = dec.attach_witness(dec.threshold_decisions(answers, thresholds), witness)
+        decisions, _ = dec.apply_rules(decisions, fold_of, config, [])
+        out = dec.apply_witness_rule(decisions, fold_of, config, [])
+        accepted = out["accept_wit_eps0"].to_numpy(dtype=bool)
+        assert not (accepted & (out["score"].to_numpy() > out["score_wit"].to_numpy())).any()
+        assert (out["score_wit"] >= out["score"]).all()
+        assert accepted.any() == expect_any
+        if expect_any:
+            wrong = out["wrong"].to_numpy(dtype=bool)
+            assert wrong[accepted].mean() <= wrong[out["accept_eps0"].to_numpy(dtype=bool)].mean()
+    with pytest.raises(ValueError):
+        _decision_script().witness_pairs(["a=a"], ["a"])
+
+
+def test_script_reports_the_second_opinion_rule(tmp_path: Path) -> None:
+    """Two labellers of the same questions, one witnessing the other: a witness table, exact when both saved.
+
+    Parameters
+    ----------
+    tmp_path : pathlib.Path
+        Pytest's temporary folder.
+    """
+    script = _decision_script()
+    first = _write_audit(tmp_path / "a", "hand", "arkitscenes", "lidar", max_folds=3, cal_shift=0.0)
+    second = _write_audit(tmp_path / "b", "hand", "arkitscenes", "lidar", max_folds=3, cal_shift=0.0, seed=5)
+    results = tmp_path / "results"
+    assert script.main(["--audits", f"one={first}:lidar", "--audits", f"two={second}:lidar", "--witness", "one=two",
+                        "--results", str(results), "--n-boot", "20"]) == 0
+    table = pd.read_csv(results / "witness.csv")
+    assert set(table["part"]) == {"threshold", "sweep", "safety"} and set(table["witness"]) == {"two"}
+    assert (table["calibration"] == "exact").all() and set(table["scope"]) == {"all", "witnessed"}
+    assert {"certified", "second_opinion", "interval", "second_opinion_interval"} <= set(table["rule"])
+    summary = json.loads((results / "summary.json").read_text())
+    pair = summary["witness"]["pairs"][0]
+    assert pair["n_witnessed"] == pair["n_answers"] == 300 and pair["ref_max_abs_diff"] > 0
+    assert set(pair["calibration_witness_from"]["threshold"]) <= {"leave_two_out", "test"}
+    single = pd.read_csv(results / "decision_gate.csv")
+    single = single[(single["labeller"] == "one") & (single["rule"] == "certified")]
+    mine = table[(table["part"] == "threshold") & (table["scope"] == "all") & (table["rule"] == "certified")]
+    np.testing.assert_allclose(single.sort_values(["qtype", "threshold", "epsilon"])["accept_share"].to_numpy(),
+                               mine.sort_values(["qtype", "threshold", "epsilon"])["accept_share"].to_numpy())
+    with pytest.raises(ValueError, match="not analysed"):
+        script.witness_pairs(["one=three"], ["one", "two"])

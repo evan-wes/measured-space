@@ -45,7 +45,10 @@ guarantee. It follows the design review in ``docs/LOG.md``.
    same way.
 4. **Conformal calibration** (:func:`conformal_calibrate`). Split conformal on ``|e - mu| / sigma``, Mondrian
    by question type and depth source (pooled over sources when a cell has too few calibration scores, which is
-   recorded). Coverage is reported at nominal 50/80/90/95 % with Wilson intervals (:func:`coverage_table`).
+   recorded). Coverage is reported at nominal 50/80/90/95 % with Wilson intervals (:func:`coverage_table`). The
+   numeric leave-two-out calibration predictions and every test scene's quantiles per cell
+   (:func:`conformal_quantile_table`) are kept in :class:`AuditResult`, so a downstream analysis can rebuild a
+   test scene's calibration set exactly as the audit used it.
 5. **Categorical p(correct)** (:class:`LogisticPredictor`): a ridge logistic model on the features and the
    auto decision margin; Brier score and reliability bins against a constant-p baseline.
 6. **Gate** (:func:`gate_decisions`). Score ``r = (|mu| + z * sigma) / tau_hat``, the model's 90 % bound on
@@ -1774,6 +1777,58 @@ def conformal_calibrate(test: pd.DataFrame, cal: pd.DataFrame, config: AuditConf
     return out
 
 
+def conformal_quantile_table(test: pd.DataFrame, cal: pd.DataFrame, config: AuditConfig) -> pd.DataFrame:
+    """Every test scene's conformal quantiles per Mondrian cell, as :func:`conformal_calibrate` computes them.
+
+    :func:`conformal_calibrate` takes a quantile only for the cells its test scene has answers in. This table
+    takes it, with the same rule, for every cell a test scene could need: each calibration group (dataset, model
+    kind, test scene and the first Mondrian column, i.e. the question type) crossed with every value of the
+    other Mondrian columns (the depth sources) seen in its dataset, plus every test cell. So a calibration item
+    of any cell can be given the half-width that its test scene's own answers of that cell get (``q * sigma``).
+    A cell with fewer than ``min_cal`` calibration scores falls back to its pooled group, as in
+    :func:`conformal_calibrate`; a group without scores gets ``inf``. For a test row's cell the quantiles are
+    those of :func:`conformal_calibrate` exactly (the same scores, the same rule).
+
+    Parameters
+    ----------
+    test : pandas.DataFrame
+        Test predictions joined with rows: ``dataset, kind, scene`` and the ``config.mondrian`` columns.
+    cal : pandas.DataFrame
+        Calibration predictions joined likewise, with ``test_scene``, ``e``, ``mu`` and ``sigma``.
+    config : AuditConfig
+        Levels, cells and the fallback size.
+
+    Returns
+    -------
+    pandas.DataFrame
+        One row per cell: ``dataset, kind, test_scene``, the ``config.mondrian`` columns, ``n_cal`` (scores
+        used), ``cal_cell`` (``"full"`` or ``"pooled"``) and, per level ``L``, ``q<L>`` (the score quantile,
+        float64; the interval half-width is ``q<L> * sigma``, m). Sorted by its key columns.
+    """
+    mondrian = list(config.mondrian)
+    pooled_cols, other = ["dataset", "kind", "test_scene", mondrian[0]], mondrian[1:]
+    full_key = ["dataset", "kind", "test_scene", *mondrian]
+    columns = [*full_key, "n_cal", "cal_cell", *[f"q{_tag(level)}" for level in config.levels]]
+    cal = cal.assign(score=np.abs(cal["e"] - cal["mu"]) / cal["sigma"])
+    full = {k: g["score"].to_numpy() for k, g in cal.groupby(full_key, sort=False)}
+    pooled = {k: g["score"].to_numpy() for k, g in cal.groupby(pooled_cols, sort=False)}
+    test_cells = test.rename(columns={"scene": "test_scene"})[full_key]
+    cells: set[tuple[Any, ...]] = set(map(tuple, test_cells.drop_duplicates().to_numpy().tolist()))
+    sources = pd.concat([cal[["dataset", *other]], test_cells[["dataset", *other]]]).drop_duplicates()
+    combos = {d: list(map(tuple, g[other].to_numpy().tolist())) for d, g in sources.groupby("dataset", sort=False)}
+    groups = set(pooled) | {tuple(k) for k in test_cells[pooled_cols].drop_duplicates().to_numpy().tolist()}
+    for group in groups:
+        cells.update((*group, *combo) for combo in combos.get(group[0], [()]))
+    rows = []
+    for key in cells:
+        scores, label = full.get(key, np.array([])), "full"
+        if len(scores) < config.min_cal:
+            scores, label = pooled.get(key[:4], np.array([])), "pooled"
+        rows.append([*key, len(scores), label, *[conformal_quantile(scores, level) for level in config.levels]])
+    table = pd.DataFrame(rows, columns=columns)
+    return table.sort_values(full_key, kind="stable").reset_index(drop=True)
+
+
 def _tag(level: float) -> str:
     """Column suffix of a coverage level.
 
@@ -2430,6 +2485,14 @@ class AuditResult:
         dataset and question type with more than ``max_folds`` scenes) when there is such a group.
     notes : list of str
         Groups skipped and why, and other remarks produced while running.
+    calibration : pandas.DataFrame
+        The numeric leave-two-out calibration predictions the conformal step and the gate used (per item, kept
+        out of the repository): columns ``kind, test_scene, row`` (index into ``pairs``) and the predicted
+        ``mu, sigma`` (m), ``pi``, ``sigma_g`` (m) and ``ridge``; one row per calibration item and test scene
+        (:func:`cross_fit`'s ``cal``), every numeric model kind. Empty when nothing numeric was modelled.
+    quantiles : pandas.DataFrame
+        :func:`conformal_quantile_table` of those predictions: every test scene's conformal quantiles per
+        Mondrian cell, the ones that give its answers their ``half*``. Empty when nothing numeric was modelled.
     """
 
     pairs: pd.DataFrame
@@ -2438,6 +2501,8 @@ class AuditResult:
     gate: pd.DataFrame
     tables: dict[str, pd.DataFrame] = field(default_factory=dict)
     notes: list[str] = field(default_factory=list)
+    calibration: pd.DataFrame = field(default_factory=pd.DataFrame)
+    quantiles: pd.DataFrame = field(default_factory=pd.DataFrame)
 
 
 def _join(pred: pd.DataFrame, pairs: pd.DataFrame, columns: Sequence[str]) -> pd.DataFrame:
@@ -2647,7 +2712,7 @@ def run_audit(pairs: pd.DataFrame, config: AuditConfig | None = None,
         (num_cal if task[2] else cat_cal).append(cal)
 
     tables: dict[str, pd.DataFrame] = {"errors": error_table(pairs)}
-    numeric_out = categorical_out = pd.DataFrame()
+    numeric_out = categorical_out = calibration = quantiles = pd.DataFrame()
     gates: list[pd.DataFrame] = []
     gate_rows, threshold_rows, curve_rows, aurc_rows = [], [], [], []
     n_numeric = pairs[pairs["answer_type"] == "number"].groupby("dataset").size().to_dict()
@@ -2657,6 +2722,9 @@ def run_audit(pairs: pd.DataFrame, config: AuditConfig | None = None,
         test = _join(pd.concat(num_test, ignore_index=True), pairs, row_cols)
         cal = _join(pd.concat(num_cal, ignore_index=True), pairs, row_cols)
         numeric_out = conformal_calibrate(test, cal, config)
+        calibration = pd.concat(num_cal, ignore_index=True)[["kind", "test_scene", "row", "mu", "sigma", "pi",
+                                                             "sigma_g", "ridge"]]
+        quantiles = conformal_quantile_table(test, cal, config)
         numeric_out["nll"] = mixture_nll(numeric_out["e"], numeric_out["mu"], numeric_out["sigma"],
                                          numeric_out["pi"], numeric_out["sigma_g"])
         tables["comparison"] = comparison_table(numeric_out, config)
@@ -2705,7 +2773,8 @@ def run_audit(pairs: pd.DataFrame, config: AuditConfig | None = None,
         if parts:
             tables[name] = pd.concat(parts, ignore_index=True)
     return AuditResult(pairs, numeric_out, categorical_out,
-                       pd.concat(gates, ignore_index=True) if gates else pd.DataFrame(), tables, notes)
+                       pd.concat(gates, ignore_index=True) if gates else pd.DataFrame(), tables, notes,
+                       calibration=calibration, quantiles=quantiles)
 
 
 def _plain_rule(decisions: pd.DataFrame, tau_scale: float) -> pd.DataFrame:
