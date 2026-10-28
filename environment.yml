@@ -1,7 +1,7 @@
 # Conda environment for the prototype. Python from conda-forge only (no Anaconda `defaults` channel);
 # everything else from PyPI, pinned to the versions the results were produced with. PyTorch's default
 # Linux wheel for 2.14.1 is built against CUDA 13.0 (needs driver >= 580).
-name: metric-grounding-audit
+name: measured-space
 channels:
   - conda-forge
 dependencies:

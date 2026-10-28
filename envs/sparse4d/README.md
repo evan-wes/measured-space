@@ -1,4 +1,4 @@
-# Sparse4D environment (`mga-sparse4d`)
+# Sparse4D environment (`measured-space-sparse4d`)
 
 A separate conda environment for the Sparse4D labeller, so the main environment is untouched. It runs
 `scripts/extract_smartspaces_frames.py`, `scripts/run_sparse4d.py` and `scripts/eval_sparse4d.py`. `measured_space`
@@ -7,7 +7,7 @@ is not installed in it and none of these scripts imports it. Its output is conve
 
 It needs three source checkouts next to the packages:
 
-| Code | Where | Commit | Licence | Used for |
+| Code | Where | Commit | License | Used for |
 |---|---|---|---|---|
 | SparseQID | https://github.com/playbox-dev/SparseQID | `7aea61d` | Apache-2.0 | detector and frame loader (`--sparseqid-src <SparseQID>/src`; not pip-installed) |
 | pytorch3d | https://github.com/facebookresearch/pytorch3d | `33824be` (0.7.9) | BSD-3-Clause | `box3d_overlap` (3D IoU) in NVIDIA's evaluator and `eval_sparse4d.py hota --sim 3d` |
@@ -23,8 +23,8 @@ Linux, conda, a C++20 compiler (g++), git. The results were produced with this e
 supporting CUDA 13.0); the evaluation runs on the CPU.
 
 ```bash
-conda create -n mga-sparse4d python=3.12 pip
-conda activate mga-sparse4d
+conda create -n measured-space-sparse4d python=3.12 pip
+conda activate measured-space-sparse4d
 
 # 1. PyTorch (CUDA 13.0 build) from PyTorch's index
 pip install --index-url https://download.pytorch.org/whl/cu130 torch==2.14.1 torchvision==0.29.1

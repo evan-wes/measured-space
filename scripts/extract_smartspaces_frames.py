@@ -13,7 +13,7 @@ grabbed (decoded without the colour conversion): the same frame sequence, faster
 last requested frame is reported with a ``WARNING`` line and that camera stops there (the default, as in the
 12-scene run); with ``--strict-length`` it is an error instead (the first, single-scene version's behaviour).
 
-Usage (``mga-sparse4d`` env or any env with OpenCV), e.g. the 12-scene cache (every 6th frame of 0..8999)::
+Usage (``measured-space-sparse4d`` env or any env with OpenCV), e.g. the 12-scene cache (every 6th frame of 0..8999)::
 
     python -I scripts/extract_smartspaces_frames.py --data-root <data>/MTMC_Tracking_2026 --split train \\
         --scene Warehouse_000 --cache-root <outputs>/sparse4d/frame_cache --start 0 --end 9000 --step 6

@@ -33,18 +33,8 @@ venv/
 # Machine-specific paths
 configs/paths.local.yaml
 
-# Documents that are not part of the project
-*.docx
+# Default output folder of `scripts/run_vlm_eval.py score`; the committed aggregates are in results/vlm_results/
+/results/vlm/
 
 # Tool state
 .gstack/
-
-# LaTeX build products
-*.aux
-*.bbl
-*.blg
-*.fdb_latexmk
-*.fls
-*.log
-*.out
-*.synctex.gz

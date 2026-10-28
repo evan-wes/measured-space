@@ -1,4 +1,4 @@
-"""Recalibrate a held-out site from a few physical references, and re-test the certified label gate there.
+"""Recalibrate a held-out site from a few reference measurements (simulated), and re-test the label gate there.
 
 The audit (:mod:`measured_space.audit`) predicts each numeric label's error ``e = auto - oracle`` (m) from
 auto-side features, with a model fitted on other scenes; calibrates it by split conformal prediction on other

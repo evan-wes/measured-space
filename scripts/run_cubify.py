@@ -1,6 +1,6 @@
 """Run Cubify Anything (CuTR RGB-D), unmodified, on exported frames and write its boxes as prediction JSONL.
 
-Runs in the ``mga-cubify`` conda env, with the ``apple/ml-cubifyanything`` checkout (commit ``00e9cb1``) on
+Runs in the ``measured-space-cubify`` conda env, with the ``apple/ml-cubifyanything`` checkout (commit ``00e9cb1``) on
 ``PYTHONPATH``, not in the project env. Its input is the frame ``.npz`` files written by
 ``python -m measured_space.cubify export`` (project env); its output is one JSONL per scene at
 ``<out>/<dataset>/<scene>.jsonl``, one line per view, in the format documented in :mod:`measured_space.cubify`
@@ -13,7 +13,7 @@ upright one: the image at 4x the depth size, depth in metres, both intrinsics, a
 0.25, the published demo's value). ``seconds`` is the time of the model's forward pass alone (synchronised on
 the GPU).
 
-**Why some geometry is duplicated here.** ``measured_space`` is not installed in ``mga-cubify`` (and
+**Why some geometry is duplicated here.** ``measured_space`` is not installed in ``measured-space-cubify`` (and
 ``cubifyanything`` cannot be imported in the project env), so this script cannot use the package. The export
 stores everything convention-laden that the model needs (``T_gravity``, intrinsics, ``view_key``), which leaves
 only four small pieces of geometry, copied here: the nearest rotation to CuTR's float32 ``R``, the move of a
@@ -26,7 +26,7 @@ with CuTR's own ``pred_boxes_3d.corners`` moved by ``T_wc``; a difference above 
 scene is (re)computed and its JSONL written in one go once all its views are done. A complete JSONL written
 with another checkpoint or threshold is an error (use another ``--out``).
 
-Example (GPU), from the repository root with the ``mga-cubify`` env's Python::
+Example (GPU), from the repository root with the ``measured-space-cubify`` env's Python::
 
     PYTHONPATH=<data>/third_party/ml-cubifyanything python scripts/run_cubify.py \\
         <data>/outputs/cubify/frames --out <data>/outputs/cubify/predictions \\

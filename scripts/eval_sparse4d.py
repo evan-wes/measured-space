@@ -1,6 +1,6 @@
 """Score Sparse4D's 11-column tracking output on Smart Spaces scenes: ground truth, HOTA, NVIDIA's evaluator, summary.
 
-Runs in the ``mga-sparse4d`` conda env (``envs/sparse4d/README.md``) with NVIDIA's ``spatialai_data_utils``
+Runs in the ``measured-space-sparse4d`` conda env (``envs/sparse4d/README.md``) with NVIDIA's ``spatialai_data_utils``
 on the path (``PYTHONPATH=<video-search-and-summarization>/libs/analytics/spatialai-data-utils``, repository
 https://github.com/NVIDIA-AI-Blueprints/video-search-and-summarization, Apache-2.0; its bundled TrackEval code is
 MIT); it is imported, not copied. ``gt`` needs only the standard library; ``hota --sim bev`` needs shapely;

@@ -1,9 +1,10 @@
 """ARKitScenes: 3D object boxes, ARKit poses and laser-depth frames, as :mod:`measured_space.scene` types.
 
-ARKitScenes is the project's real-sensor dataset. For the six validation videos with laser depth, the dataset's
-"upsampling" archives hold about 30 filtered frames each, with the RGB image (``wide``), a depth map rendered
-from a Faro laser scan (``highres_depth``), the iPad LiDAR depth (``lowres_depth``) and its confidence. The
-3D boxes were annotated on the iPad reconstruction, so the laser depth is the independent reference for them.
+ARKitScenes is the project's real-sensor dataset. For each validation video with laser depth (the results use
+106), the dataset's "upsampling" archive holds 2-69 filtered frames (median 17), with the RGB image (``wide``), a
+depth map rendered from a Faro laser scan (``highres_depth``), the iPad LiDAR depth (``lowres_depth``) and its
+confidence. The 3D boxes were annotated on the iPad's reconstruction (the ARKit mesh; ARKitScenes paper, Sec.
+3.2); the laser depth is independent of them and is used for visibility and to check the conventions below.
 Everything is read straight out of the downloaded archives; nothing is extracted.
 
 Conventions, each checked against the laser depth (``scripts/check_arkitscenes_oracle.py``):

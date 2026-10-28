@@ -1,6 +1,6 @@
 """Reproduce the project's key claims from the committed result tables, and check them against their stated values.
 
-Every claim of the write-up that carries a number is listed here once, with:
+Every reported claim that carries a number is listed here once, with:
 
 - an id and the project aim it supports (A1-A7, listed in :data:`AIMS`);
 - a plain statement and the value(s) as stated (the number of decimals written sets the rounding tolerance:
@@ -509,7 +509,7 @@ def _a1_wrong_range(r: Path) -> Values:
 
 
 def _a1_wrong_table(r: Path) -> Values:
-    """Table "Wrong" column: share of numeric labels outside the tolerance, per labeller (percent)."""
+    """Share of numeric labels outside the tolerance, per labeller (percent)."""
     return {"baseline": pct(operating_point(r, "ark106_2d", "numeric", 1)["wrong_share"]),
             "cubify_sam3": pct(gate(r, "audit_ark106_cutr_sam3", "numeric", "sigma", 1)["err_all"]),
             "cubify_clip": pct(gate(r, "audit_ark106_cutr_clip", "numeric", "sigma", 1)["err_all"]),
@@ -674,7 +674,7 @@ def _a4_width(r: Path) -> Values:
 
 
 def _a4_table_gates(r: Path) -> Values:
-    """Table gate columns: accepted share and wrong among accepted, at the tolerance and twice it (percent).
+    """Gates per labeller: accepted share and wrong among accepted, at the tolerance and twice it (percent).
 
     The baseline's cells come from its iPad-LiDAR-only audit, certified on LiDAR answers alone.
     """
@@ -699,7 +699,7 @@ def _a4_table_gates(r: Path) -> Values:
 
 
 def _a4_handheld_gates(r: Path) -> Values:
-    """Handheld gates as summarised in the text: acceptance range at the tolerance and twice it, and worst error.
+    """Handheld gates in summary: acceptance range at the tolerance and twice it, and worst error.
 
     The baseline is its iPad-LiDAR-only audit.
     """
@@ -746,7 +746,7 @@ def _a6_exact(r: Path) -> Values:
 
 
 def _a7_recall_table(r: Path) -> Values:
-    """Table recall column: present / clearly visible, per labeller."""
+    """Recall of present / clearly visible objects, per labeller."""
     spec = {"baseline": ("ark106_v0", "v0", "lidar"), "cubify_sam3": ("ark106_cutr", "cutr_sam3", "cutr_sam3"),
             "cubify_clip": ("ark106_cutr", "cutr_clip", "cutr_clip"), "monocular": ("ss12_v0", "v0", "moge"),
             "sparse4d": ("ss12_sparse4d_v22", "sparse4d", "sparse4d"),
@@ -798,9 +798,10 @@ def _a7_flags(r: Path) -> Values:
 def _a4_violations(r: Path) -> Values:
     """Gates (all model kinds, both tolerances, non-empty) whose accepted labels exceed epsilon on held-out scenes.
 
-    Counts over the six audits; the two largest violations by number of labels accepted (their counts and errors),
-    with whether they are on the warehouse scenes; the range of error among accepted over Table 2's handheld cells
-    (baseline: its LiDAR-only audit); the scene-bootstrap upper bound of Cubify + SAM 3's constant-sigma gate at the
+    Counts over the six audits, and how many are on the handheld scans and the most labels any of those accepts;
+    the two largest violations by number of labels accepted (their counts and errors), with whether they are on the
+    warehouse scenes; the range of error among accepted over the handheld gate cells of A4.5 (baseline: its
+    LiDAR-only audit); the scene-bootstrap upper bound of Cubify + SAM 3's constant-sigma gate at the
     tolerance (percent).
     """
     rows = []
@@ -816,7 +817,9 @@ def _a4_violations(r: Path) -> Values:
         ("audit_ark106_cutr_sam3", "const", 1), ("audit_ark106_cutr_sam3", "sigma", 2),
         ("audit_ark106_cutr_clip", "sigma", 1), ("audit_ark106_cutr_clip", "sigma", 2),
         ("audit_ark106_2d_lidar", "sigma", 1), ("audit_ark106_2d_lidar", "sigma", 2))]
-    return {"violated": float(len(bad)), "gates": float(len(g)),
+    hand = bad[bad["audit"].isin(HANDHELD_AUDITS)]
+    return {"violated": float(len(bad)), "gates": float(len(g)), "violated_handheld": float(len(hand)),
+            "handheld_max_n": float(hand["accept_n"].astype(float).max()),
             "largest_n": float(top["accept_n"].iloc[0]), "largest_err": pct(float(top["accept_err"].iloc[0])),
             "second_n": float(top["accept_n"].iloc[1]), "second_err": pct(float(top["accept_err"].iloc[1])),
             "largest_two_warehouse": float(all(a in WAREHOUSE_AUDITS for a in top["audit"])),
@@ -991,7 +994,7 @@ CLAIMS: tuple[Claim, ...] = (
     Claim("A1.1", "A1", "Before gating, 25-33% of handheld numeric labels are wrong at the tolerance.",
           {"lo": "25", "hi": "33"}, ("review_effort/operating_points.csv", "audit_ark106_cutr_*/gate.csv"),
           f"{EFFORT}, {AUDIT}", _a1_wrong_range),
-    Claim("A1.2", "A1", "Share of numeric labels wrong at the tolerance, per labeller (results table).",
+    Claim("A1.2", "A1", "Share of numeric labels wrong at the tolerance, per labeller.",
           {"baseline": "33", "cubify_sam3": "25", "cubify_clip": "26", "monocular": "55", "sparse4d": "2.7",
            "sparse4d_pre2026": "4.5"},
           ("review_effort/operating_points.csv", "audit_*/gate.csv"), f"{EFFORT}, {AUDIT}", _a1_wrong_table),
@@ -1043,7 +1046,8 @@ CLAIMS: tuple[Claim, ...] = (
           {"lo": "0.64", "hi": "0.78", "monocular": "0.39"}, ("audit_*/coverage.csv",), AUDIT, _a4_sites),
     Claim("A4.4", "A4", "Median interval half-widths are 2-3 tolerances on handheld scans and 0.1 for Sparse4D.",
           {"lo": "2", "hi": "3", "sparse4d": "0.1"}, ("audit_*/coverage.csv",), AUDIT, _a4_width),
-    Claim("A4.5", "A4", "Results table, gate columns: accepted share / wrong among accepted (percent).",
+    Claim("A4.5", "A4", "Certified gates per labeller: accepted share / wrong among accepted (percent). Cubify + "
+          "SAM 3 at the tolerance uses its constant-spread gate, since its feature-model gate exceeds epsilon.",
           {"baseline_t1_acc": "11", "baseline_t1_err": "6.9", "baseline_t2_acc": "48", "baseline_t2_err": "7.4",
            "cubify_sam3_t1_acc": "11", "cubify_sam3_t1_err": "7.5", "cubify_sam3_t2_acc": "79",
            "cubify_sam3_t2_err": "8.9", "cubify_sam3_feature_t1_acc": "14", "cubify_sam3_feature_t1_err": "10.3",
@@ -1056,20 +1060,6 @@ CLAIMS: tuple[Claim, ...] = (
           "and 48-79% at twice it (baseline certified on its LiDAR answers alone).",
           {"t1_lo": "11", "t1_hi": "20", "t1_worst_err": "7.5", "t2_lo": "48", "t2_hi": "79"},
           ("audit_ark106_2d_lidar/gate.csv", "audit_ark106_cutr_*/gate.csv"), AUDIT, _a4_handheld_gates),
-    Claim("A4.8", "A4", "The item-level certificate on held-out scenes: 6 of 45 non-empty gates exceed epsilon; the two "
-          "largest by labels accepted (1,921 at 15% and 1,047 at 22% wrong) are on the warehouse scenes. The "
-          "handheld Table 2 gates hold (6.0-8.9% wrong; baseline: its LiDAR-only audit), though the scene-bootstrap "
-          "upper bound reaches 13%.",
-          {"violated": "6", "gates": "45", "largest_n": "1921", "largest_err": "15", "second_n": "1047",
-           "second_err": "22", "largest_two_warehouse": "True",
-           "handheld_lo": "6.0", "handheld_hi": "8.9", "boot_hi_sam3_tau": "13"},
-          ("audit_*/gate.csv",), AUDIT, _a4_violations),
-    Claim("A4.9", "A4", "Leaving out a whole warehouse layout, Sparse4D v2.2 keeps 0.91 coverage and its gate (91% at "
-          "1.7% wrong); the monocular baseline's gate at twice the tolerance accepts 1,011 labels at 36% wrong and the "
-          "pre-2026 checkpoint's constant gate 2,167 at 16% (gates exceeding epsilon: 0, 2 and 2).",
-          {"v22_coverage": "0.91", "v22_acc": "91", "v22_err": "1.7", "mono_n": "1011", "mono_err": "36",
-           "old_n": "2167", "old_err": "16", "violated_v22": "0", "violated_mono": "2", "violated_old": "2"},
-          ("audit_ss12_*_bylayout/gate.csv", "audit_ss12_sparse4d_v22_bylayout/coverage.csv"), AUDIT, _a4_layouts),
     Claim("A4.7", "A4", "Checking labels in risk order, Sparse4D's labels reach at most 1% wrong after 9% are checked, "
           "against 18% ordered by question type alone and 59% at random (a sixth): assuming 30 s per check, 46 instead "
           "of 91 or 297 reviewer-minutes per 1,000 labels (500 to check all). Handheld labels reach 2% after 69-74% "
@@ -1079,6 +1069,21 @@ CLAIMS: tuple[Claim, ...] = (
            "minutes_all": "500", "ratio": "1/6", "handheld_ours_lo": "69", "handheld_ours_hi": "74",
            "handheld_random_lo": "92", "handheld_random_hi": "95"},
           ("review_effort/effort_targets.csv",), EFFORT, _a4_effort),
+    Claim("A4.8", "A4", "The item-level certificate on held-out scenes: 6 of 45 non-empty gates exceed epsilon, 4 of "
+          "them on handheld scans (each accepting at most 291 labels); the two largest by labels accepted (1,921 at "
+          "15% and 1,047 at 22% wrong) are on the warehouse scenes. The handheld gates of A4.5 hold (6.0-8.9% wrong; "
+          "baseline: its LiDAR-only audit), though the scene-bootstrap upper bound reaches 13%.",
+          {"violated": "6", "gates": "45", "violated_handheld": "4", "handheld_max_n": "291",
+           "largest_n": "1921", "largest_err": "15", "second_n": "1047",
+           "second_err": "22", "largest_two_warehouse": "True",
+           "handheld_lo": "6.0", "handheld_hi": "8.9", "boot_hi_sam3_tau": "13"},
+          ("audit_*/gate.csv",), AUDIT, _a4_violations),
+    Claim("A4.9", "A4", "Leaving out a whole warehouse layout, Sparse4D v2.2 keeps 0.91 coverage and its gate (91% at "
+          "1.7% wrong); the monocular baseline's gate at twice the tolerance accepts 1,011 labels at 36% wrong and the "
+          "pre-2026 checkpoint's constant gate 2,167 at 16% (gates exceeding epsilon: 0, 2 and 2).",
+          {"v22_coverage": "0.91", "v22_acc": "91", "v22_err": "1.7", "mono_n": "1011", "mono_err": "36",
+           "old_n": "2167", "old_err": "16", "violated_v22": "0", "violated_mono": "2", "violated_old": "2"},
+          ("audit_ss12_*_bylayout/gate.csv", "audit_ss12_sparse4d_v22_bylayout/coverage.csv"), AUDIT, _a4_layouts),
     Claim("A5.1", "A5", "Ten random references per site take the monocular warehouse baseline from 9% accepted at 22% "
           "wrong to 53% at 7.2% (twice the tolerance); a quarter of sites still miss a per-site bound.",
           {"before_acc": "9", "before_err": "22", "after_acc": "53", "after_err": "7.2",
@@ -1095,7 +1100,7 @@ CLAIMS: tuple[Claim, ...] = (
     Claim("A6.3", "A6", "On fixed cameras, Sparse4D's labels reproduce the reference model ranking exactly.",
           {"dd": "0.000", "lo": "0.000", "hi": "0.000"}, ("vlm_results/ss12_sparse4d_v22/delta_delta.csv",),
           "scripts/run_vlm_eval.py score", _a6_exact),
-    Claim("A7.1", "A7", "Results table, recall of present / clearly visible objects.",
+    Claim("A7.1", "A7", "Recall of present / clearly visible objects, per labeller.",
           {"baseline_present": "0.66", "baseline_clear": "0.87", "cubify_sam3_present": "0.58",
            "cubify_sam3_clear": "0.80", "cubify_clip_present": "0.45", "cubify_clip_clear": "0.80",
            "monocular_present": "0.63", "monocular_clear": "0.74", "sparse4d_present": "0.75",

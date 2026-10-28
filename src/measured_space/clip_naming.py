@@ -55,7 +55,7 @@ from PIL import Image
 from measured_space.perception import prompt_phrases
 
 CLIP_MODEL_ID = "laion/CLIP-ViT-H-14-laion2B-s32B-b79K"
-"""str: the default CLIP (OpenCLIP ViT-H/14, LAION-2B, MIT licence), as used by BoxFusion."""
+"""str: the default CLIP (OpenCLIP ViT-H/14, LAION-2B, MIT license), as used by BoxFusion."""
 
 CLIP_REVISION = "1c2b8495b28150b8a4922ee1c8edee224c284c0c"
 """str: the pinned snapshot (commit) of :data:`CLIP_MODEL_ID`; only its transformers files are cached."""

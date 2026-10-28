@@ -4,10 +4,11 @@ All notable changes to this project are documented here. Format is a
 loose variant of [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 with 4-digit `MAJOR.MINOR.PATCH.MICRO` version numbers.
 
-## [0.2.0.0] - 2026-10-27
+## [0.2.0.0] - 2026-10-28
 
 The first complete prototype: the label audit, its certificates and the miss audit, run on 106 ARKitScenes videos
-and 12 synthetic PhysicalAI-SmartSpaces warehouse scenes with four labellers.
+and 12 synthetic PhysicalAI-SmartSpaces warehouse scenes with six labeller configurations (the baseline on each
+dataset, Cubify Anything named two ways, and Sparse4D's two checkpoints).
 
 ### Added
 
@@ -28,13 +29,15 @@ and 12 synthetic PhysicalAI-SmartSpaces warehouse scenes with four labellers.
   checks (`estimation.py`, `fusion_eval.py`), **VLM evaluation** under label noise (`eval_vlm.py`, `scoring.py`).
 - **A pairing viewer and a blind spot-check page** (`viewer.py`, `scripts/make_viewer.py`), with the author's two
   spot-check exports in `results/spotcheck/`.
-- **`claims.py`**: recomputes every reported number from the committed tables in `results/` (190 quantities in 38
+- **`claims.py`**: recomputes every reported number from the committed tables in `results/` (192 quantities in 38
   claims); `setup_env.sh` builds the environments; `REPRODUCE.md` documents both tiers.
 - `LICENSE` (PolyForm Noncommercial 1.0.0), `LICENSES/`, `THIRD_PARTY_NOTICES.md`.
 
 ### Changed
 
 - The README describes the prototype, its results and its limitations.
+- `docs/DATASETS.md` records the datasets as used, their download sizes and the data-folder layout.
+- The conda environments are named `measured-space`, `measured-space-cubify` and `measured-space-sparse4d`.
 
 ## [0.1.0.0] - 2026-10-26
 
@@ -45,6 +48,6 @@ and 12 synthetic PhysicalAI-SmartSpaces warehouse scenes with four labellers.
   - `environment.yml` (Python 3.12 from conda-forge, `torch==2.14.1` from PyPI);
   - a `.gitignore` that keeps data, weights and run outputs out of git;
   - the version-tag workflows;
-  - `docs/DATASETS.md` from the planning phase: the dataset survey, licences and measured download sizes.
+  - `docs/DATASETS.md` from the planning phase: the dataset survey, licenses and measured download sizes.
 
   No pipeline code and no results yet.

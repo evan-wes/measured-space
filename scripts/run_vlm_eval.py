@@ -72,8 +72,9 @@ Three steps, run in order from the repository root:
     easier a question set generated from automatic labels is than the full one.
 
 Outputs: per-item data (sampled specs, predictions, scored rows) stays under ``<out>``, by default
-``<data root>/outputs/vlm``. The repository receives only aggregates, in ``results/vlm/<label folder name>``
-(``summary.json`` and CSVs): one dataset's licence is unclear about redistributing per-item derived labels.
+``<data root>/outputs/vlm``. Aggregates (``summary.json`` and CSVs) go to ``results/vlm/<label folder
+name>`` by default, which git ignores; the committed ones are in ``results/vlm_results/``. Only aggregates are
+committed: one dataset's license is unclear about redistributing per-item derived labels.
 
 Examples::
 

@@ -10,7 +10,7 @@
 #                   Default name: measured-space-claims.
 # full              The full environment the results were produced with: `conda env create -f environment.yml`
 #                   (PyTorch 2.14.1, a CUDA 13.0 build) plus requirements-nodeps.txt (MoGe-2).
-#                   Default name: metric-grounding-audit. The Cubify Anything and Sparse4D environments are separate
+#                   Default name: measured-space. The Cubify Anything and Sparse4D environments are separate
 #                   and documented in REPRODUCE.md.
 #
 # The script only creates a new conda environment under your conda installation. It needs no sudo, changes nothing
@@ -19,7 +19,7 @@
 set -euo pipefail
 
 usage() {
-    sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+    sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 MODE="claims"
@@ -33,7 +33,7 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 if [[ -z "$NAME" ]]; then
-    if [[ "$MODE" == "claims" ]]; then NAME="measured-space-claims"; else NAME="metric-grounding-audit"; fi
+    if [[ "$MODE" == "claims" ]]; then NAME="measured-space-claims"; else NAME="measured-space"; fi
 fi
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

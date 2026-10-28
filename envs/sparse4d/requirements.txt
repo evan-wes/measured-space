@@ -1,4 +1,4 @@
-# Python packages of the `mga-sparse4d` environment (Python 3.12), from `pip freeze` of the environment the
+# Python packages of the `measured-space-sparse4d` environment (Python 3.12), from `pip freeze` of the environment the
 # Sparse4D results were produced with. Used by scripts/extract_smartspaces_frames.py, scripts/run_sparse4d.py and
 # scripts/eval_sparse4d.py. Build order and the three source checkouts are in envs/sparse4d/README.md:
 #

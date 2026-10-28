@@ -1,6 +1,6 @@
 """Run a frozen NVIDIA TAO Sparse4D NGC checkpoint over one Smart Spaces scene with SparseQID's pure-PyTorch runtime.
 
-Runs in the separate ``mga-sparse4d`` conda env (``envs/sparse4d/README.md``), not in the project env:
+Runs in the separate ``measured-space-sparse4d`` conda env (``envs/sparse4d/README.md``), not in the project env:
 ``measured_space`` is not imported here (as for ``scripts/run_cubify.py``). Its input is the half-resolution JPEG
 frame cache written by ``scripts/extract_smartspaces_frames.py``; its output is read by
 ``python -m measured_space.sparse4d convert`` (project env) and scored by ``scripts/eval_sparse4d.py``.
@@ -34,7 +34,7 @@ Outputs (under ``--out-dir/<tag>/``):
   the format is documented in :mod:`measured_space.sparse4d`;
 * ``<scene>.meta.json``: run parameters, re-centring offset, timings, peak VRAM (written last).
 
-Usage (GPU, from the repository root, with the ``mga-sparse4d`` env's Python)::
+Usage (GPU, from the repository root, with the ``measured-space-sparse4d`` env's Python)::
 
     python -I scripts/run_sparse4d.py --sparseqid-src <SparseQID>/src \\
         --model-dir <models>/sparse4d/rn50_trainable_v2.2 --ckpt sparse4d_warehouse_v2.2_r50.pth \\
@@ -45,7 +45,7 @@ The ResNet-101 checkpoint's yaml has no ``model.backbone``; pass ``--backbone-if
 loading verifies it). ``--max-frames N`` processes only the first N cached frames (checks); ``--device cpu`` runs
 on the CPU. Refuses to overwrite existing outputs.
 
-Provenance and licences:
+Provenance and licenses:
 
 * :func:`tao_decode` is adapted from NVIDIA TAO PyTorch (https://github.com/NVIDIA/tao_pytorch_backend, commit
   ``d99ff772``, the commit EVA/GaugeAlign pinned), ``nvidia_tao_pytorch/cv/sparse4d/model/detection3d/decoder.py``

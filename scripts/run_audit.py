@@ -20,8 +20,8 @@ Outputs:
   p(correct); thresholds certified by Learn-then-Test on held-out scenes), for scoring models on the accepted
   item set. These hold per-item derived labels, so they stay out of the repository.
 - ``--results`` (required, no default, so a run never overwrites the committed tables by accident; the
-  committed run used ``results/audit``): aggregate tables only (CSV) and ``summary.json`` (settings, counts,
-  input checksums, notes, runtime). These are small and meant for committing.
+  committed runs are the ``results/audit*`` folders listed in ``REPRODUCE.md``): aggregate tables only (CSV) and
+  ``summary.json`` (settings, counts, input checksums, notes, runtime). These are small and meant for committing.
 
 ``--exclude-ambiguous`` (a pairing sensitivity analysis) drops, before the audit, every (question, depth source)
 pair whose auto answer rests on an ambiguous detection pairing (:func:`measured_space.audit.exclude_ambiguous`):
@@ -47,8 +47,8 @@ run without either option writes exactly what it wrote before they existed.
 
 Usage::
 
-    python scripts/run_audit.py --results results/audit                       # both datasets, default settings
-    python scripts/run_audit.py --results results/audit --wait-minutes 120    # wait for the labels' summary.json
+    python scripts/run_audit.py --results <new folder>                        # both datasets, default settings
+    python scripts/run_audit.py --results <new folder> --wait-minutes 120     # wait for the labels' summary.json
     python scripts/run_audit.py --results <scratch folder> --exclude-ambiguous --labels <label root>
     python scripts/run_audit.py --results <scratch folder> --labels <label root> --depth-sources lidar
     python scripts/run_audit.py --results <scratch folder> --labels <label root> \

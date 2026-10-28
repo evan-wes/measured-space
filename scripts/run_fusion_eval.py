@@ -15,8 +15,8 @@ Writes:
   (``<data root>/outputs/fusion_exclude_ambiguous`` with ``--exclude-ambiguous``);
 - ``<results dir>/summary.json``, ``<results dir>/summary.csv`` (one row per depth source and estimator) and
   ``<results dir>/log_scale.csv`` (one row per video and depth source): aggregates only. ``--results-dir`` is
-  required, with no default, so a run never overwrites the committed tables by accident (the committed run
-  used ``results/fusion``).
+  required, with no default, so a run never overwrites the committed tables by accident (the committed runs
+  are under ``results/fusion/``).
 
 ``--exclude-ambiguous`` (a pairing sensitivity analysis) drops every matched detection whose pairing with its
 ground-truth object was ambiguous (its ``detections.jsonl`` match has ``ambiguous`` True: another feasible
@@ -27,7 +27,7 @@ grouped into objects by their matched id. Detections of unknown ambiguity (match
 
 Usage (from the repository root)::
 
-    python scripts/run_fusion_eval.py --results-dir results/fusion [--scale-prior-sigma 0.1] [--gate-prob 0.997]
+    python scripts/run_fusion_eval.py --results-dir <new folder> [--scale-prior-sigma 0.1] [--gate-prob 0.997]
         [--min-frames 2] [--labels-dir <labels folder>/arkitscenes]
     python scripts/run_fusion_eval.py --results-dir <scratch folder> --exclude-ambiguous
 """

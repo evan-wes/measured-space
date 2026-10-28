@@ -1,10 +1,10 @@
 # Third-party notices
 
 measured-space is licensed under the PolyForm Noncommercial License 1.0.0 ([LICENSE](LICENSE)). The files below
-contain code from other projects and stay under those projects' licences, whose texts are in
+contain code from other projects and stay under those projects' licenses, whose texts are in
 [LICENSES/](LICENSES).
 
-## Code in this repository under another licence
+## Code in this repository under another license
 
 ### NVIDIA TAO PyTorch — Apache-2.0
 
@@ -24,14 +24,14 @@ contain code from other projects and stay under those projects' licences, whose 
 ## Code this project uses but does not include
 
 These are installed or checked out separately (`REPRODUCE.md`, `envs/sparse4d/README.md`) and keep their own
-licences:
+licenses:
 
 - **SparseQID** (<https://github.com/playbox-dev/SparseQID>, Apache-2.0): the Sparse4D detector and frame loader,
   imported by `scripts/run_sparse4d.py`.
 - **NVIDIA video-search-and-summarization** (<https://github.com/NVIDIA-AI-Blueprints/video-search-and-summarization>,
   Apache-2.0; its bundled TrackEval code is MIT): the official 3D-IoU tracking evaluator, imported by
   `scripts/eval_sparse4d.py`.
-- **Cubify Anything** (<https://github.com/apple/ml-cubifyanything>): Apple's code licence, and the Apple Machine
+- **Cubify Anything** (<https://github.com/apple/ml-cubifyanything>): Apple's code license, and the Apple Machine
   Learning Research Model License (research purposes only) for its weights; run by `scripts/run_cubify.py`.
 - The Python packages in `environment.yml`, `requirements-nodeps.txt` and `envs/sparse4d/requirements.txt`.
 
@@ -40,7 +40,7 @@ licences:
 No dataset files are included. `results/` holds aggregate tables, figures and two spot-check exports (pair
 identifiers and verdicts, no images or geometry) derived from:
 
-- **ARKitScenes** (Apple, <https://github.com/apple/ARKitScenes>): under the licence in that repository. Its
+- **ARKitScenes** (Apple, <https://github.com/apple/ARKitScenes>): under the license in that repository. Its
   application to derived data is not stated, so only aggregates and identifiers are committed.
 - **NVIDIA PhysicalAI-SmartSpaces** (<https://huggingface.co/datasets/nvidia/PhysicalAI-SmartSpaces>), licensed
   under CC BY 4.0 (<https://creativecommons.org/licenses/by/4.0/>). The warehouse results in `results/` are
