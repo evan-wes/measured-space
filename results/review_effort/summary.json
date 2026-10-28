@@ -1,9 +1,9 @@
 {
  "argv": [
   "--results",
-  "<data>/outputs/review_effort_results/all6"
+  "<data>/outputs/review_effort_results/all6_fig2"
  ],
- "git_commit": "0ba474f5b2ab00c39363f9da9e6f6bf864323c5f+dirty",
+ "git_commit": "2232bffe338acec72e236363524e182fc6ceda7a",
  "inputs": {
   "audits": [
    {
