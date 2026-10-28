@@ -19,9 +19,9 @@ cameras.
 
 ![Review effort on held-out scenes: wrong answers left against the share of answers reviewed, in order of predicted risk (solid) or at random (dashed)](results/review_effort/review_effort.png)
 
-*Reviewing answers in order of predicted risk (solid) reaches a low error rate far sooner than reviewing at random
-(dashed). Left: 106 real handheld RGB-D videos; right: 12 synthetic warehouse scenes. Markers: each audit's
-certified gate. v0 is the baseline that lifts SAM 3 masks through iPad LiDAR or MoGe-2 monocular depth; CuTR is
+*Solid lines: answers reviewed in order of predicted risk, riskiest first. Dashed lines: answers reviewed in random
+order. Risk order reaches a low error rate far sooner. Left: 106 real handheld RGB-D videos; right: 12 synthetic
+warehouse scenes. v0 is the baseline that lifts SAM 3 masks through iPad LiDAR or MoGe-2 monocular depth; CuTR is
 Cubify Anything's detector, its boxes named by SAM 3 or CLIP; Sparse4D v2.2 and v1.1 are NVIDIA's current and
 pre-2026 checkpoints. Made by `scripts/run_review_effort.py`.*
 

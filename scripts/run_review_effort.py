@@ -531,48 +531,46 @@ def make_figures_module() -> ModuleType:
     return module
 
 
+SERIES_COLOURS: tuple[str, ...] = ("#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4", "#008300", "#6250d6",
+                                   "#e34948")
+"""tuple of str: categorical colours, assigned to labellers in drawing order across all panels (checked for
+colour-blind separation as a set and within each panel of the default six)."""
+
+
 def labeller_styles(entries: Sequence[tuple[str, str, str]], mf: ModuleType) -> dict[tuple[str, str],
-                                                                                     tuple[str, str, str]]:
-    """Colour, marker and legend label of each labeller, by its source, unique within a setting.
+                                                                                     tuple[str, str]]:
+    """Colour and legend label of each labeller, one colour per labeller across the whole figure.
 
     Parameters
     ----------
     entries : sequence of tuple of (str, str, str)
         ``(setting, labeller, source)`` in drawing order.
     mf : types.ModuleType
-        ``scripts/make_figures.py`` (``SOURCE_STYLE`` and the palette).
+        ``scripts/make_figures.py`` (its muted colour, for labellers beyond :data:`SERIES_COLOURS`).
 
     Returns
     -------
     dict
-        ``(setting, labeller) -> (colour, marker, label)``. A labeller takes its source's style; when another
-        labeller of the same setting already has that colour, the next unused palette colour and marker.
+        ``(setting, labeller) -> (colour, label)``. Colours follow :data:`SERIES_COLOURS` in drawing order and are
+        never reused; any labeller past the last one is drawn in the muted colour.
     """
-    palette = [mf.BLUE, mf.AQUA, mf.ORANGE, mf.INK, mf.MUTED]
-    markers = ["o", "s", "^", "v", "P", "X", "D"]
-    out: dict[tuple[str, str], tuple[str, str, str]] = {}
-    used: dict[str, set[str]] = {}
-    for setting, labeller, source in entries:
-        colour, marker, _ = mf.SOURCE_STYLE.get(source, (mf.MUTED, "*", source))
-        taken = used.setdefault(setting, set())
-        if colour in taken:
-            colour = next((c for c in palette if c not in taken), mf.MUTED)
-            marker = next((m for m in markers if m not in {s[1] for k, s in out.items() if k[0] == setting}), "*")
-        taken.add(colour)
-        out[(setting, labeller)] = (colour, marker, DISPLAY.get(labeller, labeller))
+    out: dict[tuple[str, str], tuple[str, str]] = {}
+    for setting, labeller, _source in entries:
+        if (setting, labeller) in out:
+            continue
+        n = len(out)
+        colour = SERIES_COLOURS[n] if n < len(SERIES_COLOURS) else mf.MUTED
+        out[(setting, labeller)] = (colour, DISPLAY.get(labeller, labeller))
     return out
 
 
-def effort_figure(curves: pd.DataFrame, points: pd.DataFrame, styles: dict[tuple[str, str], tuple[str, str, str]],
-                  mf: ModuleType) -> Any:
-    """Residual wrong share against review fraction, one panel per setting (all answers, at the tolerance).
+def effort_figure(curves: pd.DataFrame, styles: dict[tuple[str, str], tuple[str, str]], mf: ModuleType) -> Any:
+    """Wrong share left against review fraction, one panel per setting (all answers, at the tolerance).
 
     Parameters
     ----------
     curves : pandas.DataFrame
         ``effort_curves.csv`` rows.
-    points : pandas.DataFrame
-        ``operating_points.csv`` rows.
     styles : dict
         :func:`labeller_styles` output.
     mf : types.ModuleType
@@ -581,8 +579,10 @@ def effort_figure(curves: pd.DataFrame, points: pd.DataFrame, styles: dict[tuple
     Returns
     -------
     matplotlib.figure.Figure
-        Per labeller, the risk order (solid) and random review (dashed), and the certified gate's operating point
-        (marker); log residual axis, both axes in percent.
+        Per labeller, the risk order (solid) and random review (dashed) in the labeller's colour, with a legend
+        under each panel; log residual axis, both axes in percent. The certified gates' operating points are in
+        ``operating_points.csv``; they are not drawn, because the gate decides per answer kind and its point need
+        not lie on the curve of the single risk ranking.
     """
     from matplotlib.lines import Line2D
     from matplotlib.ticker import FuncFormatter, LogLocator
@@ -590,32 +590,24 @@ def effort_figure(curves: pd.DataFrame, points: pd.DataFrame, styles: dict[tuple
     mf.style()
     sel = (curves["answer_kind"] == "combined") & np.isclose(curves["tau_scale"].astype(float), 1.0)
     data = curves[sel]
-    ops = points[(points["answer_kind"] == "combined") & np.isclose(points["tau_scale"].astype(float), 1.0)
-                 & (points["order"] == "ours")]
     present = list(dict.fromkeys(data["setting"]))
     settings = [s for s in SETTING_TITLE if s in present] + [s for s in present if s not in SETTING_TITLE]
     fig, axes = mf.panels(max(len(settings), 1), 2.3)
     fig.subplots_adjust(wspace=0.22)                          # room for the 100 / 0 tick labels between panels
     floor = 1e-3
     top = min(1.0, 1.6 * float(data["residual_wrong_share"].max())) if len(data) else 1.0
-    handles: list[Any] = []
     for ax, setting in zip(axes, settings):
         d = data[data["setting"] == setting]
+        handles: list[Any] = []
         for labeller in dict.fromkeys(d["labeller"]):
-            colour, marker, label = styles[(setting, labeller)]
+            colour, label = styles[(setting, labeller)]
             g = d[d["labeller"] == labeller]
-            for order, ls, lw in (("ours", "-", 1.1), ("random", (0, (3, 2)), 0.8)):
+            for order, ls, lw in (("ours", "-", 1.5), ("random", (0, (3, 2)), 1.0)):
                 c = g[g["order"] == order]
                 y = c["residual_wrong_share"].to_numpy(float)
                 ax.plot(c["review_fraction"], np.where(y > 0, y, np.nan), color=colour, linestyle=ls, linewidth=lw,
                         zorder=2 if order == "ours" else 1)
-            op = ops[(ops["setting"] == setting) & (ops["labeller"] == labeller)]
-            for _, r in op.iterrows():
-                ax.plot([r["review_fraction"]], [max(r["residual_wrong_share"], floor)], linestyle="none",
-                        marker=marker, color=colour, markersize=4.5, markeredgecolor="white", markeredgewidth=0.6,
-                        zorder=4)
-            handles.append(Line2D([], [], color=colour, marker=marker, markeredgecolor="white",
-                                  markeredgewidth=0.6, label=label))
+            handles.append(Line2D([], [], color=colour, linewidth=2.0, label=label))
         ax.set_yscale("log")
         ax.yaxis.set_major_locator(LogLocator(base=10, subs=(1.0, 2.0, 5.0)))
         ax.yaxis.set_minor_formatter(FuncFormatter(lambda v, _: ""))
@@ -625,16 +617,9 @@ def effort_figure(curves: pd.DataFrame, points: pd.DataFrame, styles: dict[tuple
         ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{100 * v:g}"))
         ax.set_title(SETTING_TITLE.get(setting, setting), color=mf.INK)
         ax.set_xlabel("Answers reviewed (%)")
-    axes[0].set_ylabel("Wrong answers delivered (%)")
-    handles += [Line2D([], [], color=mf.INK, linewidth=1.1, label="Risk order"),
-                Line2D([], [], color=mf.INK, linewidth=0.8, linestyle=(0, (3, 2)), label="Random order"),
-                Line2D([], [], color=mf.INK, marker="o", linestyle="none", markeredgecolor="white",
-                       label="Certified gate")]
-    fig.canvas.draw()
-    renderer = fig.canvas.get_renderer()                      # type: ignore[attr-defined]
-    bottom = min(a.get_tightbbox(renderer).transformed(fig.transFigure.inverted()).y0 for a in fig.axes)
-    fig.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, bottom - 0.01), ncol=3, handlelength=1.6,
-               columnspacing=1.2)
+        ax.legend(handles=handles, loc="upper center", bbox_to_anchor=(0.5, -0.30), frameon=False,
+                  handlelength=1.6)
+    axes[0].set_ylabel("Wrong answers left (%)")
     return fig
 
 
@@ -735,7 +720,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     miss_df = pd.concat(misses, ignore_index=True) if misses else pd.DataFrame()
 
     mf = make_figures_module()
-    fig = effort_figure(curves_df, points_df, labeller_styles(entries, mf), mf)
+    fig = effort_figure(curves_df, labeller_styles(entries, mf), mf)
     results = args.results
     if results.exists() and any(results.iterdir()):                  # re-check: nothing may have appeared meanwhile
         print(f"{results} is no longer empty; nothing written", file=sys.stderr)
