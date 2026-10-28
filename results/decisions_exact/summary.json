@@ -1,0 +1,1222 @@
+{
+ "analysis": "certify decisions, not measurements (measured_space.decisions)",
+ "inputs": {
+  "2d_lidar": {
+   "folder": "<data>/outputs/audit_exactcal/audit_ark106_2d",
+   "source": "lidar",
+   "dataset": "arkitscenes",
+   "setting": "handheld",
+   "files": {
+    "pairs.csv": {
+     "bytes": 2026978,
+     "sha256": "e1aa09821f2d2c1c0acd04bfd81bea2c4742af67bc9ce9b7ea92e107f5c04754"
+    },
+    "numeric.csv": {
+     "bytes": 4637960,
+     "sha256": "dfa9c4403c8fb578f6088dae9a41e60928b628d804e79b8a88dc3aba8a74ae6f"
+    },
+    "gate.csv": {
+     "bytes": 11807290,
+     "sha256": "8040f3b2756b80b5eaeacf1a6c4fe7001c190efa06d35640f0ef62224a014511"
+    },
+    "summary.json": {
+     "bytes": 3414,
+     "sha256": "9b045c98f2ff30bbd59d2d6e37693a663de668e06298fb90d5215c8269e57e31"
+    },
+    "tables/folds.csv": {
+     "bytes": 23232,
+     "sha256": "690f5410adf8170db116184eccfb0840d22ad43b7410201f39eaf4e56e8b2c68"
+    },
+    "calibration.json": {
+     "bytes": 1242,
+     "sha256": "7235b8c04e57723fd022a6a907614fade4f5f2bf13133529c241b59fd7dfc8c9"
+    },
+    "calibration_numeric.csv.gz": {
+     "bytes": 12365894,
+     "sha256": "ebde850f4b2b29744315bbc177d0887b711be4c9f7a4a5035e682afbea077e4f"
+    },
+    "calibration_quantiles.csv.gz": {
+     "bytes": 79942,
+     "sha256": "b1e306c5cb979cf45044b5bb42b875b455d9a781574b41d049b99c18b33c15e9"
+    }
+   },
+   "audit_git_commit": "661a9660ae8ef31bb997cdec80d34d67a0067933+dirty",
+   "audit_config": {
+    "max_folds": 20,
+    "seed": 0,
+    "epsilon": 0.1,
+    "delta": 0.1,
+    "min_accept": 30,
+    "min_accept_frac": 0.05
+   },
+   "folds": {
+    "recorded": true,
+    "checked_against_record": [
+     "arkitscenes/distance_center",
+     "arkitscenes/distance_surface",
+     "arkitscenes/ego_distance",
+     "arkitscenes/size_height",
+     "arkitscenes/size_longest"
+    ],
+    "rule": "recomputed with measured_space.audit.scene_folds over the audit's modelled rows of every depth source; groups listed were checked against folds.csv, the others have at most max_folds scenes (one scene per fold)"
+   },
+   "n_answers": {
+    "distance_center": 177,
+    "distance_surface": 57,
+    "ego_distance": 653,
+    "size_height": 651,
+    "size_longest": 652
+   },
+   "n_scenes": 98,
+   "n_decisions": {
+    "threshold": 4380,
+    "sweep": 21900,
+    "safety": 468
+   },
+   "part_b": {
+    "skipped": false,
+    "label_folder": "<data>/outputs/labels_ark106_2d/arkitscenes",
+    "check": "4 files match the audit's recorded sha256: ['qa_auto_laser.jsonl', 'qa_auto_lidar.jsonl', 'qa_auto_moge.jsonl', 'qa_oracle.jsonl']",
+    "counts": {
+     "n_answers": 1956,
+     "n_no_referents": 0,
+     "n_multi_referent": 0,
+     "n_same_object": 0,
+     "n_pairs": 534
+    },
+    "referent_file": "<data>/outputs/labels_ark106_2d/arkitscenes/qa_oracle.jsonl",
+    "n_ids_found": 1956,
+    "n_calibration_pairs": 49859
+   },
+   "calibration": {
+    "mode": "exact",
+    "note": "The audit folder holds its leave-two-out calibration predictions (calibration_numeric.csv.gz) and per-test-scene conformal quantiles (calibration_quantiles.csv.gz). For a test scene S and a question type whose group holds S, each calibration decision uses mu and sigma from a model fitted without S's fold and the item's own fold, and the half-width q90 * sigma with q90 the quantile that S's own answers of the item's cell (question type, depth source) get; margins likewise, with the direct quantile of S taken over leave-two-out margins. For a question type with no answer of S in any depth source, no model or quantile of that type saw S, and its calibration decisions are the other scenes' own test decisions. So no calibration decision for S comes from a model or a quantile that saw S's fold. One data reuse remains: the per-cell quantile that scales every calibration decision's error bar is computed from those same calibration items' scores (one scalar per cell), as the conformal step of the audit computes it for the test scene.",
+    "n_calibration_answers": 191621,
+    "n_exact_groups": 367,
+    "test_halfwidth_check": {
+     "n": 2190,
+     "max_rel_diff": 5.974350167424604e-06,
+     "n_missing": 0,
+     "n_infinite_agree": 0
+    },
+    "parts": {
+     "decision_gate": "exact",
+     "sweep": "exact",
+     "safety": "exact",
+     "margin_intervals": "exact",
+     "margin_gate": "exact"
+    },
+    "calibration_decisions": {
+     "decision_gate": {
+      "n_test_scene_pools": 98,
+      "n_cal": 409264,
+      "n_cal_exact": 383242,
+      "n_cal_own": 26022
+     },
+     "sweep": {
+      "n_test_scene_pools": 490,
+      "n_cal": 2046320,
+      "n_cal_exact": 1916210,
+      "n_cal_own": 130110
+     },
+     "safety": {
+      "n_test_scene_pools": 48,
+      "n_cal": 21550,
+      "n_cal_exact": 18928,
+      "n_cal_own": 2622
+     },
+     "margin_gate": {
+      "n_test_scene_pools": 96,
+      "n_cal": 40513,
+      "n_cal_exact": 40513,
+      "n_cal_own": 0
+     }
+    }
+   },
+   "notes": [],
+   "seconds": 3.1
+  },
+  "cutr_sam3": {
+   "folder": "<data>/outputs/audit_exactcal/audit_ark106_cutr_sam3",
+   "source": "cutr_sam3",
+   "dataset": "arkitscenes",
+   "setting": "handheld",
+   "files": {
+    "pairs.csv": {
+     "bytes": 604111,
+     "sha256": "796f224ffeb0eb4abbd3cad20cdb421720122900f82675bf0f049360c9830b62"
+    },
+    "numeric.csv": {
+     "bytes": 1443643,
+     "sha256": "c0a8aed492b3da604d45b44e4003c6adc17448cf48f4f6dd1d9c3f43ae2c75f8"
+    },
+    "gate.csv": {
+     "bytes": 3673047,
+     "sha256": "31ec905ed125b692d94204d041f8b30144805b46963b8b71ad2837464bbdd6a5"
+    },
+    "summary.json": {
+     "bytes": 3037,
+     "sha256": "7f060022ad9e52f0b1563694d7611ffa8b86774c11df8dcedd6ebf2b37467cdb"
+    },
+    "tables/folds.csv": {
+     "bytes": 22316,
+     "sha256": "150a72b13c44bbac84289b883b6b54ed9afca158c2a601d646839c76a2624655"
+    },
+    "calibration.json": {
+     "bytes": 1241,
+     "sha256": "711f2a488aa6a103943d98d757ef2f4584c66aebdfbcd592b16564763777bb1a"
+    },
+    "calibration_numeric.csv.gz": {
+     "bytes": 3836991,
+     "sha256": "e1c425088dddbf8eca005d6a8fef190f6e4521780bdc24561c99edbad4bd9bf7"
+    },
+    "calibration_quantiles.csv.gz": {
+     "bytes": 18608,
+     "sha256": "59e88fb373c414bc1f12ec3b3cea3b9cbd2f8000702810c3a2575d2cedde3be0"
+    }
+   },
+   "audit_git_commit": "661a9660ae8ef31bb997cdec80d34d67a0067933+dirty",
+   "audit_config": {
+    "max_folds": 20,
+    "seed": 0,
+    "epsilon": 0.1,
+    "delta": 0.1,
+    "min_accept": 30,
+    "min_accept_frac": 0.05
+   },
+   "folds": {
+    "recorded": true,
+    "checked_against_record": [
+     "arkitscenes/distance_center",
+     "arkitscenes/distance_surface",
+     "arkitscenes/ego_distance",
+     "arkitscenes/size_height",
+     "arkitscenes/size_longest"
+    ],
+    "rule": "recomputed with measured_space.audit.scene_folds over the audit's modelled rows of every depth source; groups listed were checked against folds.csv, the others have at most max_folds scenes (one scene per fold)"
+   },
+   "n_answers": {
+    "distance_center": 137,
+    "distance_surface": 40,
+    "ego_distance": 610,
+    "size_height": 609,
+    "size_longest": 611
+   },
+   "n_scenes": 98,
+   "n_decisions": {
+    "threshold": 4014,
+    "sweep": 20070,
+    "safety": 354
+   },
+   "part_b": {
+    "skipped": false,
+    "label_folder": "<data>/outputs/labels_ark106_cutr_sam3/arkitscenes",
+    "check": "2 files match the audit's recorded sha256: ['qa_auto_cutr_sam3.jsonl', 'qa_oracle.jsonl']",
+    "counts": {
+     "n_answers": 1830,
+     "n_no_referents": 0,
+     "n_multi_referent": 0,
+     "n_same_object": 0,
+     "n_pairs": 408
+    },
+    "referent_file": "<data>/outputs/labels_ark106_cutr_sam3/arkitscenes/qa_oracle.jsonl",
+    "n_ids_found": 1830,
+    "n_calibration_pairs": 38048
+   },
+   "calibration": {
+    "mode": "exact",
+    "note": "The audit folder holds its leave-two-out calibration predictions (calibration_numeric.csv.gz) and per-test-scene conformal quantiles (calibration_quantiles.csv.gz). For a test scene S and a question type whose group holds S, each calibration decision uses mu and sigma from a model fitted without S's fold and the item's own fold, and the half-width q90 * sigma with q90 the quantile that S's own answers of the item's cell (question type, depth source) get; margins likewise, with the direct quantile of S taken over leave-two-out margins. For a question type with no answer of S in any depth source, no model or quantile of that type saw S, and its calibration decisions are the other scenes' own test decisions. So no calibration decision for S comes from a model or a quantile that saw S's fold. One data reuse remains: the per-cell quantile that scales every calibration decision's error bar is computed from those same calibration items' scores (one scalar per cell), as the conformal step of the audit computes it for the test scene.",
+    "n_calibration_answers": 177150,
+    "n_exact_groups": 362,
+    "test_halfwidth_check": {
+     "n": 2007,
+     "max_rel_diff": 6.395759403903041e-06,
+     "n_missing": 0,
+     "n_infinite_agree": 0
+    },
+    "parts": {
+     "decision_gate": "exact",
+     "sweep": "exact",
+     "safety": "exact",
+     "margin_intervals": "exact",
+     "margin_gate": "exact"
+    },
+    "calibration_decisions": {
+     "decision_gate": {
+      "n_test_scene_pools": 98,
+      "n_cal": 374822,
+      "n_cal_exact": 354300,
+      "n_cal_own": 20522
+     },
+     "sweep": {
+      "n_test_scene_pools": 490,
+      "n_cal": 1874110,
+      "n_cal_exact": 1771500,
+      "n_cal_own": 102610
+     },
+     "safety": {
+      "n_test_scene_pools": 45,
+      "n_cal": 15268,
+      "n_cal_exact": 13508,
+      "n_cal_own": 1760
+     },
+     "margin_gate": {
+      "n_test_scene_pools": 90,
+      "n_cal": 28969,
+      "n_cal_exact": 28969,
+      "n_cal_own": 0
+     }
+    }
+   },
+   "notes": [],
+   "seconds": 2.9
+  },
+  "cutr_clip": {
+   "folder": "<data>/outputs/audit_exactcal/audit_ark106_cutr_clip",
+   "source": "cutr_clip",
+   "dataset": "arkitscenes",
+   "setting": "handheld",
+   "files": {
+    "pairs.csv": {
+     "bytes": 573221,
+     "sha256": "6b2287d8a2fe33eada2d354a3c072b5888abcee144df1f55ad019990a7cb27d7"
+    },
+    "numeric.csv": {
+     "bytes": 1411473,
+     "sha256": "76e4b3070d6028eddbaf137567fae12d204424c020a00ffd748a90b1149e6e2f"
+    },
+    "gate.csv": {
+     "bytes": 3587356,
+     "sha256": "0f1626075de4ba0fc5a317d5d455d979ae15a75ce67b03a540794c2250a120ba"
+    },
+    "summary.json": {
+     "bytes": 2917,
+     "sha256": "4d9ad920f0ecfd0c12693803ec30bd6203a343b101940f4fdc8b601a44ad4ab1"
+    },
+    "tables/folds.csv": {
+     "bytes": 20956,
+     "sha256": "be66d7fbcfdb6aeb9d9e6ab9667b041467e440c216a1f2489023eaa90c850370"
+    },
+    "calibration.json": {
+     "bytes": 1241,
+     "sha256": "c225c647fd33fb88327990ce3d4f051c2f68ba32217ee4897fecc0ac0431a1df"
+    },
+    "calibration_numeric.csv.gz": {
+     "bytes": 3784936,
+     "sha256": "f4a7832faa4c37db2819af6d89e876598d98b9fb13da4ebdd6bc8e8b005237da"
+    },
+    "calibration_quantiles.csv.gz": {
+     "bytes": 18421,
+     "sha256": "7446596f87c4f906132624db3181f371c2b80354cd91b85ae2805d51295b65e7"
+    }
+   },
+   "audit_git_commit": "661a9660ae8ef31bb997cdec80d34d67a0067933+dirty",
+   "audit_config": {
+    "max_folds": 20,
+    "seed": 0,
+    "epsilon": 0.1,
+    "delta": 0.1,
+    "min_accept": 30,
+    "min_accept_frac": 0.05
+   },
+   "folds": {
+    "recorded": true,
+    "checked_against_record": [
+     "arkitscenes/distance_center",
+     "arkitscenes/ego_distance",
+     "arkitscenes/size_height",
+     "arkitscenes/size_longest"
+    ],
+    "rule": "recomputed with measured_space.audit.scene_folds over the audit's modelled rows of every depth source; groups listed were checked against folds.csv, the others have at most max_folds scenes (one scene per fold)"
+   },
+   "n_answers": {
+    "distance_center": 126,
+    "distance_surface": 31,
+    "ego_distance": 602,
+    "size_height": 604,
+    "size_longest": 604
+   },
+   "n_scenes": 99,
+   "n_decisions": {
+    "threshold": 3934,
+    "sweep": 19670,
+    "safety": 314
+   },
+   "part_b": {
+    "skipped": false,
+    "label_folder": "<data>/outputs/labels_ark106_cutr_clip/arkitscenes",
+    "check": "2 files match the audit's recorded sha256: ['qa_auto_cutr_clip.jsonl', 'qa_oracle.jsonl']",
+    "counts": {
+     "n_answers": 1810,
+     "n_no_referents": 0,
+     "n_multi_referent": 0,
+     "n_same_object": 0,
+     "n_pairs": 378
+    },
+    "referent_file": "<data>/outputs/labels_ark106_cutr_clip/arkitscenes/qa_oracle.jsonl",
+    "n_ids_found": 1810,
+    "n_calibration_pairs": 35722
+   },
+   "calibration": {
+    "mode": "exact",
+    "note": "The audit folder holds its leave-two-out calibration predictions (calibration_numeric.csv.gz) and per-test-scene conformal quantiles (calibration_quantiles.csv.gz). For a test scene S and a question type whose group holds S, each calibration decision uses mu and sigma from a model fitted without S's fold and the item's own fold, and the half-width q90 * sigma with q90 the quantile that S's own answers of the item's cell (question type, depth source) get; margins likewise, with the direct quantile of S taken over leave-two-out margins. For a question type with no answer of S in any depth source, no model or quantile of that type saw S, and its calibration decisions are the other scenes' own test decisions. So no calibration decision for S comes from a model or a quantile that saw S's fold. One data reuse remains: the per-cell quantile that scales every calibration decision's error bar is computed from those same calibration items' scores (one scalar per cell), as the conformal step of the audit computes it for the test scene.",
+    "n_calibration_answers": 175925,
+    "n_exact_groups": 359,
+    "test_halfwidth_check": {
+     "n": 1967,
+     "max_rel_diff": 6.267281326104112e-06,
+     "n_missing": 0,
+     "n_infinite_agree": 0
+    },
+    "parts": {
+     "decision_gate": "exact",
+     "sweep": "exact",
+     "safety": "exact",
+     "margin_intervals": "exact",
+     "margin_gate": "exact"
+    },
+    "calibration_decisions": {
+     "decision_gate": {
+      "n_test_scene_pools": 99,
+      "n_cal": 371112,
+      "n_cal_exact": 351850,
+      "n_cal_own": 19262
+     },
+     "sweep": {
+      "n_test_scene_pools": 495,
+      "n_cal": 1855560,
+      "n_cal_exact": 1759250,
+      "n_cal_own": 96310
+     },
+     "safety": {
+      "n_test_scene_pools": 42,
+      "n_cal": 12658,
+      "n_cal_exact": 11294,
+      "n_cal_own": 1364
+     },
+     "margin_gate": {
+      "n_test_scene_pools": 82,
+      "n_cal": 24619,
+      "n_cal_exact": 24619,
+      "n_cal_own": 0
+     }
+    }
+   },
+   "notes": [],
+   "seconds": 2.8
+  },
+  "2d_moge": {
+   "folder": "<data>/outputs/audit_exactcal/audit_ss12_2d",
+   "source": "moge",
+   "dataset": "smartspaces",
+   "setting": "warehouse",
+   "files": {
+    "pairs.csv": {
+     "bytes": 5954612,
+     "sha256": "b1f92d66233fa089f3e0c169e182208799f34d5fa451fdb588066442574e2c5f"
+    },
+    "numeric.csv": {
+     "bytes": 9190295,
+     "sha256": "07908a9c63699e20d217f0ff5b6543f24d00110219846a0bbf34a7b6e62926ec"
+    },
+    "gate.csv": {
+     "bytes": 23310015,
+     "sha256": "68c8a3f3827f97d28d32b6734f0141ae998e40e90e0b7399e7045bd057da6d31"
+    },
+    "summary.json": {
+     "bytes": 1547,
+     "sha256": "8f34a84de1a5b40aa47a35f3da3f49882cf821ed2fec029da8ab775d7790bf31"
+    },
+    "calibration.json": {
+     "bytes": 1240,
+     "sha256": "bcfea8001dbdd6cbf4b145c3dc721708a25f617f2d1c659135c6d248cb7b76f0"
+    },
+    "calibration_numeric.csv.gz": {
+     "bytes": 6614520,
+     "sha256": "d6465c30791221e96e682e1bedd668cdf2b22031ade2c2d2c425d60e6a4a6fce"
+    },
+    "calibration_quantiles.csv.gz": {
+     "bytes": 8415,
+     "sha256": "03c37dcab705f914669fd3ad0c089bd7a28af589fd7b81871cd1454888df38d0"
+    }
+   },
+   "audit_git_commit": "661a9660ae8ef31bb997cdec80d34d67a0067933+dirty",
+   "audit_config": {
+    "max_folds": 20,
+    "seed": 0,
+    "epsilon": 0.1,
+    "delta": 0.1,
+    "min_accept": 30,
+    "min_accept_frac": 0.05
+   },
+   "folds": {
+    "recorded": false,
+    "checked_against_record": [],
+    "rule": "recomputed with measured_space.audit.scene_folds over the audit's modelled rows of every depth source; groups listed were checked against folds.csv, the others have at most max_folds scenes (one scene per fold)"
+   },
+   "n_answers": {
+    "distance_center": 1862,
+    "distance_surface": 1881,
+    "ego_distance": 2692,
+    "size_height": 2681,
+    "size_longest": 2656
+   },
+   "n_scenes": 12,
+   "n_decisions": {
+    "threshold": 27287,
+    "sweep": 117720,
+    "safety": 11229
+   },
+   "part_b": {
+    "skipped": false,
+    "label_folder": "<data>/outputs/labels_ss12_2d/smartspaces",
+    "check": "2 files match the audit's recorded sha256: ['qa_auto_moge.jsonl', 'qa_oracle.jsonl']",
+    "counts": {
+     "n_answers": 8029,
+     "n_no_referents": 0,
+     "n_multi_referent": 0,
+     "n_same_object": 0,
+     "n_pairs": 5623
+    },
+    "referent_file": "<data>/outputs/labels_ss12_2d/smartspaces/qa_oracle.jsonl",
+    "n_ids_found": 8029,
+    "n_calibration_pairs": 61853
+   },
+   "calibration": {
+    "mode": "exact",
+    "note": "The audit folder holds its leave-two-out calibration predictions (calibration_numeric.csv.gz) and per-test-scene conformal quantiles (calibration_quantiles.csv.gz). For a test scene S and a question type whose group holds S, each calibration decision uses mu and sigma from a model fitted without S's fold and the item's own fold, and the half-width q90 * sigma with q90 the quantile that S's own answers of the item's cell (question type, depth source) get; margins likewise, with the direct quantile of S taken over leave-two-out margins. For a question type with no answer of S in any depth source, no model or quantile of that type saw S, and its calibration decisions are the other scenes' own test decisions. So no calibration decision for S comes from a model or a quantile that saw S's fold. One data reuse remains: the per-cell quantile that scales every calibration decision's error bar is computed from those same calibration items' scores (one scalar per cell), as the conformal step of the audit computes it for the test scene.",
+    "n_calibration_answers": 129492,
+    "n_exact_groups": 60,
+    "test_halfwidth_check": {
+     "n": 11772,
+     "max_rel_diff": 7.5555913200147485e-06,
+     "n_missing": 0,
+     "n_infinite_agree": 0
+    },
+    "parts": {
+     "decision_gate": "exact",
+     "sweep": "exact",
+     "safety": "exact",
+     "margin_intervals": "exact",
+     "margin_gate": "exact"
+    },
+    "calibration_decisions": {
+     "decision_gate": {
+      "n_test_scene_pools": 12,
+      "n_cal": 300157,
+      "n_cal_exact": 300157,
+      "n_cal_own": 0
+     },
+     "sweep": {
+      "n_test_scene_pools": 60,
+      "n_cal": 1294920,
+      "n_cal_exact": 1294920,
+      "n_cal_own": 0
+     },
+     "safety": {
+      "n_test_scene_pools": 12,
+      "n_cal": 123519,
+      "n_cal_exact": 123519,
+      "n_cal_own": 0
+     },
+     "margin_gate": {
+      "n_test_scene_pools": 24,
+      "n_cal": 102850,
+      "n_cal_exact": 102850,
+      "n_cal_own": 0
+     }
+    }
+   },
+   "notes": [],
+   "seconds": 1.9
+  },
+  "sparse4d_v22": {
+   "folder": "<data>/outputs/audit_exactcal/audit_ss12_sparse4d_v22",
+   "source": "sparse4d",
+   "dataset": "smartspaces",
+   "setting": "warehouse",
+   "files": {
+    "pairs.csv": {
+     "bytes": 6389104,
+     "sha256": "0281a6f059262cd0722858ae6afea455433a1bd66ee4a49155e9f8112ea5bd60"
+    },
+    "numeric.csv": {
+     "bytes": 16191630,
+     "sha256": "e6bdde2c1b13e143234760749c2ccc89f7f7e7451082ebb35aec475bc9167e19"
+    },
+    "gate.csv": {
+     "bytes": 42129290,
+     "sha256": "8acd211db29a4002cbff6d906cb01fb10d10093ab92c6d1e5b1b8d5aa57463d1"
+    },
+    "summary.json": {
+     "bytes": 1555,
+     "sha256": "bc3da4013e1bf1958d1f5c1945bc6e682d8b14c159341e2ab7c4bc2404858d61"
+    },
+    "calibration.json": {
+     "bytes": 1240,
+     "sha256": "d702f6d405f29409bbc455d54eea4ecee71a8d3bb28c9ff17bdc70472cffe9cc"
+    },
+    "calibration_numeric.csv.gz": {
+     "bytes": 10531442,
+     "sha256": "bdb954ccfda64bbea66c0a9d34e46b3b3493d2d2fb0efab800b88a798879a57e"
+    },
+    "calibration_quantiles.csv.gz": {
+     "bytes": 8411,
+     "sha256": "845f0b56b7f1b2c167ff6157a59419075e71cb1e02825a63bb7dc9260b5afef7"
+    }
+   },
+   "audit_git_commit": "661a9660ae8ef31bb997cdec80d34d67a0067933+dirty",
+   "audit_config": {
+    "max_folds": 20,
+    "seed": 0,
+    "epsilon": 0.1,
+    "delta": 0.1,
+    "min_accept": 30,
+    "min_accept_frac": 0.05
+   },
+   "folds": {
+    "recorded": false,
+    "checked_against_record": [],
+    "rule": "recomputed with measured_space.audit.scene_folds over the audit's modelled rows of every depth source; groups listed were checked against folds.csv, the others have at most max_folds scenes (one scene per fold)"
+   },
+   "n_answers": {
+    "distance_center": 3803,
+    "distance_surface": 3820,
+    "ego_distance": 4049,
+    "size_height": 4034,
+    "size_longest": 4050
+   },
+   "n_scenes": 12,
+   "n_decisions": {
+    "threshold": 47135,
+    "sweep": 197560,
+    "safety": 22869
+   },
+   "part_b": {
+    "skipped": false,
+    "label_folder": "<data>/outputs/labels_ss12_sparse4d_v22/smartspaces",
+    "check": "2 files match the audit's recorded sha256: ['qa_auto_sparse4d.jsonl', 'qa_oracle.jsonl']",
+    "counts": {
+     "n_answers": 12133,
+     "n_no_referents": 0,
+     "n_multi_referent": 0,
+     "n_same_object": 0,
+     "n_pairs": 11480
+    },
+    "referent_file": "<data>/outputs/labels_ss12_sparse4d_v22/smartspaces/qa_oracle.jsonl",
+    "n_ids_found": 12133,
+    "n_calibration_pairs": 126280
+   },
+   "calibration": {
+    "mode": "exact",
+    "note": "The audit folder holds its leave-two-out calibration predictions (calibration_numeric.csv.gz) and per-test-scene conformal quantiles (calibration_quantiles.csv.gz). For a test scene S and a question type whose group holds S, each calibration decision uses mu and sigma from a model fitted without S's fold and the item's own fold, and the half-width q90 * sigma with q90 the quantile that S's own answers of the item's cell (question type, depth source) get; margins likewise, with the direct quantile of S taken over leave-two-out margins. For a question type with no answer of S in any depth source, no model or quantile of that type saw S, and its calibration decisions are the other scenes' own test decisions. So no calibration decision for S comes from a model or a quantile that saw S's fold. One data reuse remains: the per-cell quantile that scales every calibration decision's error bar is computed from those same calibration items' scores (one scalar per cell), as the conformal step of the audit computes it for the test scene.",
+    "n_calibration_answers": 217316,
+    "n_exact_groups": 60,
+    "test_halfwidth_check": {
+     "n": 19756,
+     "max_rel_diff": 7.3549980355679784e-06,
+     "n_missing": 0,
+     "n_infinite_agree": 0
+    },
+    "parts": {
+     "decision_gate": "exact",
+     "sweep": "exact",
+     "safety": "exact",
+     "margin_intervals": "exact",
+     "margin_gate": "exact"
+    },
+    "calibration_decisions": {
+     "decision_gate": {
+      "n_test_scene_pools": 12,
+      "n_cal": 518485,
+      "n_cal_exact": 518485,
+      "n_cal_own": 0
+     },
+     "sweep": {
+      "n_test_scene_pools": 60,
+      "n_cal": 2173160,
+      "n_cal_exact": 2173160,
+      "n_cal_own": 0
+     },
+     "safety": {
+      "n_test_scene_pools": 12,
+      "n_cal": 251559,
+      "n_cal_exact": 251559,
+      "n_cal_own": 0
+     },
+     "margin_gate": {
+      "n_test_scene_pools": 24,
+      "n_cal": 210353,
+      "n_cal_exact": 210353,
+      "n_cal_own": 0
+     }
+    }
+   },
+   "notes": [],
+   "seconds": 3.3
+  },
+  "sparse4d_v11": {
+   "folder": "<data>/outputs/audit_exactcal/audit_ss12_sparse4d_v11",
+   "source": "sparse4d",
+   "dataset": "smartspaces",
+   "setting": "warehouse",
+   "files": {
+    "pairs.csv": {
+     "bytes": 5832443,
+     "sha256": "99b28d3ddf7055455554fe58e55bdb1967a3a21748a63768193fc048164ce801"
+    },
+    "numeric.csv": {
+     "bytes": 11498014,
+     "sha256": "03762646f33e75f4da8ac243065148434041d4cae2114bf98f99b831f5fe753a"
+    },
+    "gate.csv": {
+     "bytes": 29679346,
+     "sha256": "389830f46039d89c321af80fb109a07847c9e84fe84ed7dc20525988403e9d90"
+    },
+    "summary.json": {
+     "bytes": 1555,
+     "sha256": "aa7e4c6b4b2ecb0cc0a8e98159f37cf0e61ab41eee121bccb9f063067ae6b73e"
+    },
+    "calibration.json": {
+     "bytes": 1240,
+     "sha256": "7432375be69c654dc5b909725879309fb52d9f28865a858ae88ee639b92063f1"
+    },
+    "calibration_numeric.csv.gz": {
+     "bytes": 7706689,
+     "sha256": "395cc4f1c987189068c57b686430c737f6c8f67dee8e4dec88d392b29089d192"
+    },
+    "calibration_quantiles.csv.gz": {
+     "bytes": 8451,
+     "sha256": "b42ba29f150ec353f0b866ae33abb64843cfb0b52ced4a41a29b9a4b98d56cd6"
+    }
+   },
+   "audit_git_commit": "661a9660ae8ef31bb997cdec80d34d67a0067933+dirty",
+   "audit_config": {
+    "max_folds": 20,
+    "seed": 0,
+    "epsilon": 0.1,
+    "delta": 0.1,
+    "min_accept": 30,
+    "min_accept_frac": 0.05
+   },
+   "folds": {
+    "recorded": false,
+    "checked_against_record": [],
+    "rule": "recomputed with measured_space.audit.scene_folds over the audit's modelled rows of every depth source; groups listed were checked against folds.csv, the others have at most max_folds scenes (one scene per fold)"
+   },
+   "n_answers": {
+    "distance_center": 2523,
+    "distance_surface": 2558,
+    "ego_distance": 2989,
+    "size_height": 3006,
+    "size_longest": 2989
+   },
+   "n_scenes": 12,
+   "n_decisions": {
+    "threshold": 33211,
+    "sweep": 140650,
+    "safety": 15243
+   },
+   "part_b": {
+    "skipped": false,
+    "label_folder": "<data>/outputs/labels_ss12_sparse4d_v11/smartspaces",
+    "check": "2 files match the audit's recorded sha256: ['qa_auto_sparse4d.jsonl', 'qa_oracle.jsonl']",
+    "counts": {
+     "n_answers": 8984,
+     "n_no_referents": 0,
+     "n_multi_referent": 0,
+     "n_same_object": 0,
+     "n_pairs": 7612
+    },
+    "referent_file": "<data>/outputs/labels_ss12_sparse4d_v11/smartspaces/qa_oracle.jsonl",
+    "n_ids_found": 8984,
+    "n_calibration_pairs": 83732
+   },
+   "calibration": {
+    "mode": "exact",
+    "note": "The audit folder holds its leave-two-out calibration predictions (calibration_numeric.csv.gz) and per-test-scene conformal quantiles (calibration_quantiles.csv.gz). For a test scene S and a question type whose group holds S, each calibration decision uses mu and sigma from a model fitted without S's fold and the item's own fold, and the half-width q90 * sigma with q90 the quantile that S's own answers of the item's cell (question type, depth source) get; margins likewise, with the direct quantile of S taken over leave-two-out margins. For a question type with no answer of S in any depth source, no model or quantile of that type saw S, and its calibration decisions are the other scenes' own test decisions. So no calibration decision for S comes from a model or a quantile that saw S's fold. One data reuse remains: the per-cell quantile that scales every calibration decision's error bar is computed from those same calibration items' scores (one scalar per cell), as the conformal step of the audit computes it for the test scene.",
+    "n_calibration_answers": 154715,
+    "n_exact_groups": 60,
+    "test_halfwidth_check": {
+     "n": 14065,
+     "max_rel_diff": 6.737601155713642e-06,
+     "n_missing": 0,
+     "n_infinite_agree": 0
+    },
+    "parts": {
+     "decision_gate": "exact",
+     "sweep": "exact",
+     "safety": "exact",
+     "margin_intervals": "exact",
+     "margin_gate": "exact"
+    },
+    "calibration_decisions": {
+     "decision_gate": {
+      "n_test_scene_pools": 12,
+      "n_cal": 365321,
+      "n_cal_exact": 365321,
+      "n_cal_own": 0
+     },
+     "sweep": {
+      "n_test_scene_pools": 60,
+      "n_cal": 1547150,
+      "n_cal_exact": 1547150,
+      "n_cal_own": 0
+     },
+     "safety": {
+      "n_test_scene_pools": 12,
+      "n_cal": 167673,
+      "n_cal_exact": 167673,
+      "n_cal_own": 0
+     },
+     "margin_gate": {
+      "n_test_scene_pools": 24,
+      "n_cal": 139601,
+      "n_cal_exact": 139601,
+      "n_cal_own": 0
+     }
+    }
+   },
+   "notes": [],
+   "seconds": 2.5
+  }
+ },
+ "thresholds": {
+  "arkitscenes": {
+   "distance_center": [
+    0.5,
+    1.0
+   ],
+   "distance_surface": [
+    0.5,
+    1.0
+   ],
+   "ego_distance": [
+    0.75,
+    1.5
+   ],
+   "size_height": [
+    0.5,
+    1.0
+   ],
+   "size_longest": [
+    0.6,
+    1.0
+   ]
+  },
+  "smartspaces": {
+   "distance_center": [
+    2.0,
+    5.0,
+    10.0
+   ],
+   "distance_surface": [
+    2.0,
+    5.0,
+    10.0
+   ],
+   "ego_distance": [
+    10.0,
+    30.0
+   ],
+   "size_height": [
+    1.0,
+    2.0
+   ],
+   "size_longest": [
+    1.0,
+    2.0
+   ]
+  }
+ },
+ "sweep_u": [
+  -0.5,
+  -0.3,
+  -0.2,
+  -0.1,
+  -0.05,
+  0.05,
+  0.1,
+  0.2,
+  0.3,
+  0.5
+ ],
+ "safety_qtypes": [
+  "distance_center",
+  "distance_surface"
+ ],
+ "margin_qtypes": [
+  "size_height",
+  "size_longest",
+  "ego_distance"
+ ],
+ "fit_qtypes": [
+  "size_height",
+  "size_longest"
+ ],
+ "config": {
+  "epsilons": [
+   0.1,
+   0.05
+  ],
+  "delta": 0.1,
+  "level": 0.9,
+  "min_accept": 30,
+  "min_accept_frac": 0.05,
+  "pool": "labeller",
+  "fit_margin": 0.1,
+  "n_boot": 2000,
+  "seed": 0
+ },
+ "ltt_growth": 1.25,
+ "primary_epsilon": 0.1,
+ "skip_margins": false,
+ "assumptions": [
+  "Answers and error bars are the audit's out-of-scene predictions of the feature model (numeric.csv, kind sigma): mu is the predicted bias of e = value - reference, half90 the half-width of the split-conformal 90 % interval [mu - half90, mu + half90] for e, so the interval for the reference is [c - half90, c + half90] with c = value - mu. Nothing is refitted.",
+  "Truth is the reference value value - e. A decision with c exactly at the threshold (infinite score) is never accepted.",
+  "Calibration decisions for a test scene come from scenes outside its fold (per question type, the audit's folds, recomputed and checked against folds.csv where recorded); the test scene's own answers never calibrate it. How their predictions were obtained is recorded per labeller and part (summary.json 'calibration', and the tables' 'calibration' column): 'exact' or 'approximate', as described under 'calibration_modes'.",
+  "Learn-then-Test is the audit's procedure and settings (fixed-sequence binomial tests on a geometric grid; min_accept 30, min_accept_frac 0.05). Items are treated as independent and scenes as exchangeable, as in the audit; Wilson intervals and binomial bounds are optimistic for items that share a scene, so the scene-cluster bootstrap interval is reported too.",
+  "Calibration pool 'labeller' (default) pools all of a labeller's decisions of one analysis (question types and thresholds; sweep: per |u|, both signs; margins: per decision), as the audit's gate pools question types: the certificate is on the pooled wrong-decision rate, and a per-type or per-threshold row may exceed epsilon. Pool 'family' calibrates each question type and threshold separately.",
+  "The fixed-tolerance gate is taken from gate.csv as the audit ran it (kind sigma, tau_scale 1, decision accept); in an audit with several depth sources its threshold was certified on all sources together.",
+  "The sweep places t = ref (1 + u) relative to the reference: an analysis device (t depends on the unknown reference), not a deployable decision. Its truth is u < 0; answers with ref <= 0 are left out.",
+  "Safety decisions are one-sided: only outside calls (c > t) can be accepted, with score half90 / (c - t); an accepted call is wrong when ref <= t. The no-check baseline accepts every outside call.",
+  "Margins: unordered pairs of answers of one question type in one view (dataset, scene, camera, frame) about two different single-referent objects (referents from the label folder's qa_oracle.jsonl, found by the audit's recorded checksums), oriented by question id (hashes: unrelated to the values). Direct calibration is split conformal on |e_m - (mu_A - mu_B)| / sqrt(sigma_A^2 + sigma_B^2) over pairs of the same question type outside the test scene's fold, exact or approximate as the labeller's calibration mode. The sum and quadrature error bars use only the audit's own half90 of the test answers and do not depend on the mode."
+ ],
+ "calibration": {
+  "2d_lidar": {
+   "decision_gate": "exact",
+   "sweep": "exact",
+   "safety": "exact",
+   "margin_intervals": "exact",
+   "margin_gate": "exact"
+  },
+  "cutr_sam3": {
+   "decision_gate": "exact",
+   "sweep": "exact",
+   "safety": "exact",
+   "margin_intervals": "exact",
+   "margin_gate": "exact"
+  },
+  "cutr_clip": {
+   "decision_gate": "exact",
+   "sweep": "exact",
+   "safety": "exact",
+   "margin_intervals": "exact",
+   "margin_gate": "exact"
+  },
+  "2d_moge": {
+   "decision_gate": "exact",
+   "sweep": "exact",
+   "safety": "exact",
+   "margin_intervals": "exact",
+   "margin_gate": "exact"
+  },
+  "sparse4d_v22": {
+   "decision_gate": "exact",
+   "sweep": "exact",
+   "safety": "exact",
+   "margin_intervals": "exact",
+   "margin_gate": "exact"
+  },
+  "sparse4d_v11": {
+   "decision_gate": "exact",
+   "sweep": "exact",
+   "safety": "exact",
+   "margin_intervals": "exact",
+   "margin_gate": "exact"
+  }
+ },
+ "witness": {
+  "pairs": [
+   {
+    "labeller": "2d_lidar",
+    "witness": "cutr_sam3",
+    "witness_source": "cutr_sam3",
+    "calibration": "exact",
+    "n_answers": 2190,
+    "n_witnessed": 2007,
+    "n_witnessed_scenes": 98,
+    "ref_max_abs_diff": 9.90000000022917e-06,
+    "rule": "second_opinion: score inf unless the witness answers the question id and its call (c_w > t; one-sided: both outside) agrees with the labeller's, else max(half / |c - t|, half_w / |c_w - t|); certified per test scene by the same Learn-then-Test on the same calibration decisions",
+    "calibration_note": "exact: the labeller's calibration decisions for a test scene are its leave-two-out ones (own test decisions for question types whose group lacks the scene), and the witness's answer to each is its leave-two-out answer for that test scene where it has one, else its test answer, which then never saw the test scene either (the scene is outside the witness's group of that type, or shares the witness fold of the item's scene, so the witness model held both out); approximate: test predictions of both labellers",
+    "calibration_witness_from": {
+     "threshold": {
+      "leave_two_out": 340602,
+      "none": 34506,
+      "test": 34156
+     },
+     "sweep": {
+      "leave_two_out": 1703010,
+      "none": 172530,
+      "test": 170780
+     },
+     "safety": {
+      "test": 20782,
+      "leave_two_out": 13198,
+      "none": 10970
+     }
+    }
+   },
+   {
+    "labeller": "cutr_sam3",
+    "witness": "2d_lidar",
+    "witness_source": "lidar",
+    "calibration": "exact",
+    "n_answers": 2007,
+    "n_witnessed": 2007,
+    "n_witnessed_scenes": 98,
+    "ref_max_abs_diff": 9.90000000022917e-06,
+    "rule": "second_opinion: score inf unless the witness answers the question id and its call (c_w > t; one-sided: both outside) agrees with the labeller's, else max(half / |c - t|, half_w / |c_w - t|); certified per test scene by the same Learn-then-Test on the same calibration decisions",
+    "calibration_note": "exact: the labeller's calibration decisions for a test scene are its leave-two-out ones (own test decisions for question types whose group lacks the scene), and the witness's answer to each is its leave-two-out answer for that test scene where it has one, else its test answer, which then never saw the test scene either (the scene is outside the witness's group of that type, or shares the witness fold of the item's scene, so the witness model held both out); approximate: test predictions of both labellers",
+    "calibration_witness_from": {
+     "threshold": {
+      "leave_two_out": 341550,
+      "test": 33272
+     },
+     "sweep": {
+      "leave_two_out": 1707750,
+      "test": 166360
+     },
+     "safety": {
+      "test": 19884,
+      "leave_two_out": 14146
+     }
+    }
+   },
+   {
+    "labeller": "cutr_clip",
+    "witness": "2d_lidar",
+    "witness_source": "lidar",
+    "calibration": "exact",
+    "n_answers": 1967,
+    "n_witnessed": 1770,
+    "n_witnessed_scenes": 96,
+    "ref_max_abs_diff": 1.0000000000065512e-05,
+    "rule": "second_opinion: score inf unless the witness answers the question id and its call (c_w > t; one-sided: both outside) agrees with the labeller's, else max(half / |c - t|, half_w / |c_w - t|); certified per test scene by the same Learn-then-Test on the same calibration decisions",
+    "calibration_note": "exact: the labeller's calibration decisions for a test scene are its leave-two-out ones (own test decisions for question types whose group lacks the scene), and the witness's answer to each is its leave-two-out answer for that test scene where it has one, else its test answer, which then never saw the test scene either (the scene is outside the witness's group of that type, or shares the witness fold of the item's scene, so the witness model held both out); approximate: test predictions of both labellers",
+    "calibration_witness_from": {
+     "threshold": {
+      "leave_two_out": 300102,
+      "none": 37078,
+      "test": 33932
+     },
+     "sweep": {
+      "leave_two_out": 1500510,
+      "none": 185390,
+      "test": 169660
+     },
+     "safety": {
+      "test": 15922,
+      "leave_two_out": 11328,
+      "none": 3306
+     }
+    }
+   },
+   {
+    "labeller": "2d_moge",
+    "witness": "sparse4d_v22",
+    "witness_source": "sparse4d",
+    "calibration": "exact",
+    "n_answers": 11772,
+    "n_witnessed": 11616,
+    "n_witnessed_scenes": 12,
+    "ref_max_abs_diff": 0.00012699999999910005,
+    "rule": "second_opinion: score inf unless the witness answers the question id and its call (c_w > t; one-sided: both outside) agrees with the labeller's, else max(half / |c - t|, half_w / |c_w - t|); certified per test scene by the same Learn-then-Test on the same calibration decisions",
+    "calibration_note": "exact: the labeller's calibration decisions for a test scene are its leave-two-out ones (own test decisions for question types whose group lacks the scene), and the witness's answer to each is its leave-two-out answer for that test scene where it has one, else its test answer, which then never saw the test scene either (the scene is outside the witness's group of that type, or shares the witness fold of the item's scene, so the witness model held both out); approximate: test predictions of both labellers",
+    "calibration_witness_from": {
+     "threshold": {
+      "leave_two_out": 296032,
+      "none": 4125
+     },
+     "sweep": {
+      "leave_two_out": 1277760,
+      "none": 17160
+     },
+     "safety": {
+      "leave_two_out": 121440,
+      "none": 2079
+     }
+    }
+   }
+  ],
+  "notes": [],
+  "skipped": false,
+  "headline": [
+   {
+    "labeller": "2d_lidar",
+    "witness": "cutr_sam3",
+    "n_decisions": 4380,
+    "certified_eps0.1_accept_share": 0.9995433789954338,
+    "certified_eps0.1_wrong_rate": 0.06555504796710827,
+    "certified_eps0.05_accept_share": 0.9116438356164384,
+    "certified_eps0.05_wrong_rate": 0.04282494365138993,
+    "second_opinion_eps0.1_accept_share": 0.7299086757990868,
+    "second_opinion_eps0.1_wrong_rate": 0.008445417578980294,
+    "second_opinion_eps0.05_accept_share": 0.7299086757990868,
+    "second_opinion_eps0.05_wrong_rate": 0.008445417578980294,
+    "interval_accept_share": 0.6461187214611872,
+    "interval_wrong_rate": 0.01696113074204947,
+    "second_opinion_interval_accept_share": 0.5399543378995434,
+    "second_opinion_interval_wrong_rate": 0.0033826638477801266
+   },
+   {
+    "labeller": "cutr_sam3",
+    "witness": "2d_lidar",
+    "n_decisions": 4014,
+    "certified_eps0.1_accept_share": 0.9997508719481814,
+    "certified_eps0.1_wrong_rate": 0.06105158235733865,
+    "certified_eps0.05_accept_share": 0.911310413552566,
+    "certified_eps0.05_wrong_rate": 0.035811919081465284,
+    "second_opinion_eps0.1_accept_share": 0.9115595416043847,
+    "second_opinion_eps0.1_wrong_rate": 0.021863897239682975,
+    "second_opinion_eps0.05_accept_share": 0.9115595416043847,
+    "second_opinion_eps0.05_wrong_rate": 0.021863897239682975,
+    "interval_accept_share": 0.7027902341803687,
+    "interval_wrong_rate": 0.01772421127259837,
+    "second_opinion_interval_accept_share": 0.5891878425510713,
+    "second_opinion_interval_wrong_rate": 0.0033826638477801266
+   },
+   {
+    "labeller": "cutr_clip",
+    "witness": "2d_lidar",
+    "n_decisions": 3934,
+    "certified_eps0.1_accept_share": 1.0,
+    "certified_eps0.1_wrong_rate": 0.06583629893238434,
+    "certified_eps0.05_accept_share": 0.9112862226741231,
+    "certified_eps0.05_wrong_rate": 0.03905160390516039,
+    "second_opinion_eps0.1_accept_share": 0.7290289781392985,
+    "second_opinion_eps0.1_wrong_rate": 0.011506276150627616,
+    "second_opinion_eps0.05_accept_share": 0.7290289781392985,
+    "second_opinion_eps0.05_wrong_rate": 0.011506276150627616,
+    "interval_accept_share": 0.6474326385358414,
+    "interval_wrong_rate": 0.0176678445229682,
+    "second_opinion_interval_accept_share": 0.4936451448906965,
+    "second_opinion_interval_wrong_rate": 0.004119464469618949
+   },
+   {
+    "labeller": "2d_moge",
+    "witness": "sparse4d_v22",
+    "n_decisions": 27287,
+    "certified_eps0.1_accept_share": 0.9470077326199289,
+    "certified_eps0.1_wrong_rate": 0.07441662474362447,
+    "certified_eps0.05_accept_share": 0.7549382489830322,
+    "certified_eps0.05_wrong_rate": 0.025970873786407767,
+    "second_opinion_eps0.1_accept_share": 0.7659324953274453,
+    "second_opinion_eps0.1_wrong_rate": 0.001244019138755981,
+    "second_opinion_eps0.05_accept_share": 0.7659324953274453,
+    "second_opinion_eps0.05_wrong_rate": 0.001244019138755981,
+    "interval_accept_share": 0.6515556858577345,
+    "interval_wrong_rate": 0.006862028235558805,
+    "second_opinion_interval_accept_share": 0.6390588925129183,
+    "second_opinion_interval_wrong_rate": 0.0007454983369652483
+   }
+  ]
+ },
+ "calibration_modes": {
+  "exact": "The audit folder holds its leave-two-out calibration predictions (calibration_numeric.csv.gz) and per-test-scene conformal quantiles (calibration_quantiles.csv.gz). For a test scene S and a question type whose group holds S, each calibration decision uses mu and sigma from a model fitted without S's fold and the item's own fold, and the half-width q90 * sigma with q90 the quantile that S's own answers of the item's cell (question type, depth source) get; margins likewise, with the direct quantile of S taken over leave-two-out margins. For a question type with no answer of S in any depth source, no model or quantile of that type saw S, and its calibration decisions are the other scenes' own test decisions. So no calibration decision for S comes from a model or a quantile that saw S's fold. One data reuse remains: the per-cell quantile that scales every calibration decision's error bar is computed from those same calibration items' scores (one scalar per cell), as the conformal step of the audit computes it for the test scene."
+ },
+ "headline": [
+  {
+   "labeller": "2d_lidar",
+   "setting": "handheld",
+   "n_decisions": 4380,
+   "certified_eps0.1_accept_share": 0.9995433789954338,
+   "certified_eps0.1_wrong_rate": 0.06555504796710827,
+   "certified_eps0.05_accept_share": 0.9116438356164384,
+   "certified_eps0.05_wrong_rate": 0.04282494365138993,
+   "interval_accept_share": 0.6461187214611872,
+   "interval_wrong_rate": 0.01696113074204947,
+   "accept_all_accept_share": 1.0,
+   "accept_all_wrong_rate": 0.06575342465753424,
+   "fixed_tau_gate_accept_share": 0.30182648401826484,
+   "fixed_tau_gate_wrong_rate": 0.02118003025718608
+  },
+  {
+   "labeller": "cutr_sam3",
+   "setting": "handheld",
+   "n_decisions": 4014,
+   "certified_eps0.1_accept_share": 0.9997508719481814,
+   "certified_eps0.1_wrong_rate": 0.06105158235733865,
+   "certified_eps0.05_accept_share": 0.911310413552566,
+   "certified_eps0.05_wrong_rate": 0.035811919081465284,
+   "interval_accept_share": 0.7027902341803687,
+   "interval_wrong_rate": 0.01772421127259837,
+   "accept_all_accept_share": 1.0,
+   "accept_all_wrong_rate": 0.06103637269556552,
+   "fixed_tau_gate_accept_share": 0.14499252615844543,
+   "fixed_tau_gate_wrong_rate": 0.02577319587628866
+  },
+  {
+   "labeller": "cutr_clip",
+   "setting": "handheld",
+   "n_decisions": 3934,
+   "certified_eps0.1_accept_share": 1.0,
+   "certified_eps0.1_wrong_rate": 0.06583629893238434,
+   "certified_eps0.05_accept_share": 0.9112862226741231,
+   "certified_eps0.05_wrong_rate": 0.03905160390516039,
+   "interval_accept_share": 0.6474326385358414,
+   "interval_wrong_rate": 0.0176678445229682,
+   "accept_all_accept_share": 1.0,
+   "accept_all_wrong_rate": 0.06583629893238434,
+   "fixed_tau_gate_accept_share": 0.19522114895780376,
+   "fixed_tau_gate_wrong_rate": 0.01953125
+  },
+  {
+   "labeller": "2d_moge",
+   "setting": "warehouse",
+   "n_decisions": 27287,
+   "certified_eps0.1_accept_share": 0.9470077326199289,
+   "certified_eps0.1_wrong_rate": 0.07441662474362447,
+   "certified_eps0.05_accept_share": 0.7549382489830322,
+   "certified_eps0.05_wrong_rate": 0.025970873786407767,
+   "interval_accept_share": 0.6515556858577345,
+   "interval_wrong_rate": 0.006862028235558805,
+   "accept_all_accept_share": 1.0,
+   "accept_all_wrong_rate": 0.09788543995309122,
+   "fixed_tau_gate_accept_share": 0.0,
+   "fixed_tau_gate_wrong_rate": null
+  },
+  {
+   "labeller": "sparse4d_v22",
+   "setting": "warehouse",
+   "n_decisions": 47135,
+   "certified_eps0.1_accept_share": 0.999978784342845,
+   "certified_eps0.1_wrong_rate": 0.0036067382356685194,
+   "certified_eps0.05_accept_share": 0.999978784342845,
+   "certified_eps0.05_wrong_rate": 0.0036067382356685194,
+   "interval_accept_share": 0.9879282910788162,
+   "interval_wrong_rate": 0.0017609414594339217,
+   "accept_all_accept_share": 1.0,
+   "accept_all_wrong_rate": 0.003606661716346664,
+   "fixed_tau_gate_accept_share": 0.9200806194971889,
+   "fixed_tau_gate_wrong_rate": 0.003389596015495296
+  },
+  {
+   "labeller": "sparse4d_v11",
+   "setting": "warehouse",
+   "n_decisions": 33211,
+   "certified_eps0.1_accept_share": 1.0,
+   "certified_eps0.1_wrong_rate": 0.0068350847610731385,
+   "certified_eps0.05_accept_share": 1.0,
+   "certified_eps0.05_wrong_rate": 0.0068350847610731385,
+   "interval_accept_share": 0.9689560687723947,
+   "interval_wrong_rate": 0.0028278433809819765,
+   "accept_all_accept_share": 1.0,
+   "accept_all_wrong_rate": 0.0068350847610731385,
+   "fixed_tau_gate_accept_share": 0.9246936256059739,
+   "fixed_tau_gate_wrong_rate": 0.005079778573754477
+  }
+ ],
+ "outputs": [
+  "decision_gate.csv",
+  "sweep.csv",
+  "safety.csv",
+  "margin_intervals.csv",
+  "margin_gate.csv",
+  "witness.csv",
+  "decision_sweep.pdf",
+  "decision_sweep.png"
+ ],
+ "git_commit": "661a9660ae8ef31bb997cdec80d34d67a0067933+dirty",
+ "seconds": 37.2
+}

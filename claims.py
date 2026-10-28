@@ -14,7 +14,9 @@ anything fails. It reads only the committed aggregate tables and needs only nump
 models, no GPU. ``REPRODUCE.md`` says how the tables themselves are regenerated from raw data.
 
 The decision-level claims (``DEC.*``) are kept in their own block: they come from
-``scripts/run_decision_analysis.py``, whose certificate is approximate (see ``results/decisions/summary.json``).
+``scripts/run_decision_analysis.py`` in exact mode, with the second-opinion rule (``results/decisions_exact/``; the
+audits saved their leave-two-out calibration predictions). ``results/decisions/`` holds the earlier run in
+approximate mode, kept for comparison.
 
 Usage::
 
@@ -385,6 +387,10 @@ def by_alpha(results: Path, run: str) -> pd.DataFrame:
     return _csv(results, f"recall_control/{run}/by_alpha.csv").set_index("alpha")
 
 
+DECISIONS = "decisions_exact"
+"""str: folder under ``results/`` of the decision-level tables (exact mode, with the second-opinion rule)."""
+
+
 def decision(results: Path, table: str, **where: object) -> pd.Series:
     """One row of a decision-analysis table, selected by column values (NaN-safe for ``u``).
 
@@ -393,7 +399,7 @@ def decision(results: Path, table: str, **where: object) -> pd.Series:
     results : pathlib.Path
         Results folder.
     table : str
-        File name under ``decisions/``.
+        File name under :data:`DECISIONS`.
     **where : object
         Column -> required value; ``None`` selects missing values.
 
@@ -402,7 +408,7 @@ def decision(results: Path, table: str, **where: object) -> pd.Series:
     pandas.Series
         The row.
     """
-    d = _csv(results, f"decisions/{table}")
+    d = _csv(results, f"{DECISIONS}/{table}")
     for col, val in where.items():
         if val is None:
             d = d[d[col].isna()]
@@ -831,12 +837,30 @@ def _dec_margins(r: Path) -> Values:
 
 def _dec_close(r: Path) -> Values:
     """Largest certified share of handheld decisions whose threshold lies within 10% of the reference."""
-    s = _csv(r, "decisions/sweep.csv")
+    s = _csv(r, f"{DECISIONS}/sweep.csv")
     sel = s[s["labeller"].isin(HANDHELD_DECIDERS) & (s["qtype"] == "all") & s["u"].isna()
             & (s["rule"] == "certified") & (s["u_abs"].astype(float) <= 0.1 + 1e-9)]
     if sel.empty:
         raise LookupError("sweep: no handheld close-call rows")
     return {"accepted": pct(sel["accept_share"].max())}
+
+
+def _dec_second_opinion(r: Path) -> Values:
+    """Close calls certified with a second labeller's agreement: handheld at |u| = 0.1 (epsilon 0.10) and
+    monocular warehouse labels witnessed by Sparse4D at |u| = 0.05 (epsilon 0.05)."""
+    w = _csv(r, f"{DECISIONS}/witness.csv")
+    w = w[(w["part"] == "sweep") & (w["rule"] == "second_opinion") & (w["scope"] == "all")
+          & (w["qtype"].astype(str) == "all")]
+    hand = w[w["labeller"].isin(HANDHELD_DECIDERS) & np.isclose(w["u_abs"].astype(float), 0.1)
+             & np.isclose(w["epsilon"].astype(float), 0.10)]
+    mono = _one(w[(w["labeller"] == "2d_moge") & (w["witness"] == "sparse4d_v22")
+                  & np.isclose(w["u_abs"].astype(float), 0.05) & np.isclose(w["epsilon"].astype(float), 0.05)],
+                "witness 2d_moge |u|=0.05")
+    if len(hand) != len(HANDHELD_DECIDERS):
+        raise LookupError("witness: missing handheld second-opinion rows")
+    return {"handheld_acc_lo": pct(hand["accept_share"].min()), "handheld_acc_hi": pct(hand["accept_share"].max()),
+            "handheld_wrong_lo": pct(hand["wrong_rate"].min()), "handheld_wrong_hi": pct(hand["wrong_rate"].max()),
+            "monocular_acc": pct(mono["accept_share"]), "monocular_wrong": pct(mono["wrong_rate"])}
 
 
 CLAIMS: tuple[Claim, ...] = (
@@ -960,17 +984,25 @@ CLAIMS: tuple[Claim, ...] = (
     Claim("DEC.1", "A4", "Certifying threshold decisions (epsilon 0.05) accepts 91% of handheld decisions at 3.6-4.3% "
           "wrong (accepting all would be 6-7% wrong), i.e. with at most 5% wrong.",
           {"accepted_lo": "91", "accepted_hi": "91", "wrong_lo": "3.6", "wrong_hi": "4.3", "accept_all_lo": "6",
-           "accept_all_hi": "7", "within_5pct": "True"}, ("decisions/decision_gate.csv",), DECIDE, _dec_handheld,
+           "accept_all_hi": "7", "within_5pct": "True"}, (f"{DECISIONS}/decision_gate.csv",), DECIDE, _dec_handheld,
           block="decisions"),
-    Claim("DEC.2", "A4", "Monocular warehouse labels, which the fixed-tolerance gate rejects entirely, get 73% of "
-          "threshold decisions certified at 1.6% wrong.", {"accepted": "73", "wrong": "1.6", "fixed_gate": "0"},
-          ("decisions/decision_gate.csv",), DECIDE, _dec_monocular, block="decisions"),
-    Claim("DEC.3", "A4", "For monocular labels, calibrating a comparison's margin directly gives intervals 25% narrower "
-          "than combining them as independent, at 90% coverage; 41% of \"which is larger?\" calls certify at 3.6% "
-          "wrong.", {"narrower": "25", "coverage": "0.90", "sign_accepted": "41", "sign_wrong": "3.6"},
-          ("decisions/margin_intervals.csv", "decisions/margin_gate.csv"), DECIDE, _dec_margins, block="decisions"),
-    Claim("DEC.4", "A4", "Close calls (threshold within 10% of the reference) do not certify on handheld scans.",
-          {"accepted": "0"}, ("decisions/sweep.csv",), DECIDE, _dec_close, block="decisions"),
+    Claim("DEC.2", "A4", "Monocular warehouse labels, which the fixed-tolerance gate rejects entirely, get 75% of "
+          "threshold decisions certified at 2.6% wrong.", {"accepted": "75", "wrong": "2.6", "fixed_gate": "0"},
+          (f"{DECISIONS}/decision_gate.csv",), DECIDE, _dec_monocular, block="decisions"),
+    Claim("DEC.3", "A4", "For monocular labels, calibrating a comparison's margin directly gives intervals 22% narrower "
+          "than combining them as independent, at 90% coverage; 39% of \"which is larger?\" calls certify at 2.0% "
+          "wrong.", {"narrower": "22", "coverage": "0.90", "sign_accepted": "39", "sign_wrong": "2.0"},
+          (f"{DECISIONS}/margin_intervals.csv", f"{DECISIONS}/margin_gate.csv"), DECIDE, _dec_margins,
+          block="decisions"),
+    Claim("DEC.4", "A4", "Close calls (threshold within 10% of the reference) do not certify on one handheld "
+          "labeller's evidence.", {"accepted": "0"}, (f"{DECISIONS}/sweep.csv",), DECIDE, _dec_close,
+          block="decisions"),
+    Claim("DEC.5", "A4", "With a second labeller's agreement, 72-73% of handheld decisions 10% from their threshold "
+          "certify at 6.0-6.7% wrong (epsilon 0.10); with Sparse4D as the witness, monocular warehouse decisions "
+          "5% from their threshold certify at 59% with 2.6% wrong (epsilon 0.05).",
+          {"handheld_acc_lo": "72", "handheld_acc_hi": "73", "handheld_wrong_lo": "6.0", "handheld_wrong_hi": "6.7",
+           "monocular_acc": "59", "monocular_wrong": "2.6"}, (f"{DECISIONS}/witness.csv",), DECIDE,
+          _dec_second_opinion, block="decisions"),
 )
 """tuple of Claim: every checked claim, in order."""
 
