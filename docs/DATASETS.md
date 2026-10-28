@@ -89,7 +89,7 @@ inertial poses, and fixed, calibrated multi-camera installations.
 ## 2. ARKitScenes (Apple)
 
 - Repo: https://github.com/apple/ARKitScenes. Paper: arXiv:2111.08897.
-- **License [V]: the brief's "CC BY-NC-SA 4.0" is out of date.** In 2024 the README dropped the CC statement and pointed to `LICENSE`, now an Apple software license. It grants (a) a personal, non-commercial license and (b) commercial terms for licensees under 700M monthly active users. Both cover use, reproduction, modification and redistribution "with or without modifications", on condition that the notice is kept and Apple marks are not used. Because it is written for "Apple Software", it is **unclear** how it applies to derived data (contact: ARKitScenes-license@group.apple.com). **Plan: commit only aggregate statistics and figures for ARKitScenes, not per-item QA files, unless you decide otherwise.** **Exception (the author's decision, 2026-10-27):** `results/spotcheck/` holds the export of the manual pairing spot check: pair identifiers (video id, frame timestamp, object id, detection index), the author's verdicts and notes. It holds no ARKitScenes geometry, depth or images. Omni3D still bundles the old CC BY-NC-SA text.
+- **License [V]: the often-cited "CC BY-NC-SA 4.0" is out of date.** In 2024 the README dropped the CC statement and pointed to `LICENSE`, now an Apple software license. It grants (a) a personal, non-commercial license and (b) commercial terms for licensees under 700M monthly active users. Both cover use, reproduction, modification and redistribution "with or without modifications", on condition that the notice is kept and Apple marks are not used. Because it is written for "Apple Software", it is **unclear** how it applies to derived data (contact: ARKitScenes-license@group.apple.com). **Plan: commit only aggregate statistics and figures for ARKitScenes, not per-item QA files, unless you decide otherwise.** **Exception (the author's decision, 2026-10-27):** `results/spotcheck/` holds the export of the manual pairing spot check: pair identifiers (video id, frame timestamp, object id, detection index), the author's verdicts and notes. It holds no ARKitScenes geometry, depth or images. Omni3D still bundles the old CC BY-NC-SA text.
 - **Domain [V]:** real homes; iPad Pro LiDAR plus a Faro laser scanner.
 - **Self-contained copy (decided 2026-10-26):** this project uses only its own downloads, not a raw-subset copy
   elsewhere on the machine. For the 6 validation videos with laser depth, each `upsampling/Validation/<id>.zip`
@@ -197,7 +197,7 @@ inertial poses, and fixed, calibrated multi-camera installations.
   - Use is limited to "non-commercial, research, or academic purposes" for "multi-camera multiple people tracking tasks".
   - Incorporating the dataset into "any other program, dataset, or product" is prohibited.
   - Derived techniques "can only be used for academic purposes".
-- **Decision (user, 2026-10-26):** not used. The intended use (spatial QA, VLM scoring) is a grey area under the purpose clause, and a reply to a 2021 challenge inbox is unlikely within the deadline. It is still useful as evidence that real fixed-camera metric GT is scarce and research-only.
+- **Decision (author, 2026-10-26):** not used. The intended use (spatial QA, VLM scoring) is a grey area under the purpose clause, and a reply to a 2021 challenge inbox is unlikely within the deadline. It is still useful as evidence that real fixed-camera metric GT is scarce and research-only.
 
 ## 8. Other candidates (listed, not used)
 
@@ -217,7 +217,7 @@ inertial poses, and fixed, calibrated multi-camera installations.
 | BMW SORDI | Not stated [U] | Synthetic industrial, 2D [U] | No metric 3D |
 | NVIDIA SimReady-Warehouse-01 | CC-BY-4.0 [V] | USD assets (racks, pallets) | Would require rendering our own scenes |
 
-## Corrections to the original brief
+## Corrections to commonly cited details
 
 1. ARKitScenes is no longer CC BY-NC-SA 4.0 (see §2) [V].
 2. Smart Spaces "depth in 2025/2026 parts" is only partly true: 2026 test scenes have no depth, and 2025 test scenes have no GT [V].
