@@ -1001,7 +1001,8 @@ CLAIMS: tuple[Claim, ...] = (
           "wrong before gating.", {"recall": "45", "categorical_wrong": "60"},
           ("misses/ark106_cutr/recall.csv", "audit_ark106_cutr_clip/gate.csv"), f"{MISSES}, {AUDIT}", _a1_clip),
     Claim("A1.5", "A1", "Sparse4D (v2.2, frozen) reproduces DetA 42.3 on val scene 022 under the footprint-IoU metric "
-          "(published reference: 42.16, from the challenge winner's report; external, not recomputed).",
+          "(published reference: 42.16, the challenge winners' run of the same frozen checkpoint, in their "
+          "repository's results; external, not recomputed).",
           {"DetA": "42.3"}, ("sparse4d_eval/stage1_w022_rn50_v2.2_rgb_hota_bev.json",),
           "Sparse4D evaluation (REPRODUCE.md, Tier 2)", _a1_reproduction),
     Claim("A1.6", "A1", "The pre-2026 checkpoint collapses on the larger shared layout: DetA 8.5 against 55.8.",
@@ -1103,8 +1104,8 @@ CLAIMS: tuple[Claim, ...] = (
     Claim("A7.2", "A7", "The baseline finds 33% of objects less than 10% visible, against 89% of those more than 60% "
           "visible.", {"under_10pct": "33", "over_60pct": "89"}, ("misses/ark106_v0/recall.csv",), MISSES,
           _a7_visibility),
-    Claim("A7.3", "A7", "Conformal risk control certifies Cubify's per-scene miss rate on clearly visible objects at 5, "
-          "10 or 20%, using 9.3, 5.8 or 3.7 candidates per image.",
+    Claim("A7.3", "A7", "Conformal risk control bounds the average per-scene share of clearly visible objects "
+          "Cubify's candidate boxes miss at 5, 10 or 20%, using 9.3, 5.8 or 3.7 candidates per image.",
           {"feasible_0.05": "True", "feasible_0.1": "True", "feasible_0.2": "True", "boxes_per_image_0.05": "9.3",
            "boxes_per_image_0.1": "5.8", "boxes_per_image_0.2": "3.7"},
           ("recall_control/ark106_t005_clearly_visible_mark/by_alpha.csv",), "scripts/run_recall_control.py",
@@ -1115,8 +1116,8 @@ CLAIMS: tuple[Claim, ...] = (
     Claim("A7.5", "A7", "Recall guarantees bound the per-scene average: 37-41% of scenes exceed alpha = 0.2.",
           {"lo": "37", "hi": "41"}, ("recall_control/ark106_t005_*_mark/by_alpha.csv",),
           "scripts/run_recall_control.py", _a7_average),
-    Claim("A7.6", "A7", "Disagreement flags catch 46-76% of clearly visible misses (warehouse / handheld); in the fully "
-          "annotated warehouses the baseline flags the pre-2026 detector's misses with 69% precision. The handheld "
+    Claim("A7.6", "A7", "Disagreement flags catch 46-76% of clearly visible misses (warehouse / handheld); in the "
+          "warehouses the baseline flags the pre-2026 detector's misses with 69% precision. The handheld "
           "flags cost about 10 per image, 95% of them on objects the reference does not annotate.",
           {"warehouse_clear": "46", "handheld_clear": "76", "warehouse_precision": "69",
            "handheld_flags_per_image": "10", "handheld_unannotated": "95"},
